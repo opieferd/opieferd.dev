@@ -14,11 +14,13 @@ A modern, responsive personal website showcasing your skills, experience, and so
 ## 📁 Project Structure
 
 ```
-opieferd-website/
+/
 │
 ├── index.html          # Main HTML file
 ├── style.css           # CSS styles and animations
 ├── script.js           # JavaScript functionality
+├── CNAME               # Custom domain configuration
+├── .nojekyll           # Prevents Jekyll processing
 └── README.md           # This file
 ```
 
