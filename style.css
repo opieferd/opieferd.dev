@@ -271,18 +271,24 @@ section:nth-child(4) { animation-delay: 0.6s; }
     }
 }
 
+h2 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+    font-weight: 600;
+    /* left aligned by default */
+}
+
+.support h2 {
+    text-align: center;
+}
+
+/* Your media queries below... */
 @media (max-width: 480px) {
     .name {
         font-size: 2rem;
     }
-    
-.support h2 {
-    text-align: center;
-}
-    
     h2 {
         font-size: 1.5rem;
-        .support h2 {
-    text-align: center;
-        }
+    }
 }
