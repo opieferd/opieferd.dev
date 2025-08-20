@@ -283,4 +283,12 @@ section:nth-child(4) { animation-delay: 0.6s; }
     h2 {
         font-size: 1.5rem;
     }
+    .support {
+    text-align: center;
+
+.support-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
 }
+    }
