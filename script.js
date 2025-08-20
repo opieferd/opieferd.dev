@@ -99,60 +99,62 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.kofi').href = socialLinks.kofi;
     */
     
-// Konami code Easter egg
-let konamiCode = [];
-const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
+    // Konami code Easter egg
+    let konamiCode = [];
+    const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
 
-document.addEventListener('keydown', function(e) {
-    konamiCode.push(e.keyCode);
+    document.addEventListener('keydown', function(e) {
+        konamiCode.push(e.keyCode);
 
-    if (konamiCode.length > konami.length) {
-        konamiCode.shift();
-    }
+        if (konamiCode.length > konami.length) {
+            konamiCode.shift();
+        }
 
-    if (konamiCode.join(',') === konami.join(',')) {
-        // 🌈 Rainbow animation for body and links
-        document.body.style.animation = 'rainbow 2s linear infinite';
+        if (konamiCode.join(',') === konami.join(',')) {
+            // 🌈 Rainbow animation for body and links
+            document.body.style.animation = 'rainbow 2s linear infinite';
 
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes rainbow {
-                0% { filter: hue-rotate(0deg); }
-                100% { filter: hue-rotate(360deg); }
-            }
-            a {
-                animation: rainbow 2s linear infinite;
-            }
-        `;
-        style.id = 'rainbow-style';
-        document.head.appendChild(style);
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes rainbow {
+                    0% { filter: hue-rotate(0deg); }
+                    100% { filter: hue-rotate(360deg); }
+                }
+                a {
+                    animation: rainbow 2s linear infinite;
+                }
+            `;
+            style.id = 'rainbow-style';
+            document.head.appendChild(style);
 
-        // 🐱 Summon Nyancat (fly animation is in CSS)
-        summonNyancat();
+            // 🐱 Summon Nyancat (fly animation is in CSS)
+            summonNyancat();
 
-        // Reset everything after 5 seconds
+            // Reset everything after 5 seconds
+            setTimeout(() => {
+                document.body.style.animation = '';
+                if (style.parentNode) style.parentNode.removeChild(style);
+                const nyan = document.getElementById("nyancat");
+                if (nyan) nyan.remove();
+            }, 5000);
+
+            konamiCode = []; // Reset
+        }
+    });
+
+    // Nyancat function
+    function summonNyancat() {
+        const nyan = document.createElement("img");
+        nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
+        nyan.id = "nyancat";
+        document.body.appendChild(nyan);
+
         setTimeout(() => {
-            document.body.style.animation = '';
-            if (style.parentNode) style.parentNode.removeChild(style);
-            const nyan = document.getElementById("nyancat");
-            if (nyan) nyan.remove();
+            nyan.remove();
         }, 5000);
-
-        konamiCode = []; // Reset
     }
-});
+}); // <-- THIS was missing!
 
-// Nyancat function
-function summonNyancat() {
-    const nyan = document.createElement("img");
-    nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
-    nyan.id = "nyancat";
-    document.body.appendChild(nyan);
-
-    setTimeout(() => {
-        nyan.remove();
-    }, 5000);
-}
 // Add some utility functions
 function updateSocialLink(platform, url) {
     const link = document.querySelector(`.${platform}`);
