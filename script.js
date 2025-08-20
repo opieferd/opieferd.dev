@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.kofi').href = socialLinks.kofi;
     */
     
-// Konami code Easter egg
+ // Konami code Easter egg
     let konamiCode = [];
     const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
 
@@ -111,31 +111,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (konamiCode.join(',') === konami.join(',')) {
-            // 🌈 Rainbow animation for body and links
+            // 🌈 Rainbow animation for body and links (now persists)
             document.body.style.animation = 'rainbow 2s linear infinite';
 
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes rainbow {
-                    0% { filter: hue-rotate(0deg); }
-                    100% { filter: hue-rotate(360deg); }
-                }
-                a {
-                    animation: rainbow 2s linear infinite;
-                }
-            `;
-            style.id = 'rainbow-style';
-            document.head.appendChild(style);
+            // Avoid adding multiple identical style tags
+            if (!document.getElementById('rainbow-style')) {
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes rainbow {
+                        0% { filter: hue-rotate(0deg); }
+                        100% { filter: hue-rotate(360deg); }
+                    }
+                    a {
+                        animation: rainbow 2s linear infinite;
+                    }
+                `;
+                style.id = 'rainbow-style';
+                document.head.appendChild(style);
+            }
 
             // 🐱 Summon Multiple Nyancats (fly animation is in CSS)
             summonNyancats(7); // You can adjust how many appear!
 
-            // Reset everything after 5 seconds
+            // Remove only Nyancats after 5 seconds
             setTimeout(() => {
-                document.body.style.animation = '';
-                if (style.parentNode) style.parentNode.removeChild(style);
-                // Remove all nyancats
                 document.querySelectorAll('.nyancat').forEach(nyan => nyan.remove());
+                // Rainbow animation remains
             }, 5000);
 
             konamiCode = []; // Reset
