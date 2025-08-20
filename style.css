@@ -292,3 +292,17 @@ h2 {
         font-size: 1.5rem;
     }
 }
+
+/* Nyancat fly animation — outside media query */
+@keyframes nyan-fly {
+  0%   { left: -200px; top: 30%; }
+  100% { left: 110%; top: 30%; }
+}
+
+#nyancat {
+  position: fixed;
+  width: 150px;
+  z-index: 9999;
+  animation: nyan-fly 5s linear forwards;
+  pointer-events: none;
+}
