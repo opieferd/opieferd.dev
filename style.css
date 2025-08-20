@@ -283,4 +283,9 @@ section:nth-child(4) { animation-delay: 0.6s; }
     h2 {
         font-size: 1.5rem;
     }
+    .social-link span {
+    font-weight: 600;
+    font-size: 1rem;
+    text-transform: uppercase;
+    }
 }
