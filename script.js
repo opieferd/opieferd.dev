@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.kofi').href = socialLinks.kofi;
     */
     
-  // Konami code Easter egg
+// Konami code Easter egg
 let konamiCode = [];
 const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
 
@@ -127,7 +127,7 @@ document.addEventListener('keydown', function(e) {
         style.id = 'rainbow-style';
         document.head.appendChild(style);
 
-        // 🐱 Summon Nyancat
+        // 🐱 Summon Nyancat (fly animation is in CSS)
         summonNyancat();
 
         // Reset everything after 5 seconds
@@ -142,20 +142,17 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ✨ Nyancat function
+// Nyancat function
 function summonNyancat() {
     const nyan = document.createElement("img");
-    nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif"; // transparent Nyancat gif
+    nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
     nyan.id = "nyancat";
-    nyan.style.position = "fixed";
-    nyan.style.bottom = "20px";
-    nyan.style.right = "20px";
-    nyan.style.width = "200px";
-    nyan.style.zIndex = "9999";
-
     document.body.appendChild(nyan);
-}
 
+    setTimeout(() => {
+        nyan.remove();
+    }, 5000);
+}
 // Add some utility functions
 function updateSocialLink(platform, url) {
     const link = document.querySelector(`.${platform}`);
