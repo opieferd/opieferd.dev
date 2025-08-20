@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.kofi').href = socialLinks.kofi;
     */
     
-    // Konami code Easter egg
+// Konami code Easter egg
     let konamiCode = [];
     const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
 
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Nyancat function: summon several at random heights
+    // Nyancats function: summon several at random heights
     function summonNyancats(count = 5) {
         for (let i = 0; i < count; i++) {
             const nyan = document.createElement("img");
