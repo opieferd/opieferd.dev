@@ -127,33 +127,40 @@ document.addEventListener('DOMContentLoaded', function() {
             style.id = 'rainbow-style';
             document.head.appendChild(style);
 
-            // 🐱 Summon Nyancat (fly animation is in CSS)
-            summonNyancat();
+            // 🐱 Summon Multiple Nyancats (fly animation is in CSS)
+            summonNyancats(7); // You can adjust how many appear!
 
             // Reset everything after 5 seconds
             setTimeout(() => {
                 document.body.style.animation = '';
                 if (style.parentNode) style.parentNode.removeChild(style);
-                const nyan = document.getElementById("nyancat");
-                if (nyan) nyan.remove();
+                // Remove all nyancats
+                document.querySelectorAll('.nyancat').forEach(nyan => nyan.remove());
             }, 5000);
 
             konamiCode = []; // Reset
         }
     });
 
-    // Nyancat function
-    function summonNyancat() {
-        const nyan = document.createElement("img");
-        nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
-        nyan.id = "nyancat";
-        document.body.appendChild(nyan);
-
-        setTimeout(() => {
-            nyan.remove();
-        }, 5000);
+    // Nyancat function: summon several at random heights
+    function summonNyancats(count = 5) {
+        for (let i = 0; i < count; i++) {
+            const nyan = document.createElement("img");
+            nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
+            nyan.className = "nyancat";
+            // Random vertical position (top: 10% - 80%)
+            const topPercent = 10 + Math.random() * 70;
+            nyan.style.top = topPercent + "%";
+            nyan.style.left = "-200px";
+            nyan.style.position = "fixed";
+            nyan.style.width = "150px";
+            nyan.style.zIndex = "9999";
+            nyan.style.pointerEvents = "none";
+            nyan.style.animation = "nyan-fly 5s linear forwards";
+            document.body.appendChild(nyan);
+        }
     }
-}); // <-- THIS was missing!
+}); // <-- DOMContentLoaded closure
 
 // Add some utility functions
 function updateSocialLink(platform, url) {
