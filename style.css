@@ -276,20 +276,11 @@ section:nth-child(4) { animation-delay: 0.6s; }
         font-size: 2rem;
     }
     
-    .social-links {
-        grid-template-columns: 1fr;
-    }
+.support h2 {
+    text-align: center;
+}
     
     h2 {
         font-size: 1.5rem;
     }
-   .support h2 {
-    text-align: center;
-   }
-
-.support-links {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
 }
-    }
