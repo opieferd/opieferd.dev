@@ -99,41 +99,56 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.kofi').href = socialLinks.kofi;
     */
     
-    // Add a simple Easter egg - Konami code
-    let konamiCode = [];
-    const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
-    
-    document.addEventListener('keydown', function(e) {
-        konamiCode.push(e.keyCode);
-        
-        if (konamiCode.length > konami.length) {
-            konamiCode.shift();
-        }
-        
-        if (konamiCode.join(',') === konami.join(',')) {
-            // Easter egg activated!
-            document.body.style.animation = 'rainbow 2s linear infinite';
-            
-            // Add rainbow animation
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes rainbow {
-                    0% { filter: hue-rotate(0deg); }
-                    100% { filter: hue-rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            // Remove after 5 seconds
-            setTimeout(() => {
-                document.body.style.animation = '';
-                document.head.removeChild(style);
-            }, 5000);
-            
-            konamiCode = []; // Reset
-        }
-    });
+   // Konami code Easter egg
+let konamiCode = [];
+const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
+
+document.addEventListener('keydown', function(e) {
+    konamiCode.push(e.keyCode);
+
+    if (konamiCode.length > konami.length) {
+        konamiCode.shift();
+    }
+
+    if (konamiCode.join(',') === konami.join(',')) {
+        // 🌈 Rainbow animation
+        document.body.style.animation = 'rainbow 2s linear infinite';
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes rainbow {
+                0% { filter: hue-rotate(0deg); }
+                100% { filter: hue-rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 🐱 Summon Nyancat
+        summonNyancat();
+
+        // Reset everything after 10 seconds
+        setTimeout(() => {
+            document.body.style.animation = '';
+            document.head.removeChild(style);
+        }, 10000);
+
+        konamiCode = []; // Reset
+    }
 });
+
+// ✨ Nyancat function
+function summonNyancat() {
+    const nyan = document.createElement("img");
+    nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif"; // transparent Nyancat gif
+    nyan.id = "nyancat";
+
+    document.body.appendChild(nyan);
+
+    setTimeout(() => {
+        nyan.remove();
+    }, 5000);
+}
+
 
 // Add some utility functions
 function updateSocialLink(platform, url) {
