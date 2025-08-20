@@ -126,11 +126,11 @@ document.addEventListener('keydown', function(e) {
         // 🐱 Summon Nyancat
         summonNyancat();
 
-        // Reset everything after 10 seconds
+        // Reset everything after 5 seconds
         setTimeout(() => {
             document.body.style.animation = '';
             document.head.removeChild(style);
-        }, 10000);
+        }, 5000);
 
         konamiCode = []; // Reset
     }
