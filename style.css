@@ -192,6 +192,16 @@ p {
     color: #ffffff;
 }
 
+.mastodon:hover {
+    background: #595aff;
+    color: #ffffff;
+}
+
+.bluesky:hover {
+    background: #1185fe;
+    color: #ffffff;
+}
+
 .kofi:hover {
     background: #ff5e5b;
     color: #ffffff;
