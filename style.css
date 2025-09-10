@@ -197,6 +197,16 @@ p {
     color: #ffffff;
 }
 
+.mastodon:hover {
+    background: #6364ff;
+    color: #ffffff;
+}
+
+.bluesky:hover {
+    background: #0085ff;
+    color: #ffffff;
+}
+
 footer {
     text-align: center;
     padding: 2rem 0;
