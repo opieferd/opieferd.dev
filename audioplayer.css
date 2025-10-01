@@ -16,8 +16,8 @@
 }
 
 .custom-audio-player .audio-icon {
-  width: 60px;
-  height: 60px;
+  width: 90px;
+  height: 90px;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(255,255,255,0.15);
@@ -68,8 +68,8 @@
     font-size: 1.3rem;
   }
   .custom-audio-player .audio-icon {
-    width: 60px;
-    height: 60px;
+    width: 90px;
+    height: 90px;
   }
   #playPauseBtn {
     font-size: 1.3rem;
