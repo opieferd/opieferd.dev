@@ -65,15 +65,15 @@
     gap: 1rem;
   }
   .custom-audio-player .audio-title {
-    font-size: 0.97rem;
+    font-size: 1.3rem;
   }
   .custom-audio-player .audio-icon {
     width: 42px;
     height: 42px;
   }
   #playPauseBtn {
-    font-size: 1.1rem;
-    width: 36px;
-    height: 36px;
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
   }
 }
