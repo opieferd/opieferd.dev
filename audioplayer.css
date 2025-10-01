@@ -68,12 +68,12 @@
     font-size: 1.3rem;
   }
   .custom-audio-player .audio-icon {
-    width: 42px;
-    height: 42px;
+    width: 60px;
+    height: 60px;
   }
   #playPauseBtn {
     font-size: 1.3rem;
-    width: 40px;
-    height: 40px;
+    width: 60px;
+    height: 60px;
   }
 }
