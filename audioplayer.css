@@ -3,7 +3,7 @@
   align-items: center;
   gap: 1.5rem;
   background: #111111;
-  padding: 2.5rem;
+  padding: 1.5rem;
   border-radius: 16px;
   border: 1px solid #333333;
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
@@ -16,15 +16,15 @@
 }
 
 .custom-audio-player .audio-icon {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(255,255,255,0.15);
 }
 
 .custom-audio-player .audio-title {
-  font-size: 1.08rem;
+  font-size: 1.8rem;
   font-weight: 500;
   color: #ffffff;
   flex-grow: 1;
@@ -35,15 +35,15 @@
 }
 
 #playPauseBtn {
-  border: none;
+  border: 2px solid #666666;
   background: #34383b;
   color: #ffffff;
   font-size: 1.5rem;
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: border-color 0.2s, transform 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,7 +52,7 @@
 
 #playPauseBtn:hover {
   transform: scale(1.1);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  filter: brightness(1.1);
 }
 
 #playPauseBtn i {
