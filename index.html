@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>opieferd - Developer & Creator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="style.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://lastfm.freetls.fastly.net/i/u/avatar170s/521fd3129ab19218969426ea0eba0c0f.png">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://kit.fontawesome.com/6a954d9db0.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="logoloop.css">
+</head>
+<body>
+    <div class="container">
+        <header class="hero">
+            <div class="profile-section">
+                <div class="avatar">
+                    <span class="avatar-text">:3</span>
+                </div>
+                <h1 class="name">opieferd</h1>
+                <p class="tagline">16 year old dev!</p>
+            </div>
+        </header>
+
+        <main class="content">
+            <section class="about">
+                <h2>About Me</h2>
+                <p>
+                    Haiii! I'm <strong>opieferd</strong>, a 16 year old developer who loves coding and learning. 
+                    I've been exploring programming, with the most experience with <strong>JavaScript</strong>, <strong>HTML</strong>, and 
+                    <strong>Lua</strong>. I love building bots, learning new tech, and learning as much as I can.
+                </p>
+                <p>
+                    When I'm not online, I'll probably be playing an instrument, working out, or spending time with family. 
+                    I think learning is very important and hope to one day major in CS (though right now I don't think I'm the greatest)
+                </p>
+            </section>
+
+            <section class="skills">
+                <h2>Skills & Technologies</h2>
+                <div class="skill-tags">
+                    <span class="skill-tag">JavaScript</span>
+                    <span class="skill-tag">Lua</span>
+                    <span class="skill-tag">HTML</span>
+                    <span class="skill-tag">C#</span>
+                    <span class="skill-tag">CSS</span>
+                    <span class="skill-tag">Web Development</span>
+                    <span class="skill-tag">Discord Development</span>
+                    <span class="skill-tag">Roblox Development</span>
+                </div>
+            </section>
+
+            <section class="connect">
+                <h2>Find me on</h2>
+                <!-- LogoLoop container -->
+                <div id="logo-loop-root"></div>
+            </section>
+
+            <section class="support">
+                <h2>Support Me</h2>
+                <div class="support-links">
+                    <a href="https://ko-fi.com/opieferd" class="social-link kofi" title="Ko-fi">
+                        <i class="fas fa-mug-hot"></i>
+                        <span>Ko-fi</span>
+                    </a>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Updated Audio Player -->
+        <div class="custom-audio-player">
+          <img src="gifts.png" alt="Album Art" class="audio-icon">
+          <span class="audio-title">Gifts - Snoop Dogg</span>
+          <button id="playPauseBtn" aria-label="Play/Pause">
+            <i class="fas fa-play"></i>
+          </button>
+          <audio id="audioPlayer" src="gifts.mp3" loop></audio>
+        </div>
+
+        <link rel="stylesheet" href="audioplayer.css">
+        <script src="audioplayer.js"></script>
+
+        <footer>
+            <p>&copy; 2025 opieferd. meow </p>
+        </footer>
+    </div>
+
+    <script src="script.obf.js"></script>
+    <script src="logoloop.js"></script>
+</body>
+</html>
