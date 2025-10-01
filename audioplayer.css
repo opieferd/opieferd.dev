@@ -7,8 +7,6 @@
   border-radius: 16px;
   border: 1px solid #333333;
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
-  width: fit-content;
-  max-width: 100%;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -53,8 +51,8 @@
 }
 
 #playPauseBtn:hover {
-  background: #34383b;
   transform: scale(1.1);
+  filter: brightness(1.1);
 }
 
 #playPauseBtn i {
