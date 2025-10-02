@@ -10,12 +10,12 @@ document.addEventListener('keydown', function(e) {
     }
 
     if (typedKeys.join('') === 'meow') {
-        activateMeowMode(10000); // triggers meow mode for 10 seconds
+        activateMeowMode(1000000000000000000000000000000000000000000000000000000); // triggers meow mode for 10 seconds
         typedKeys = []; // reset after activation
     }
 });
 
-function activateMeowMode(duration = 10000) {
+function activateMeowMode(duration = 10000000000000000000000000000000000000000000000) {
     const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, li, td, th, div');
     const originalTexts = [];
 
