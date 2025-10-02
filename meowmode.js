@@ -10,20 +10,21 @@ document.addEventListener('keydown', function(e) {
     }
 
     if (typedKeys.join('') === 'meow') {
-        activateMeowMode(1000000000000000000000000000000000000000000000000000000); // triggers meow mode for 10 seconds
+        activateMeowMode(); // triggers meow mode permanently until refresh
         typedKeys = []; // reset after activation
     }
 });
 
-function activateMeowMode(duration = 10000000000000000000000000000000000000000000000) {
+function activateMeowMode() {
+    // Prevent multiple activations
+    if (window.__meowModeActivated) return;
+    window.__meowModeActivated = true;
+
     const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, li, td, th, div');
-    const originalTexts = [];
 
     elements.forEach(el => {
-        const original = el.textContent;
-        originalTexts.push({ el, original });
-
         // Replace with meow variants
+        const original = el.textContent;
         const words = original.split(/\s+/).map(() => {
             const rand = Math.random();
             if (rand < 0.3) return 'meow';
@@ -33,10 +34,5 @@ function activateMeowMode(duration = 1000000000000000000000000000000000000000000
         el.textContent = words.join(' ');
     });
 
-    // Revert after duration
-    setTimeout(() => {
-        originalTexts.forEach(({ el, original }) => {
-            el.textContent = original;
-        });
-    }, duration);
+    // No revert logic: meow mode stays on until refresh
 }
