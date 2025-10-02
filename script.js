@@ -1,6 +1,6 @@
-// Smooth scrolling for any future anchor links
+// smooth scrolling
 document.addEventListener('DOMContentLoaded', function() {
-    // Add smooth scrolling to all links
+    // for all links
     const links = document.querySelectorAll('a[href^="#"]');
     
     for (const link of links) {
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add intersection observer for scroll animations
+    // intersect observer 4 scrolling
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
@@ -33,13 +33,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
     
-    // Observe all sections for animation
+    // observ sect 4 anim
     const sections = document.querySelectorAll('section');
     sections.forEach(section => {
         observer.observe(section);
     });
     
-    // Add typing effect to the name (optional enhancement)
+    // opie name type 
     const nameElement = document.querySelector('.name');
     if (nameElement) {
         const originalText = nameElement.textContent;
@@ -54,11 +54,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         
-        // Start typing effect after a short delay
+        // delay 4 type
         setTimeout(typeWriter, 500);
     }
     
-    // Add particle effect on hover for avatar
+    // hover effect
     const avatar = document.querySelector('.avatar');
     if (avatar) {
         avatar.addEventListener('mouseenter', function() {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add click effect for skill tags
+    // clicky click effect 4 skills
     const skillTags = document.querySelectorAll('.skill-tag');
     skillTags.forEach(tag => {
         tag.addEventListener('click', function() {
@@ -81,25 +81,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Placeholder for social media links - you'll need to update these with your actual profiles
-    const socialLinks = {
-        twitter: '#', // Replace with your X/Twitter profile URL
-        tiktok: '#', // Replace with your TikTok profile URL
-        github: '#', // Replace with your GitHub profile URL
-        reddit: '#', // Replace with your Reddit profile URL
-        kofi: '#' // Replace with your Ko-fi profile URL
-    };
     
-    // Update social links (uncomment and modify as needed)
-    /*
-    document.querySelector('.twitter').href = socialLinks.twitter;
-    document.querySelector('.tiktok').href = socialLinks.tiktok;
-    document.querySelector('.github').href = socialLinks.github;
-    document.querySelector('.reddit').href = socialLinks.reddit;
-    document.querySelector('.kofi').href = socialLinks.kofi;
-    */
-    
- // Konami code Easter egg
+ //  konami
     let konamiCode = [];
     const konami = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // ↑↑↓↓←→←→BA
 
@@ -111,10 +94,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (konamiCode.join(',') === konami.join(',')) {
-            // 🌈 Rainbow animation for body and links (now persists)
+            // rainbow anim
             document.body.style.animation = 'rainbow 2s linear infinite';
 
-            // Avoid adding multiple identical style tags
+            // override styles
             if (!document.getElementById('rainbow-style')) {
                 const style = document.createElement('style');
                 style.textContent = `
@@ -130,26 +113,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.head.appendChild(style);
             }
 
-            // 🐱 Summon Multiple Nyancats (fly animation is in CSS)
-            summonNyancats(7); // You can adjust how many appear!
+            // nyans
+            summonNyancats(10); // variable for how many nyans
 
-            // Remove only Nyancats after 5 seconds
+            // nyancan gone after 5 sec
             setTimeout(() => {
                 document.querySelectorAll('.nyancat').forEach(nyan => nyan.remove());
-                // Rainbow animation remains
+                // keep rainbow infinite
             }, 5000);
 
-            konamiCode = []; // Reset
+            konamiCode = []; // reset
         }
     });
 
-    // Nyancats function: summon several at random heights
+    // random pos
     function summonNyancats(count = 5) {
         for (let i = 0; i < count; i++) {
             const nyan = document.createElement("img");
             nyan.src = "https://media.tenor.com/8lR3_1m-i94AAAAi/cat.gif";
             nyan.className = "nyancat";
-            // Random vertical position (top: 10% - 80%)
+            // random pos 10%-80% of screen
             const topPercent = 10 + Math.random() * 70;
             nyan.style.top = topPercent + "%";
             nyan.style.left = "-200px";
@@ -161,9 +144,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.appendChild(nyan);
         }
     }
-}); // <-- DOMContentLoaded closure
+});
 
-// Add some utility functions
+// utilities
 function updateSocialLink(platform, url) {
     const link = document.querySelector(`.${platform}`);
     if (link) {
@@ -173,14 +156,14 @@ function updateSocialLink(platform, url) {
     }
 }
 
-// Function to add new skill tags dynamically
+// skill tag cookiecutter
 function addSkillTag(skillName) {
     const skillTags = document.querySelector('.skill-tags');
     const newTag = document.createElement('span');
     newTag.className = 'skill-tag';
     newTag.textContent = skillName;
     
-    // Add click effect
+    // click effect2
     newTag.addEventListener('click', function() {
         this.style.transform = 'scale(0.95)';
         setTimeout(() => {
