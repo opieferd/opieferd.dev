@@ -20,7 +20,7 @@
   height: 90px;
   border-radius: 8px;
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(255,255,255,0.15);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
 }
 
 .custom-audio-player .audio-title {
@@ -40,7 +40,7 @@
   color: #ffffff;
   font-size: 1.5rem;
   width: 60px;
-  height: 60px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   cursor: pointer;
   transition: border-color 0.2s, transform 0.2s;
@@ -74,6 +74,6 @@
   #playPauseBtn {
     font-size: 1.3rem;
     width: 60px;
-    height: 60px;
+    aspect-ratio: 1 / 1;
   }
 }
