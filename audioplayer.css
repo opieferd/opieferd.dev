@@ -1,35 +1,52 @@
-/* Optional but helps mitigate weird flex squeeze on narrow widths */
 .custom-audio-player {
-  flex-wrap: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: #111111;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid #333333;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Make the button truly “viable circle” on every device */
+.custom-audio-player:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(255, 255, 255, 0.15);
+}
+
+.custom-audio-player .audio-icon {
+  width: 90px;
+  height: 90px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(255,255,255,0.15);
+}
+
+.custom-audio-player .audio-title {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #ffffff;
+  flex-grow: 1;
+  margin-left: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #playPauseBtn {
   border: 2px solid #666666;
   background: #34383b;
   color: #ffffff;
-
-  /* Use one size variable so it can’t become arbitrary across rules */
-  --btn-size: 60px;
-  width: var(--btn-size);
-  height: var(--btn-size);
-
-  /* The big fix: explicit 1:1 shape + prevent flex shrink */
-  aspect-ratio: 1 / 1;
-  flex: 0 0 var(--btn-size);
-  flex-shrink: 0;
-
-  border-radius: 9999px; /* more robust than 50% if rounding errors happen */
+  font-size: 1.5rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
   cursor: pointer;
-
-  display: grid;
-  place-items: center;
-
-  /* Keep icon from affecting layout */
-  line-height: 1;
-  padding: 0;
-
   transition: border-color 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 0.7rem;
 }
 
@@ -40,13 +57,23 @@
 
 #playPauseBtn i {
   pointer-events: none;
-  line-height: 1;
 }
 
-/* Mobile: only change the variable (clean + not redundant) */
 @media (max-width: 600px) {
-  #playPauseBtn {
-    --btn-size: 60px; /* change to 52px or 56px if you want smaller on phones */
+  .custom-audio-player {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+  .custom-audio-player .audio-title {
     font-size: 1.3rem;
+  }
+  .custom-audio-player .audio-icon {
+    width: 90px;
+    height: 90px;
+  }
+  #playPauseBtn {
+    font-size: 1.3rem;
+    width: 60px;
+    height: 60px;
   }
 }
