@@ -10,7 +10,7 @@ const COMMON_FOODS = [
     "cookies", "brownie", "donut", "apple pie", "cheesecake", "chocolate",
     "popcorn", "pretzel", "chips", "apple", "banana", "orange", "watermelon",
     "strawberry", "grapes", "carrot", "broccoli", "corn", "potato",
-    "peanut butter", "jelly", "ketchup", "mustard", "hot chocolate",
+    "peanut butter", "honey", "ketchup", "mustard", "hot chocolate",
     "coffee", "orange juice", "lemonade"
 ];
 
@@ -53,6 +53,7 @@ async function wikipedia(params) {
     if (!response.ok) throw new Error("Wikipedia is being stupid and the request failed.");
     const data = await response.json();
     if (data.error) throw new Error(data.error.info || "Wikipedia returned an error.");
+    if (!data.query && !data.parse) throw new Error("Wikipedia returned an incomplete response.");
     return data;
 }
 
@@ -61,6 +62,7 @@ async function getDescription(food) {
         action: "query", prop: "extracts", titles: food, exintro: "1",
         explaintext: "1", redirects: "1"
     });
+    if (!data.query?.pages) throw new Error("Wikipedia returned no page data for this food.");
     const page = Object.values(data.query.pages)[0];
     if (!page?.extract?.trim()) throw new Error("Wikipedia has no description for this food.");
     return page.extract.trim();
@@ -82,16 +84,6 @@ async function getHardFood() {
         title.toLocaleLowerCase().startsWith("list of ")
     );
     if (!listPages.length) throw new Error("Wikipedia returned no prepared food lists.");
-    const selectedList = listPages[Math.floor(Math.random() * listPages.length)];
-    const pages = getTopLevelLinks(await getWikitext(selectedList))
-        .filter((title) => !["food", "dish", "meal", "snack", "beverage", "drink", "cuisine", "recipe"]
-            .includes(title.toLocaleLowerCase()))
-        .sort(() => Math.random() - .5)
-        .slice(0, 20);
-    const data = await wikipedia({
-        action: "query", prop: "extracts", titles: pages.join("|"),
-        exintro: "1", explaintext: "1", redirects: "1"
-    });
     const markers = ["food", "dish", "cuisine", "meal", "ingredient", "sauce", "dessert",
         "beverage", "bread", "meat", "seafood", "fish", "fruit", "vegetable", "grain",
         "noodle", "rice", "cake", "drink", "snack", "cheese", "soup", "stew"];
@@ -99,16 +91,37 @@ async function getHardFood() {
         "album", "song", "video game", "restaurant", "company", "brand", "chain", "chef",
         "cookbook", "program", "show", "festival", "industry", "history", "culture",
         "science", "technology", "policy", "law"];
-    const edible = Object.values(data.query.pages).find((page) => {
-        const title = page.title.toLocaleLowerCase();
-        const description = (page.extract || "").toLocaleLowerCase();
-        const introduction = description.split(/(?<=[.!?])\s+/)[0];
-        return !title.includes("(disambiguation)") &&
-            markers.some((marker) => new RegExp(`\\b${marker}\\b`).test(introduction)) &&
-            !nonFood.some((marker) => new RegExp(`\\b${marker}\\b`).test(introduction));
-    });
-    if (!edible) throw new Error("Wikipedia did not return an edible food.");
-    return edible.title;
+    const shuffledLists = listPages.sort(() => Math.random() - .5);
+    for (const selectedList of shuffledLists) {
+        const pages = getTopLevelLinks(await getWikitext(selectedList))
+            .filter((title) => {
+                const normalizedTitle = title.toLocaleLowerCase();
+                return !normalizedTitle.startsWith("list of ") &&
+                    !normalizedTitle.startsWith("lists of ") &&
+                    !["food", "dish", "meal", "snack", "beverage", "drink", "cuisine", "recipe"]
+                        .includes(normalizedTitle);
+            })
+            .sort(() => Math.random() - .5)
+            .slice(0, 20);
+        if (!pages.length) continue;
+
+        const data = await wikipedia({
+            action: "query", prop: "extracts", titles: pages.join("|"),
+            exintro: "1", explaintext: "1", redirects: "1"
+        });
+        const edible = Object.values(data.query?.pages || {}).find((page) => {
+            const title = page.title.toLocaleLowerCase();
+            const description = (page.extract || "").toLocaleLowerCase();
+            const introduction = description.split(/(?<=[.!?])\s+/)[0];
+            return !title.includes("(disambiguation)") &&
+                !title.startsWith("list of ") &&
+                !title.startsWith("lists of ") &&
+                markers.some((marker) => new RegExp(`\\b${marker}\\b`).test(introduction)) &&
+                !nonFood.some((marker) => new RegExp(`\\b${marker}\\b`).test(introduction));
+        });
+        if (edible) return edible.title;
+    }
+    throw new Error("Wikipedia did not return an edible food from its prepared-food lists.");
 }
 
 function makeHints(description, food) {
