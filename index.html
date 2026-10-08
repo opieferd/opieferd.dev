@@ -15,6 +15,7 @@
     <script src="https://kit.fontawesome.com/6a954d9db0.js" crossorigin="anonymous"></script>
     <script src="meowmode.js"></script>
     <link rel="stylesheet" href="logoloop.css">
+    <link rel="stylesheet" href="menu.css">
     <style>
         /* Profile GIF cropping and styling */
         .avatar .avatar-gif {
@@ -28,6 +29,27 @@
 </head>
 <body>
     <div class="container">
+        <nav class="site-menu" aria-label="Site menu">
+            <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-panel">
+                Menu <span aria-hidden="true">☰</span>
+            </button>
+            <div class="menu-panel" id="menu-panel" hidden>
+                <button class="menu-item menu-item-expand" id="social-toggle" type="button" aria-expanded="false" aria-controls="social-links-menu">
+                    Social <span aria-hidden="true">+</span>
+                </button>
+                <div class="social-links-menu" id="social-links-menu" hidden>
+                    <a href="https://x.com/Opieferd" target="_blank" rel="noopener noreferrer">X</a>
+                    <a href="https://www.tiktok.com/@opieferd" target="_blank" rel="noopener noreferrer">TikTok</a>
+                    <a href="https://github.com/opieferd" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    <a href="https://www.reddit.com/user/Opieferd/" target="_blank" rel="noopener noreferrer">Reddit</a>
+                    <a href="https://mastodon.social/@opieferd" target="_blank" rel="noopener noreferrer">Mastodon</a>
+                    <a href="https://bsky.app/profile/opieferd.dev" target="_blank" rel="noopener noreferrer">Bluesky</a>
+                    <a href="https://discord.com/users/931745609252233257" target="_blank" rel="noopener noreferrer">Discord</a>
+                    <a href="https://open.spotify.com/user/31qbysm2dpyr7rfur5ljkunpyt34?si=5e59c724a3c246ee" target="_blank" rel="noopener noreferrer">Spotify</a>
+                </div>
+                <a class="menu-item menu-link" href="guessthefood/">Guess the Food <span aria-hidden="true">→</span></a>
+            </div>
+        </nav>
         <header class="hero">
             <div class="profile-section">
                 <div class="avatar">
@@ -82,6 +104,12 @@
                 </div>
             </section>
 
+            <section class="game-link">
+                <h2>Play a game</h2>
+                <p>Think you know your food? Try my Wikipedia-powered guessing game.</p>
+                <a href="guessthefood/" class="social-link">Guess the Food →</a>
+            </section>
+
     <section>
         <div class="custom-audio-player">
           <img src="album-cover.jpg" alt="Album Art" class="audio-icon">
@@ -105,5 +133,6 @@
 
     <script src="script.obf.js"></script>
     <script src="logoloop.js"></script>
+    <script src="menu.js"></script>
 </body>
 </html>

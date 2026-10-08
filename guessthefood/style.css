@@ -1,0 +1,249 @@
+:root {
+    color-scheme: dark;
+    --background: #070707;
+    --card: #111111;
+    --border: #303030;
+    --text: #f5f5f5;
+    --muted: #a9a9a9;
+    --accent: #b8ff5c;
+    --accent-text: #101010;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 50% -15%, #252c18 0, transparent 45%),
+        var(--background);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button, input {
+    font: inherit;
+}
+
+.game-shell {
+    width: min(100% - 2rem, 720px);
+    margin: 0 auto;
+    padding: 2rem 0 1.5rem;
+}
+
+.back-link, footer a {
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.back-link:hover, footer a:hover {
+    color: var(--accent);
+}
+
+.game-header {
+    padding: 4rem 0 2rem;
+    text-align: center;
+}
+
+.eyebrow, .hint-label {
+    color: var(--accent);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: .5rem 0 .75rem;
+    font-size: clamp(2.6rem, 9vw, 5rem);
+    line-height: 1;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.subtitle, .muted {
+    color: var(--muted);
+}
+
+.card {
+    padding: clamp(1.25rem, 5vw, 2.5rem);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: rgba(17, 17, 17, .9);
+    box-shadow: 0 1rem 4rem rgba(0, 0, 0, .3);
+}
+
+.mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1.75rem;
+}
+
+button {
+    cursor: pointer;
+}
+
+.mode-button {
+    display: grid;
+    gap: .35rem;
+    padding: 1.25rem;
+    color: var(--text);
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+    background: #191919;
+}
+
+.mode-button span {
+    color: var(--muted);
+    font-size: .9rem;
+}
+
+.mode-button:hover, .mode-button:focus-visible {
+    border-color: var(--accent);
+    outline: none;
+    transform: translateY(-2px);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.game-meta, .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.game-meta {
+    color: var(--accent);
+    font-size: .85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-row {
+    margin: 2rem 0 1rem;
+}
+
+.round-status {
+    color: var(--muted);
+    font-size: .9rem;
+}
+
+.hint-box {
+    margin-bottom: 1.75rem;
+    padding: 1.25rem;
+    border-left: 3px solid var(--accent);
+    background: #1a1a1a;
+}
+
+.hint-box p {
+    margin: .5rem 0 0;
+    line-height: 1.6;
+}
+
+.hint-label {
+    font-size: .65rem;
+}
+
+.guess-form label {
+    display: block;
+    margin-bottom: .5rem;
+    font-weight: 600;
+}
+
+.guess-controls {
+    display: flex;
+    gap: .75rem;
+}
+
+input {
+    width: 100%;
+    min-width: 0;
+    padding: .85rem 1rem;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    background: #080808;
+}
+
+input:focus {
+    border-color: var(--accent);
+    outline: 2px solid rgba(184, 255, 92, .2);
+}
+
+.primary-button, .secondary-button {
+    padding: .85rem 1.2rem;
+    border: 0;
+    border-radius: .6rem;
+    font-weight: 700;
+}
+
+.primary-button {
+    color: var(--accent-text);
+    background: var(--accent);
+}
+
+.secondary-button {
+    margin-top: 1rem;
+    color: var(--text);
+    background: #292929;
+}
+
+.round-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: 1rem;
+}
+
+.round-actions .secondary-button {
+    margin-top: 0;
+}
+
+.text-button {
+    padding: 0;
+    color: var(--muted);
+    border: 0;
+    background: transparent;
+    font-size: .85rem;
+}
+
+.text-button:hover, .text-button:focus-visible, .secondary-button:hover {
+    color: var(--accent);
+}
+
+.feedback {
+    min-height: 1.5rem;
+    margin: 1rem 0 0;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.feedback.error {
+    color: #ff8585;
+}
+
+footer {
+    padding: 2rem 0;
+    color: var(--muted);
+    font-size: .8rem;
+    text-align: center;
+}
+
+@media (max-width: 540px) {
+    .mode-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .guess-controls {
+        flex-direction: column;
+    }
+}
