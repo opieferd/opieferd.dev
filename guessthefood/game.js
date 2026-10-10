@@ -14,7 +14,15 @@ const COMMON_FOODS = [
     "coffee", "orange juice", "lemonade"
 ];
 
-const state = { mode: null, food: null, hints: [], hintIndex: 0, streak: 0, attempts: 0 };
+const state = {
+    mode: null,
+    food: null,
+    hints: [],
+    hintIndex: 0,
+    streak: 0,
+    attempts: 0,
+    usedFoods: new Set()
+};
 const REDACTION = "[The food you're guessing]";
 const $ = (selector) => document.querySelector(selector);
 
@@ -147,6 +155,26 @@ async function getHardFood() {
     throw new Error("Wikipedia did not return an edible food from its prepared-food lists.");
 }
 
+function foodKey(food) {
+    return food.trim().toLocaleLowerCase();
+}
+
+function getUnusedCommonFood() {
+    const availableFoods = COMMON_FOODS.filter((food) => !state.usedFoods.has(foodKey(food)));
+    if (!availableFoods.length) {
+        throw new Error("There are no unused easy foods left this page load. Refresh to start over.");
+    }
+    return availableFoods[Math.floor(Math.random() * availableFoods.length)];
+}
+
+async function getUnusedHardFood() {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+        const food = await getHardFood();
+        if (!state.usedFoods.has(foodKey(food))) return food;
+    }
+    throw new Error("Wikipedia kept choosing foods from earlier rounds. Please try again.");
+}
+
 function makeHints(description, food) {
     const sentences = description.split(/(?<=[.!?])\s+/);
     const safe = [...new Set(sentences.map((sentence) => redactFoodMentions(sentence, food).trim()).filter(
@@ -161,9 +189,7 @@ function makeHints(description, food) {
 
 async function startRound() {
     state.attempts = 0;
-    state.food = state.mode === "easy"
-        ? COMMON_FOODS[Math.floor(Math.random() * COMMON_FOODS.length)]
-        : null;
+    state.food = null;
     $("#guess-input").disabled = true;
     $("#skip-button").disabled = true;
     $("#round-status").textContent = "Loading a food…";
@@ -172,8 +198,11 @@ async function startRound() {
     $("#continue-button").classList.add("hidden");
     $("#new-game-button").classList.add("hidden");
     try {
-        if (!state.food) state.food = await getHardFood();
+        state.food = state.mode === "easy"
+            ? getUnusedCommonFood()
+            : await getUnusedHardFood();
         state.hints = makeHints(await getDescription(state.food), state.food);
+        state.usedFoods.add(foodKey(state.food));
         state.hintIndex = 0;
         $("#hint").textContent = state.hints[0];
         $("#round-status").textContent = "Your first guess";
