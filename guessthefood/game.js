@@ -15,6 +15,7 @@ const COMMON_FOODS = [
 ];
 
 const state = { mode: null, food: null, hints: [], hintIndex: 0, streak: 0, attempts: 0 };
+const REDACTION = "[The food you're guessing]";
 const $ = (selector) => document.querySelector(selector);
 
 function normalizeGuess(value) {
@@ -45,6 +46,28 @@ function isCorrectGuess(guess, food) {
         (normalizedGuess === normalizedFood ||
             aliases[normalizedFood]?.includes(normalizedGuess) ||
             similarity(normalizedGuess, normalizedFood) >= .8);
+}
+
+function redactFoodMentions(text, food) {
+    const foodWords = food.match(/[a-z]+/gi) || [];
+    const textWords = [...text.matchAll(/[a-z]+/gi)];
+    const normalizedFood = normalizeGuess(food);
+    if (!normalizedFood || !foodWords.length) return text;
+
+    const matches = [];
+    for (let index = 0; index <= textWords.length - foodWords.length; index += 1) {
+        const firstWord = textWords[index];
+        const lastWord = textWords[index + foodWords.length - 1];
+        const candidate = text.slice(firstWord.index, lastWord.index + lastWord[0].length);
+        if (similarity(normalizeGuess(candidate), normalizedFood) >= .8) {
+            matches.push([firstWord.index, lastWord.index + lastWord[0].length]);
+        }
+    }
+
+    return matches.reverse().reduce(
+        (redacted, [start, end]) => `${redacted.slice(0, start)}${REDACTION}${redacted.slice(end)}`,
+        text
+    );
 }
 
 async function wikipedia(params) {
@@ -126,9 +149,8 @@ async function getHardFood() {
 
 function makeHints(description, food) {
     const sentences = description.split(/(?<=[.!?])\s+/);
-    const foodPattern = new RegExp(food.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
-    const safe = [...new Set(sentences.map((sentence) => sentence.replace(foodPattern, "this food").trim()).filter(
-        (sentence) => sentence && sentence.toLocaleLowerCase() !== "this food"
+    const safe = [...new Set(sentences.map((sentence) => redactFoodMentions(sentence, food).trim()).filter(
+        (sentence) => sentence && sentence !== REDACTION
     ))];
     if (safe.length >= 2) return safe.sort(() => Math.random() - .5).slice(0, 2);
     return [
