@@ -99,8 +99,66 @@ h2 {
 }
 
 .show-details h2 {
-    margin-bottom: .4rem;
+    margin: .2rem 0 .4rem;
     font-size: clamp(1.8rem, 5vw, 3rem);
+}
+
+.show-entry {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.show-entry:first-child {
+    padding-top: 0;
+}
+
+.show-entry:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.show-number {
+    float: left;
+    width: 2rem;
+    margin: .3rem .5rem 0 0;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.show-entry h2,
+.show-entry .episode,
+.show-entry .site {
+    margin-left: 2.5rem;
+}
+
+.site {
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+.remove-show,
+button {
+    border: 1px solid var(--accent);
+    border-radius: .35rem;
+    padding: .55rem .8rem;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.remove-show:hover,
+.remove-show:focus-visible,
+button:hover,
+button:focus-visible {
+    background: var(--accent);
+    color: #111;
 }
 
 .episode {
@@ -120,22 +178,7 @@ h2 {
     font-size: .85rem;
 }
 
-.steps {
-    padding-left: 1.4rem;
-    color: var(--muted);
-}
-
-.steps li {
-    margin: .85rem 0;
-    padding-left: .3rem;
-}
-
-.steps strong {
-    color: #fff;
-}
-
-.bookmarklet,
-.nova-link {
+.bookmarklet {
     color: var(--accent);
     font-weight: 700;
 }
@@ -149,9 +192,7 @@ h2 {
 }
 
 .bookmarklet:hover,
-.bookmarklet:focus-visible,
-.nova-link:hover,
-.nova-link:focus-visible {
+.bookmarklet:focus-visible {
     color: #fff;
     border-color: var(--accent);
 }
@@ -163,7 +204,78 @@ h2 {
     line-height: 1.6;
 }
 
-.nova-link {
+.editor-details {
+    margin-top: 2.5rem;
+    color: #666;
+    font-size: .75rem;
+    text-align: right;
+}
+
+.editor-details summary {
     display: inline-block;
-    margin-top: .5rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.editor-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.editor-details summary::before {
+    content: "＋ ";
+}
+
+.editor-details[open] summary::before {
+    content: "− ";
+}
+
+.editor-details .edit-card {
+    margin-top: .75rem;
+    color: #fff;
+    text-align: left;
+}
+
+.bottom-bookmarklet {
+    display: block;
+    width: max-content;
+    margin: .75rem 0 0 auto;
+    border-color: transparent;
+    color: #666;
+    font-size: .75rem;
+    font-weight: 400;
+}
+
+.bottom-bookmarklet:hover,
+.bottom-bookmarklet:focus-visible {
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.inline-form,
+.manual-form {
+    display: grid;
+    gap: .6rem;
+    margin-top: 1rem;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+}
+
+input {
+    min-width: 0;
+    flex: 1 1 10rem;
+    border: 1px solid var(--border);
+    border-radius: .35rem;
+    padding: .65rem .75rem;
+    background: #0d0d0d;
+    color: #fff;
+    font: inherit;
+}
+
+.form-message {
+    min-height: 1.4em;
+    color: var(--accent);
 }

@@ -28,16 +28,28 @@
             <p id="updated" class="updated"></p>
         </section>
 
-        <section class="card setup-card">
-            <h2>Connect Streaming site</h2>
-            <ol class="steps">
-                <li><strong>Open streaming site</strong> in a new tab or window.</li>
-                <li>Drag the <a id="bookmarklet" class="bookmarklet" href="#">Share with opieferd</a> link to your bookmarks bar.</li>
-                <li>Open the show/episode you’re watching and click that bookmark.</li>
-            </ol>
-            <p class="note">Works with most streaming sites</p>
-            <a class="nova-link" href="https://novashow.live/" target="_blank" id="nova-link">Open novashow ↗</a>
-        </section>
+        <details class="editor-details">
+            <summary>Editor</summary>
+            <section class="card edit-card">
+                <h2>Edit shows</h2>
+                <p class="note">Enter the editor password to add or remove shows.</p>
+                <form id="unlock-form" class="inline-form">
+                    <label for="editor-password">Editor password</label>
+                    <input id="editor-password" type="password" autocomplete="current-password" required>
+                    <button type="submit">Unlock</button>
+                </form>
+                <p id="edit-message" class="form-message" role="status"></p>
+                <form id="manual-show-form" class="manual-form" hidden>
+                    <label for="show-title">Add a show manually</label>
+                    <div class="form-row">
+                        <input id="show-title" type="text" placeholder="Show title" required>
+                        <input id="show-episode" type="text" placeholder="Episode (optional)">
+                        <button type="submit">Add show</button>
+                    </div>
+                </form>
+            </section>
+        </details>
+        <a id="bookmarklet" class="bookmarklet bottom-bookmarklet" href="#">Share a show</a>
     </main>
     <script src="watching.js"></script>
 </body>
