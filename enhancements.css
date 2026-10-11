@@ -89,6 +89,8 @@ body::after {
 
 .menu-toggle {
     border-color: var(--opie-orange);
+    color: var(--opie-orange);
+    background: rgba(235, 175, 54, .08);
     box-shadow: 0 0 0 1px rgba(235, 175, 54, .12), 0 0 18px rgba(235, 175, 54, .08);
 }
 
@@ -97,6 +99,33 @@ body::after {
 .menu-item:hover,
 .menu-item:focus-visible {
     border-color: var(--opie-orange);
+    background: var(--opie-orange);
+    color: #111;
+    box-shadow: 0 0 20px var(--opie-orange-glow);
+    outline: none;
+}
+
+.menu-panel {
+    border-color: rgba(235, 175, 54, .65);
+    background: #0d0d0d;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .55), 0 0 24px rgba(235, 175, 54, .12);
+}
+
+.menu-item {
+    border-color: rgba(235, 175, 54, .28);
+}
+
+.social-links-menu a {
+    color: #d8d8d8;
+    transition: color .2s ease, background .2s ease, padding-left .2s ease;
+}
+
+.social-links-menu a:hover,
+.social-links-menu a:focus-visible {
+    color: var(--opie-orange);
+    background: rgba(235, 175, 54, .1);
+    padding-left: .75rem;
+    outline: none;
     color: var(--opie-orange);
 }
 
@@ -267,6 +296,18 @@ h2 {
 
 .logoloop {
     --logoloop-fadeColorAuto: #111111;
+}
+
+.logoloop__icon i,
+.logoloop__icon .logo-label {
+    color: var(--opie-orange) !important;
+    text-shadow: 0 0 18px rgba(235, 175, 54, .3);
+}
+
+.logoloop__link:hover .logoloop__icon i,
+.logoloop__link:focus-visible .logoloop__icon i {
+    color: #ffd978 !important;
+    text-shadow: 0 0 26px var(--opie-orange-glow);
 }
 
 footer strong {
