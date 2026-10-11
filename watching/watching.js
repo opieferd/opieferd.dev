@@ -101,7 +101,6 @@
         render();
     }
 
-    // The bookmarklet can post data back after this page opens the streaming site.
     window.addEventListener("message", (event) => {
         let hostname = "";
         try {
@@ -151,7 +150,7 @@
             title: showTitleInput.value,
             episode: showEpisodeInput.value,
             updatedAt: Date.now(),
-            site: "Added manually"
+        
         });
         const shows = readShows();
         const existingIndex = shows.findIndex((item) => item.title.toLowerCase() === show.title.toLowerCase());
