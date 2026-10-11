@@ -79,7 +79,7 @@ body::after {
     bottom: 18%;
     width: .65rem;
     height: .65rem;
-    border-color: rgba(255, 255, 255, .65);
+    border-color: var(--opie-orange);
     animation-delay: -3s;
 }
 
