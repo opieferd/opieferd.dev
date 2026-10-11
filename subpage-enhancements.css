@@ -1,0 +1,257 @@
+:root {
+    --opie-orange: #ebaf36;
+    --opie-orange-glow: rgba(235, 175, 54, .42);
+    --opie-orange-soft: rgba(235, 175, 54, .16);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    position: relative;
+    overflow-x: hidden;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(235, 175, 54, .17), transparent 20rem),
+        radial-gradient(circle at 100% 44%, rgba(235, 175, 54, .1), transparent 24rem),
+        radial-gradient(circle at 45% 100%, rgba(92, 43, 14, .25), transparent 28rem),
+        var(--background, var(--bg, #000));
+}
+
+body::before,
+body::after {
+    position: fixed;
+    z-index: -1;
+    content: '';
+    pointer-events: none;
+}
+
+body::before {
+    inset: 0;
+    opacity: .2;
+    background-image:
+        linear-gradient(135deg, transparent 48%, rgba(235, 175, 54, .24) 49%, transparent 50%),
+        linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, .08) 49%, transparent 50%);
+    background-size: 130px 130px, 190px 190px;
+    mask-image: linear-gradient(to bottom, #000, transparent 86%);
+}
+
+body::after {
+    top: 14vh;
+    right: -11rem;
+    width: 29rem;
+    height: 29rem;
+    border: 1px solid var(--opie-orange-soft);
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 1.8rem rgba(235, 175, 54, .045),
+        0 0 0 5rem rgba(235, 175, 54, .03);
+    animation: subpage-drift 18s ease-in-out infinite alternate;
+}
+
+.game-shell,
+.watching-page {
+    position: relative;
+}
+
+.game-shell::before,
+.watching-page::before {
+    position: fixed;
+    top: 20%;
+    left: max(1rem, calc(50% - 31rem));
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--opie-orange);
+    box-shadow: 0 0 18px var(--opie-orange-glow);
+    content: '';
+    pointer-events: none;
+    transform: rotate(45deg);
+    animation: subpage-float 7s ease-in-out infinite;
+}
+
+.back-link {
+    transition: color .2s ease, transform .2s ease;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+    color: var(--opie-orange);
+    transform: translateX(4px);
+}
+
+.game-header,
+.watching-page > header {
+    position: relative;
+    isolation: isolate;
+}
+
+.game-header::after,
+.watching-page > header::after {
+    position: absolute;
+    top: 28%;
+    left: 50%;
+    z-index: -1;
+    width: min(80vw, 24rem);
+    height: min(80vw, 24rem);
+    border: 1px solid rgba(235, 175, 54, .26);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1.4rem rgba(235, 175, 54, .04), 0 0 0 3rem rgba(235, 175, 54, .025);
+    content: '';
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: subpage-spin 28s linear infinite;
+}
+
+.eyebrow {
+    text-shadow: 0 0 12px var(--opie-orange-glow);
+}
+
+h1 {
+    color: var(--opie-orange);
+    text-shadow: 0 0 22px rgba(235, 175, 54, .28);
+}
+
+.card {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(235, 175, 54, .32);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .035), transparent 48%),
+        color-mix(in srgb, var(--card, #151515) 94%, #000);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, .4), 0 0 24px rgba(235, 175, 54, .06);
+    transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+
+.card::before {
+    position: absolute;
+    top: -4rem;
+    right: -3rem;
+    width: 10rem;
+    height: 10rem;
+    border: 1px solid rgba(235, 175, 54, .22);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1rem rgba(235, 175, 54, .03);
+    content: '';
+    pointer-events: none;
+    animation: subpage-spin 18s linear infinite;
+}
+
+.card::after {
+    position: absolute;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    width: .45rem;
+    height: .45rem;
+    background: var(--opie-orange);
+    box-shadow: 0 0 12px var(--opie-orange-glow);
+    content: '';
+    pointer-events: none;
+    transform: rotate(45deg);
+}
+
+.card:hover {
+    border-color: var(--opie-orange);
+    box-shadow: 0 1.1rem 3rem rgba(0, 0, 0, .45), 0 0 30px rgba(235, 175, 54, .12);
+    transform: translateY(-3px);
+}
+
+.mode-button,
+.show-entry,
+.hint-box {
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.mode-button {
+    border-color: rgba(235, 175, 54, .28);
+    background: rgba(235, 175, 54, .06);
+}
+
+.mode-button:hover,
+.mode-button:focus-visible {
+    border-color: var(--opie-orange);
+    background: rgba(235, 175, 54, .13);
+    box-shadow: 0 0 18px rgba(235, 175, 54, .1);
+}
+
+.hint-box {
+    background: rgba(235, 175, 54, .07);
+    box-shadow: inset 3px 0 var(--opie-orange);
+}
+
+input {
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+input:focus {
+    border-color: var(--opie-orange);
+    box-shadow: 0 0 0 3px rgba(235, 175, 54, .1);
+}
+
+.primary-button,
+.secondary-button,
+.show-entry button,
+button {
+    transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.primary-button:hover,
+.primary-button:focus-visible,
+.secondary-button:hover,
+.secondary-button:focus-visible,
+button:hover,
+button:focus-visible {
+    box-shadow: 0 0 18px var(--opie-orange-glow);
+    transform: translateY(-2px);
+}
+
+.status-dot {
+    animation: status-pulse 2.4s ease-in-out infinite;
+}
+
+.bookmarklet {
+    transition: color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.bookmarklet:hover,
+.bookmarklet:focus-visible {
+    box-shadow: 0 0 16px var(--opie-orange-glow);
+    transform: translateY(-2px);
+}
+
+.show-entry {
+    position: relative;
+}
+
+.show-entry:hover {
+    border-color: rgba(235, 175, 54, .5);
+}
+
+@keyframes subpage-drift {
+    from { transform: translate(0, -1rem) rotate(0deg); }
+    to { transform: translate(-2rem, 2rem) rotate(12deg); }
+}
+
+@keyframes subpage-float {
+    0%, 100% { margin-top: 0; }
+    50% { margin-top: 2rem; }
+}
+
+@keyframes subpage-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes status-pulse {
+    0%, 100% { box-shadow: 0 0 .6rem var(--opie-orange); }
+    50% { box-shadow: 0 0 1.25rem var(--opie-orange); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
