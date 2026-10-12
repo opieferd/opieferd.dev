@@ -24,6 +24,8 @@
     const clearHistory = document.getElementById("clear-history");
     const saveHistoryPrompt = document.getElementById("save-history-prompt");
     const saveHistoryButton = document.getElementById("save-history-button");
+    const disclaimer = document.getElementById("vidrock-disclaimer");
+    const closeDisclaimer = document.getElementById("close-disclaimer");
     let searchType = "multi";
     let activeMedia = null;
     let activeMediaType = null;
@@ -172,7 +174,7 @@
 
     function setPlayerUrl(path) {
         const params = new URLSearchParams({ autoplay: "true", theme: "ebaf36", autonext: "true" });
-        player.src = `${VIDROCK_URL}${path}?${params.toString()}`;
+        player.src = `${VIDROCK_URL}${path}?${params}`;
     }
 
     searchForm.addEventListener("submit", (event) => {
@@ -205,5 +207,7 @@
         localStorage.removeItem(historyKey);
         renderHistory();
     });
+    closeDisclaimer.addEventListener("click", () => disclaimer.close());
+    disclaimer.showModal();
     updateSessionView();
 })();
