@@ -64,6 +64,7 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .history-copy small { color: var(--accent); font-size: .7rem; }
 .history-empty { margin: 0; color: var(--muted); font-size: .9rem; }
 .save-history-prompt { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 3.5rem; }
+.save-history-prompt[hidden] { display: none; }
 .save-history-prompt .eyebrow { margin-bottom: .4rem; }
 .save-history-prompt h2 { font-size: clamp(1.2rem, 3vw, 1.7rem); }
 .result-card { display: flex; align-items: stretch; gap: 1rem; width: 100%; padding: .65rem; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; transition: transform .2s ease, border-color .2s ease; }
