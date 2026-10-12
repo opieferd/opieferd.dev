@@ -172,7 +172,7 @@
 
     function setPlayerUrl(path) {
         const params = new URLSearchParams({ autoplay: "true", theme: "ebaf36", autonext: "true" });
-        player.src = `${VIDROCK_URL}${path}?${params}`;
+        player.src = `${VIDROCK_URL}${path}?${params.toString()}`;
     }
 
     searchForm.addEventListener("submit", (event) => {
