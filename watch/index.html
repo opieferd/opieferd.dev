@@ -55,6 +55,28 @@
             <div id="history" class="history-grid"></div>
         </section>
 
+        <section id="popular-section" class="recommendation-section" aria-labelledby="popular-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Trending on TMDB</p>
+                    <h2 id="popular-heading">Popular right now</h2>
+                </div>
+            </div>
+            <div id="popular-results" class="recommendation-grid" aria-live="polite">
+                <p class="recommendation-message">Finding what people are watching…</p>
+            </div>
+        </section>
+
+        <section id="recommended-section" class="recommendation-section" aria-labelledby="recommended-heading" hidden>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Based on your picks</p>
+                    <h2 id="recommended-heading">You might like</h2>
+                </div>
+            </div>
+            <div id="recommended-results" class="recommendation-grid" aria-live="polite"></div>
+        </section>
+
         <section id="results-section" class="results-section" aria-labelledby="results-heading" hidden>
             <div class="section-heading">
                 <div>
@@ -113,6 +135,6 @@
 
         <p class="attribution">Search powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>. This site is not affiliated with TMDB or third-party providers. DMCA Disclaimer: The third-party providers are content aggregators that scrape publicly available sources. They don't host or store copyrighted content. All content is gathered automatically from third-party websites. Copyright infringement claims should be directed to the respective third-party sites. For DMCA requests, please contact the original content provider.</p>
     </main>
-    <script src="watching.js?v=5"></script>
+    <script src="watching.js?v=6"></script>
 </body>
 </html>

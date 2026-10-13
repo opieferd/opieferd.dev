@@ -70,6 +70,9 @@
     const serverStatus = document.getElementById("server-status");
     const historySection = document.getElementById("history-section");
     const history = document.getElementById("history");
+    const popularResults = document.getElementById("popular-results");
+    const recommendedSection = document.getElementById("recommended-section");
+    const recommendedResults = document.getElementById("recommended-results");
     const clearHistory = document.getElementById("clear-history");
     const saveHistoryPrompt = document.getElementById("save-history-prompt");
     const saveHistoryButton = document.getElementById("save-history-button");
@@ -83,6 +86,7 @@
     let historyEnabled = localStorage.getItem("watch-history-enabled") === "true";
     let activeProviderId = PROVIDERS[0].id;
     let activePlayback = { currentTime: 0, duration: 0 };
+    let recommendationsTimer = null;
 
     function setDownloadActionsVisible(visible) {
         downloadActionsContent.hidden = !visible;
@@ -234,6 +238,12 @@
     function updateSessionView() {
         saveHistoryPrompt.hidden = historyEnabled;
         renderHistory();
+        loadRecommendations();
+    }
+
+    function scheduleRecommendationsRefresh() {
+        clearTimeout(recommendationsTimer);
+        recommendationsTimer = setTimeout(loadRecommendations, 500);
     }
 
     function saveCurrentMedia(season, episode, progress = activePlayback) {
@@ -250,6 +260,7 @@
         const items = readHistory().filter((saved) => !(saved.id === item.id && saved.type === item.type));
         saveHistory([item, ...items]);
         renderHistory();
+        scheduleRecommendationsRefresh();
     }
 
     function normalizeSearchText(value) {
@@ -349,6 +360,71 @@
         }).join("");
         resultsSection.hidden = false;
         results.querySelectorAll(".result-card").forEach((card) => card.addEventListener("click", () => openMedia(Number(card.dataset.id), card.dataset.type)));
+    }
+
+    function renderRecommendationCards(container, items, emptyMessage) {
+        if (!items.length) {
+            container.innerHTML = `<p class="recommendation-message">${emptyMessage}</p>`;
+            return;
+        }
+        container.innerHTML = items.map((item) => {
+            const title = mediaTitle(item);
+            const type = mediaType(item);
+            const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
+            return `<button class="recommendation-card" type="button" data-id="${item.id}" data-type="${type}">
+                <span class="recommendation-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : "<span>No poster</span>"}</span>
+                <span class="recommendation-copy"><small>${type === "tv" ? "Show" : "Movie"} · ${year(item.release_date || item.first_air_date)}</small><strong>${escapeHtml(title)}</strong></span>
+            </button>`;
+        }).join("");
+        container.querySelectorAll(".recommendation-card").forEach((card) => card.addEventListener("click", () => {
+            openMedia(Number(card.dataset.id), card.dataset.type);
+        }));
+    }
+
+    async function loadPopularShows() {
+        try {
+            const response = await fetch(`${TMDB_API}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US`);
+            if (!response.ok) throw new Error(`Popular shows failed (${response.status})`);
+            const data = await response.json();
+            const shows = (data.results || []).filter((item) => mediaType(item) === "tv").slice(0, 10);
+            renderRecommendationCards(popularResults, shows, "Popular shows are taking a break. Try searching instead.");
+        } catch (error) {
+            console.error(error);
+            renderRecommendationCards(popularResults, [], "Popular shows are unavailable right now.");
+        }
+    }
+
+    async function loadRecommendations() {
+        if (!historyEnabled) {
+            recommendedSection.hidden = true;
+            return;
+        }
+        const savedShows = readHistory().filter((item) => item.type === "tv").slice(0, 5);
+        if (!savedShows.length) {
+            recommendedSection.hidden = true;
+            return;
+        }
+        try {
+            const responses = await Promise.all(savedShows.map(async (item) => {
+                const response = await fetch(`${TMDB_API}/tv/${item.id}/recommendations?api_key=${TMDB_KEY}&language=en-US&page=1`);
+                if (!response.ok) throw new Error(`Recommendations failed (${response.status})`);
+                return response.json();
+            }));
+            const savedIds = new Set(savedShows.map((item) => item.id));
+            const recommendations = [];
+            const seenIds = new Set();
+            responses.flatMap((data) => data.results || []).forEach((item) => {
+                if (item.media_type && item.media_type !== "tv") return;
+                if (savedIds.has(item.id) || seenIds.has(item.id)) return;
+                seenIds.add(item.id);
+                recommendations.push({ ...item, media_type: "tv" });
+            });
+            recommendedSection.hidden = false;
+            renderRecommendationCards(recommendedResults, recommendations.slice(0, 10), "Watch a few shows and I’ll find more recommendations.");
+        } catch (error) {
+            console.error(error);
+            recommendedSection.hidden = true;
+        }
     }
 
     async function openMedia(id, type, preferredSeason, preferredEpisode) {
@@ -451,9 +527,11 @@
         if (!historyEnabled) return;
         localStorage.removeItem(historyKey);
         renderHistory();
+        loadRecommendations();
     });
     renderServerList();
     closeDisclaimer.addEventListener("click", () => disclaimer.close());
     disclaimer.showModal();
     updateSessionView();
+    loadPopularShows();
 })();
