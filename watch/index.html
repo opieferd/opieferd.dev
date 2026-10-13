@@ -17,7 +17,7 @@
             <div class="disclaimer-content">
                 <p class="eyebrow">Quick heads-up</p>
                 <h2 id="disclaimer-heading">Before you watch</h2>
-                <p>Use a redirect blocker. Vidrock tends to redirect you. I promise I'm not hacking you lol</p>
+                <p>Please use a redirect blocker. The third-party sources tend to redirect you. I promise I'm not hacking you lol.</p>
                 <button id="close-disclaimer" class="primary-button" type="button">Got it</button>
             </div>
         </dialog>
@@ -80,10 +80,27 @@
                 <label for="episode-select">Episode</label>
                 <select id="episode-select"></select>
             </div>
-            <div class="player-frame">
-                <iframe id="player" title="Vidrock video player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+            <div class="server-controls" aria-labelledby="server-heading">
+                <div class="server-heading">
+                    <span id="server-heading">Streaming server</span>
+                    <span id="server-status" class="server-status" role="status"></span>
+                </div>
+                <div id="server-list" class="server-list" role="group" aria-label="Streaming servers"></div>
             </div>
-            <p class="player-note">Playback is provided by <a href="https://vidrock.ru/" target="_blank" rel="noopener noreferrer">Vidrock</a>. If it doesn’t load, try another title or episode.</p>
+            <div class="player-frame">
+                <iframe id="player" title="Video player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="download-actions">
+                <div id="download-actions-content" class="download-actions-content">
+                    <a id="vidvault-link" class="secondary-button" href="https://vidvault.to" target="_blank" rel="noopener noreferrer">
+                        Open download options in VidVault <span aria-hidden="true">↗</span>
+                    </a>
+                    <p class="download-note">Downloads are handled by VidVault in a separate tab.</p>
+                </div>
+                <button id="hide-download-actions" class="text-button download-dismiss" type="button">Hide</button>
+            </div>
+            <button id="show-download-actions" class="text-button download-restore" type="button" hidden>Show download options</button>
+            <p class="player-note">Playback is provided by the selected third-party server. If it doesn’t load, try another server or episode.</p>
         </section>
 
         <section id="save-history-prompt" class="save-history-prompt card" aria-labelledby="save-history-heading">
@@ -93,7 +110,7 @@
             <button id="save-history-button" class="primary-button" type="button"><span>Sure, save it</span><span aria-hidden="true">→</span></button>
         </section>
 
-        <p class="attribution">Search powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>. This site is not affiliated with TMDB or Vidrock. DMCA Disclaimer: VidRock is a content aggregator that scrapes publicly available sources. It doesn't host or store copyrighted content. All content is gathered automatically from third-party websites. Copyright infringement claims should be directed to the respective third-party sites. For DMCA requests, please contact the original content provider.</p>
+        <p class="attribution">Search powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>. This site is not affiliated with TMDB or third-party providers.. DMCA Disclaimer: The third-party providers are a content aggregators that scrape publicly available sources. They don't host or store copyrighted content. All content is gathered automatically from third-party websites. Copyright infringement claims should be directed to the respective third-party sites. For DMCA requests, please contact the original content provider.</p>
     </main>
     <script src="watching.js?v=3"></script>
 </body>
