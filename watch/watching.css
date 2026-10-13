@@ -41,30 +41,9 @@ h1 { max-width: 760px; color: var(--accent); font-size: clamp(2.7rem, 8vw, 6.2re
 input, select, button { font: inherit; }
 input[type="search"], input[type="text"], select { min-width: 0; width: 100%; border: 1px solid var(--border); border-radius: .5rem; padding: .85rem 1rem; background: #0d0b09; color: #fff; outline: none; }
 input[type="search"]:focus, input[type="text"]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-
-button {
-    border: 1px solid var(--accent);
-    border-radius: .5rem;
-    padding: .75rem 1rem;
-    background: transparent;
-    color: var(--accent);
-    cursor: pointer;
-    font-weight: 700;
-    line-height: 1.25;
-    overflow-wrap: normal;
-    word-break: normal;
-    white-space: normal;
-}
-
+button { border: 1px solid var(--accent); border-radius: .5rem; padding: .75rem 1rem; background: transparent; color: var(--accent); cursor: pointer; font-weight: 700; }
 button:hover, button:focus-visible { background: var(--accent); color: #17120b; }
-
-.primary-button {
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    white-space: normal;
-}
-
+.primary-button { display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
 .search-options { display: flex; gap: .5rem; margin-top: 1rem; }
 .type-button { border-color: transparent; color: var(--muted); font-size: .85rem; }
 .type-button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
@@ -124,22 +103,8 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .server-button:hover, .server-button:focus-visible, .server-button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .player-frame { overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid var(--border); border-radius: .65rem; background: #000; }
 .player-frame iframe { width: 100%; height: 100%; border: 0; }
-
-.download-actions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: .5rem;
-    margin-top: 1rem;
-}
-
-.download-actions-content {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: .5rem;
-}
-
+.download-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1rem; margin-top: 1rem; }
+.download-actions-content { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1rem; }
 .download-actions-content[hidden] { display: none; }
 .download-dismiss { margin-left: auto; }
 .download-restore { margin-top: 1rem; }
