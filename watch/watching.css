@@ -52,35 +52,102 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .section-heading h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); }
 .result-count { color: var(--muted); font-size: .85rem; }
 .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+
+/* ---------- Watch history ---------- */
 .history-section { margin-top: 3.5rem; }
 .history-section .section-heading { margin-top: 0; }
 .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-.history-card { display: flex; min-height: 250px; flex-direction: column; overflow: hidden; padding: 0; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; }
+.history-card {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+    border-color: var(--border);
+    background: rgba(23, 20, 17, .82);
+    color: #fff;
+    text-align: left;
+    white-space: normal;
+    transition: transform .2s ease, border-color .2s ease;
+}
 .history-card:hover, .history-card:focus-visible { border-color: var(--accent); background: #211a11; color: #fff; transform: translateY(-3px); }
 .history-poster { display: block; width: 100%; height: 190px; object-fit: cover; background: #292019; }
 .history-poster-placeholder { display: grid; place-items: center; color: var(--muted); }
-.history-copy { display: flex; flex: 1; flex-direction: column; gap: .3rem; padding: .7rem .8rem; }
-.history-copy strong { line-height: 1.2; }
+.history-copy { display: flex; flex: 1; flex-direction: column; gap: .3rem; min-width: 0; padding: .7rem .8rem; }
+.history-copy strong { line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .history-copy small { color: var(--accent); font-size: .7rem; }
 .history-empty { margin: 0; color: var(--muted); font-size: .9rem; }
+
+/* ---------- Recommendations ---------- */
 .recommendation-section { margin-top: 3.5rem; }
 .recommendation-section .section-heading { margin-top: 0; }
-.recommendation-grid { display: flex; gap: 1rem; overflow-x: auto; padding: .15rem .1rem .85rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+.recommendation-grid {
+    display: flex;
+    align-items: flex-start;    /* cards size to their own content (no chin) */
+    gap: 1rem;
+    overflow-x: auto;
+    padding: .15rem .1rem .85rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
 .recommendation-grid::-webkit-scrollbar { display: none; }
-.recommendation-card { display: flex; min-height: 250px; flex-direction: column; overflow: hidden; padding: 0; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; }
-.recommendation-card { flex: 0 0 180px; scroll-snap-align: start; }
+.recommendation-card {
+    flex: 0 0 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    min-height: 0;              /* removes the chin */
+    overflow: hidden;
+    padding: 0;
+    border-color: var(--border);
+    background: rgba(23, 20, 17, .82);
+    color: #fff;
+    text-align: left;
+    white-space: normal;        /* buttons don't wrap text by default in some browsers */
+    scroll-snap-align: start;
+    transition: transform .2s ease, border-color .2s ease;
+}
 .recommendation-card:hover, .recommendation-card:focus-visible { border-color: var(--accent); background: #211a11; color: #fff; transform: translateY(-3px); }
-.recommendation-poster { display: grid; height: 190px; place-items: center; background: #292019; color: var(--muted); font-size: .75rem; }
-.recommendation-poster img { width: 100%; height: 100%; object-fit: cover; }
-.recommendation-copy { display: flex; flex: 1; flex-direction: column; gap: .3rem; padding: .7rem .8rem; }
+.recommendation-poster {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 100%;
+    aspect-ratio: 2 / 3;        /* poster ratio instead of a fixed height */
+    overflow: hidden;           /* image can't spill over the text */
+    background: #292019;
+    color: var(--muted);
+    font-size: .75rem;
+}
+.recommendation-poster img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.recommendation-copy {
+    display: flex;
+    flex: 0 1 auto;             /* was flex: 1, which created the empty space */
+    flex-direction: column;
+    gap: .3rem;
+    min-width: 0;
+    padding: .7rem .8rem;
+}
 .recommendation-copy small { color: var(--accent); font-size: .7rem; }
-.recommendation-copy strong { line-height: 1.2; }
+.recommendation-copy strong { line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .recommendation-message { margin: 0; color: var(--muted); font-size: .9rem; }
+
+/* ---------- Save history prompt ---------- */
 .save-history-prompt { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 3.5rem; }
 .save-history-prompt[hidden] { display: none; }
 .save-history-prompt .eyebrow { margin-bottom: .4rem; }
 .save-history-prompt h2 { font-size: clamp(1.2rem, 3vw, 1.7rem); }
-.result-card { display: flex; align-items: stretch; gap: 1rem; width: 100%; padding: .65rem; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; transition: transform .2s ease, border-color .2s ease; }
+
+/* ---------- Search results ---------- */
+.result-card { display: flex; align-items: stretch; gap: 1rem; width: 100%; padding: .65rem; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; white-space: normal; transition: transform .2s ease, border-color .2s ease; }
 .result-card:hover, .result-card:focus-visible { border-color: var(--accent); background: #211a11; color: #fff; transform: translateY(-3px); }
 .poster { display: grid; flex: 0 0 82px; min-height: 124px; place-items: center; overflow: hidden; border-radius: .3rem; background: #292019; color: var(--muted); font-size: .7rem; text-align: center; }
 .poster img { width: 100%; height: 100%; object-fit: cover; }
@@ -88,6 +155,8 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .result-copy strong { font-size: 1.05rem; line-height: 1.2; }
 .result-type { color: var(--accent); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .result-overview { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: .8rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+
+/* ---------- Player ---------- */
 .player-section { margin-top: 3.5rem; }
 .player-heading { margin: 0 0 1.25rem; align-items: start; }
 .player-meta { max-width: 680px; margin: .5rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
