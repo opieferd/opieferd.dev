@@ -1,0 +1,13 @@
+{
+  "name": "opieferd-watch-discord-rpc",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local Discord Rich Presence bridge for opieferd.dev/watch",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1"
+  }
+}
