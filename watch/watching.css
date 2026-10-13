@@ -1,3 +1,4 @@
+```css
 :root {
     color-scheme: dark;
     --bg: #080706;
@@ -57,7 +58,14 @@ button {
 }
 
 button:hover, button:focus-visible { background: var(--accent); color: #17120b; }
-.primary-button { display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
+
+.primary-button {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    white-space: normal;
+}
+
 .search-options { display: flex; gap: .5rem; margin-top: 1rem; }
 .type-button { border-color: transparent; color: var(--muted); font-size: .85rem; }
 .type-button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
@@ -117,7 +125,14 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .server-button:hover, .server-button:focus-visible, .server-button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .player-frame { overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid var(--border); border-radius: .65rem; background: #000; }
 .player-frame iframe { width: 100%; height: 100%; border: 0; }
-.download-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1rem; margin-top: 1rem; }
+
+.download-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 1rem;
+}
 
 .download-actions-content {
     display: flex;
@@ -147,3 +162,4 @@ a { color: var(--accent); }
     .episode-controls select { flex: 1 1 8rem; }
     .server-button { flex: 1 1 7rem; justify-content: center; }
 }
+```
