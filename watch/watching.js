@@ -194,7 +194,19 @@
     const readHistory = () => {
         if (!historyEnabled) return [];
         try {
-            return JSON.parse(localStorage.getItem(historyKey) || "[]");
+            const storedItems = JSON.parse(localStorage.getItem(historyKey) || "[]");
+            if (!Array.isArray(storedItems)) return [];
+            const items = storedItems.filter((item) => item && item.id && item.type);
+            const latestByMedia = new Map();
+            items.forEach((item) => {
+                const key = `${item.type}:${item.id}`;
+                if (!latestByMedia.has(key)) latestByMedia.set(key, item);
+            });
+            const normalizedItems = Array.from(latestByMedia.values());
+            if (normalizedItems.length !== items.length) {
+                saveHistory(normalizedItems);
+            }
+            return normalizedItems;
         } catch (error) {
             console.error("Unable to read watch history.", error);
             return [];
@@ -235,12 +247,7 @@
             episode: activeMediaType === "tv" ? episode : 0,
             progress: progress.currentTime ? progress : undefined
         };
-        const items = readHistory().filter((saved) => !(
-            saved.id === item.id &&
-            saved.type === item.type &&
-            (saved.season || 0) === item.season &&
-            (saved.episode || 0) === item.episode
-        ));
+        const items = readHistory().filter((saved) => !(saved.id === item.id && saved.type === item.type));
         saveHistory([item, ...items]);
         renderHistory();
     }
