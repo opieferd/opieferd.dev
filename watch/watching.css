@@ -42,7 +42,9 @@ input, select, button { font: inherit; }
 input[type="search"], input[type="text"], select { min-width: 0; width: 100%; border: 1px solid var(--border); border-radius: .5rem; padding: .85rem 1rem; background: #0d0b09; color: #fff; outline: none; }
 input[type="search"]:focus, input[type="text"]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 button { border: 1px solid var(--accent); border-radius: .5rem; padding: .75rem 1rem; background: transparent; color: var(--accent); cursor: pointer; font-weight: 700; }
-button:hover, button:focus-visible { background: var(--accent); color: #17120b; }
+button:hover { background: var(--accent); color: #17120b; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; box-shadow: none; }
+.disclaimer button { box-shadow: none; }
 .primary-button { display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
 .search-options { display: flex; gap: .5rem; margin-top: 1rem; }
 .type-button { border-color: transparent; color: var(--muted); font-size: .85rem; }
