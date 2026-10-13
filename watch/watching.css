@@ -65,7 +65,8 @@ button:hover, button:focus-visible { background: var(--accent); color: #17120b; 
 .history-empty { margin: 0; color: var(--muted); font-size: .9rem; }
 .recommendation-section { margin-top: 3.5rem; }
 .recommendation-section .section-heading { margin-top: 0; }
-.recommendation-grid { display: flex; gap: 1rem; overflow-x: auto; padding: .15rem .1rem .85rem; scroll-snap-type: x mandatory; scrollbar-color: var(--accent) var(--card); }
+.recommendation-grid { display: flex; gap: 1rem; overflow-x: auto; padding: .15rem .1rem .85rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+.recommendation-grid::-webkit-scrollbar { display: none; }
 .recommendation-card { display: flex; min-height: 250px; flex-direction: column; overflow: hidden; padding: 0; border-color: var(--border); background: rgba(23, 20, 17, .82); color: #fff; text-align: left; }
 .recommendation-card { flex: 0 0 180px; scroll-snap-align: start; }
 .recommendation-card:hover, .recommendation-card:focus-visible { border-color: var(--accent); background: #211a11; color: #fff; transform: translateY(-3px); }
