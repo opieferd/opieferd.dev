@@ -9,36 +9,42 @@
             id: "vidrock",
             name: "Xero",
             quality: "HD",
+            origin: "https://vidrock.ru",
             buildUrl: (type, id, season, episode) => `https://vidrock.ru/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
         },
         {
             id: "vidsrc",
             name: "Nova",
             quality: "HD",
+            origin: "https://vidsrc.sh",
             buildUrl: (type, id, season, episode) => `https://vidsrc.sh/embed/${type}/${id}${type === "tv" ? `?season=${season}&episode=${episode}` : ""}`
         },
         {
             id: "vidlink",
             name: "Maze",
             quality: "HD",
+            origin: "https://vidlink.pro",
             buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`
         },
         {
             id: "vaplayer",
             name: "Luci",
             quality: "HD",
+            origin: "https://vaplayer.ru",
             buildUrl: (type, id, season, episode) => `https://vaplayer.ru/embed/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`
         },
         {
             id: "cinesrc",
             name: "Zara",
             quality: "4K",
+            origin: "https://cinesrc.st",
             buildUrl: (type, id, season, episode) => `https://cinesrc.st/embed/${type}/${id}${type === "tv" ? `?s=${season}&e=${episode}` : ""}`
         },
         {
             id: "vixsrc",
             name: "Kira",
             quality: "HD",
+            origin: "https://vixsrc.to",
             buildUrl: (type, id, season, episode) => `https://vixsrc.to/${type}/${id}${type === "tv" ? `/${season}/${episode}/` : "/"}`
         }
     ];
@@ -76,6 +82,7 @@
     const DISCORD_RPC_URL = "http://127.0.0.1:6464/activity";
     let historyEnabled = localStorage.getItem("watch-history-enabled") === "true";
     let activeProviderId = PROVIDERS[0].id;
+    let activePlayback = { currentTime: 0, duration: 0 };
 
     function setDownloadActionsVisible(visible) {
         downloadActionsContent.hidden = !visible;
@@ -111,8 +118,65 @@
         const currentSeason = Number(season || seasonSelect.value) || 1;
         const currentEpisode = Number(episode || episodeSelect.value) || 1;
         const provider = activeProvider();
+        activePlayback = getSavedProgress(currentSeason, currentEpisode);
         player.src = provider.buildUrl(activeMediaType, activeMedia.id, currentSeason, currentEpisode);
         serverStatus.textContent = `Using ${provider.name}`;
+        player.addEventListener("load", () => sendResumePosition(), { once: true });
+    }
+
+    function getSavedHistoryItem(season, episode) {
+        if (!activeMedia) return null;
+        return readHistory().find((item) =>
+            item.id === activeMedia.id &&
+            item.type === activeMediaType &&
+            (item.season || 0) === (activeMediaType === "tv" ? Number(season) || 1 : 0) &&
+            (item.episode || 0) === (activeMediaType === "tv" ? Number(episode) || 1 : 0)
+        ) || null;
+    }
+
+    function getSavedProgress(season, episode) {
+        const item = getSavedHistoryItem(season, episode);
+        return {
+            currentTime: Number(item?.progress?.currentTime) || 0,
+            duration: Number(item?.progress?.duration) || 0
+        };
+    }
+
+    function sendResumePosition() {
+        if (!activePlayback.currentTime || !player.contentWindow) return;
+        player.contentWindow.postMessage({
+            type: "watch-progress-resume",
+            currentTime: activePlayback.currentTime
+        }, activeProvider().origin);
+    }
+
+    function formatProgress(progress) {
+        if (!progress.currentTime) return "";
+        const minutes = Math.floor(progress.currentTime / 60);
+        const seconds = Math.floor(progress.currentTime % 60).toString().padStart(2, "0");
+        return `Resume at ${minutes}:${seconds}`;
+    }
+
+    function handlePlaybackMessage(event) {
+        const provider = activeProvider();
+        if (event.source !== player.contentWindow || event.origin !== provider.origin || !activeMedia) return;
+        const data = typeof event.data === "string" ? (() => {
+            try { return JSON.parse(event.data); } catch { return null; }
+        })() : event.data;
+        if (!data || !["watch-progress", "playback-progress", "timeupdate"].includes(data.type || data.event)) return;
+        const payload = data.data || data;
+        const currentTime = Number(payload.currentTime ?? payload.position);
+        const duration = Number(payload.duration);
+        if (!Number.isFinite(currentTime) || currentTime < 0) return;
+        activePlayback = {
+            currentTime,
+            duration: Number.isFinite(duration) && duration > 0 ? duration : activePlayback.duration
+        };
+        saveCurrentMedia(
+            activeMediaType === "tv" ? Number(seasonSelect.value) || 1 : 0,
+            activeMediaType === "tv" ? Number(episodeSelect.value) || 1 : 0,
+            activePlayback
+        );
     }
     function updateDiscordPresence(season, episode) {
         if (!activeMedia) return;
@@ -144,9 +208,10 @@
         history.innerHTML = items.length ? items.map((item) => {
             const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
             const episode = item.type === "tv" && item.season ? `S${item.season} · E${item.episode}` : "Movie";
+            const progress = item.progress ? formatProgress(item.progress) : "";
             return `<button class="history-card" type="button" data-id="${item.id}" data-type="${item.type}" data-season="${item.season || ""}" data-episode="${item.episode || ""}">
                 ${poster ? `<img class="history-poster" src="${poster}" alt="" loading="lazy">` : "<span class=\"history-poster history-poster-placeholder\">No poster</span>"}
-                <span class="history-copy"><small>${episode}</small><strong>${escapeHtml(item.title)}</strong></span>
+                <span class="history-copy"><small>${episode}${progress ? ` · ${progress}` : ""}</small><strong>${escapeHtml(item.title)}</strong></span>
             </button>`;
         }).join("") : "<p class=\"history-empty\">Anything you play will show up here.</p>";
         history.querySelectorAll(".history-card").forEach((card) => card.addEventListener("click", () => {
@@ -159,7 +224,7 @@
         renderHistory();
     }
 
-    function saveCurrentMedia(season, episode) {
+    function saveCurrentMedia(season, episode, progress = activePlayback) {
         if (!historyEnabled || !activeMedia) return;
         const item = {
             id: activeMedia.id,
@@ -167,9 +232,15 @@
             title: mediaTitle(activeMedia),
             poster_path: activeMedia.poster_path || "",
             season: activeMediaType === "tv" ? season : 0,
-            episode: activeMediaType === "tv" ? episode : 0
+            episode: activeMediaType === "tv" ? episode : 0,
+            progress: progress.currentTime ? progress : undefined
         };
-        const items = readHistory().filter((saved) => !(saved.id === item.id && saved.type === item.type));
+        const items = readHistory().filter((saved) => !(
+            saved.id === item.id &&
+            saved.type === item.type &&
+            (saved.season || 0) === item.season &&
+            (saved.episode || 0) === item.episode
+        ));
         saveHistory([item, ...items]);
         renderHistory();
     }
@@ -288,6 +359,7 @@
         saveCurrentMedia(Number(seasonSelect.value), Number(episodeSelect.value));
         updateDiscordPresence(Number(seasonSelect.value), Number(episodeSelect.value));
     });
+    window.addEventListener("message", handlePlaybackMessage);
     closePlayer.addEventListener("click", () => {
         player.src = "";
         playerSection.hidden = true;
