@@ -1,4 +1,3 @@
-```css
 :root {
     color-scheme: dark;
     --bg: #080706;
@@ -162,4 +161,3 @@ a { color: var(--accent); }
     .episode-controls select { flex: 1 1 8rem; }
     .server-button { flex: 1 1 7rem; justify-content: center; }
 }
-```
