@@ -252,6 +252,67 @@
         renderHistory();
     }
 
+    function normalizeSearchText(value) {
+        return String(value || "")
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim();
+    }
+
+    function levenshteinDistance(left, right) {
+        const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+        for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+            const current = [leftIndex];
+            for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+                current[rightIndex] = Math.min(
+                    current[rightIndex - 1] + 1,
+                    previous[rightIndex] + 1,
+                    previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1)
+                );
+            }
+            for (let index = 0; index < current.length; index += 1) previous[index] = current[index];
+        }
+        return previous[right.length];
+    }
+
+    function fuzzySimilarity(left, right) {
+        if (!left || !right) return 0;
+        return 1 - levenshteinDistance(left, right) / Math.max(left.length, right.length);
+    }
+
+    function scoreSearchResult(item, query) {
+        const title = normalizeSearchText(mediaTitle(item));
+        const normalizedQuery = normalizeSearchText(query);
+        const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+        if (!title || !normalizedQuery) return 0;
+
+        let score = 0;
+        const titleTokens = title.split(" ");
+        const wholeTitleSimilarity = fuzzySimilarity(normalizedQuery, title);
+        const tokenSimilarities = queryTokens.map((token) => Math.max(
+            ...titleTokens.map((titleToken) => fuzzySimilarity(token, titleToken))
+        ));
+        const fuzzyTokenMatches = tokenSimilarities.filter((similarity) => similarity >= 0.9).length;
+        if (wholeTitleSimilarity >= 0.9) score += 5000;
+        score += fuzzyTokenMatches * 700;
+        if (fuzzyTokenMatches === queryTokens.length) score += 1800;
+        if (title === normalizedQuery) score += 10000;
+        else if (title.startsWith(normalizedQuery)) score += 6000;
+        else if (title.includes(` ${normalizedQuery}`)) score += 4500;
+
+        const matchingTokens = queryTokens.filter((token) =>
+            titleTokens.some((titleToken) => titleToken === token || titleToken.startsWith(token))
+        ).length;
+        score += matchingTokens * 900;
+        if (matchingTokens === queryTokens.length) score += 2500;
+        if (title.includes(normalizedQuery)) score += 300;
+        return (score || wholeTitleSimilarity >= 0.9 || fuzzyTokenMatches > 0)
+            ? score + Math.min(Number(item.popularity) || 0, 100)
+            : 0;
+    }
+
     async function search() {
         const query = searchInput.value.trim();
         if (!query) return;
@@ -261,7 +322,12 @@
             const response = await fetch(`${TMDB_API}/search/${searchType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}&include_adult=false&page=1`);
             if (!response.ok) throw new Error(`Search failed (${response.status})`);
             const data = await response.json();
-            const items = (data.results || []).filter((item) => mediaType(item) === "movie" || mediaType(item) === "tv");
+            const items = (data.results || [])
+                .filter((item) => mediaType(item) === "movie" || mediaType(item) === "tv")
+                .map((item) => ({ item, score: scoreSearchResult(item, query) }))
+                .filter(({ score }) => score > 0)
+                .sort((left, right) => right.score - left.score)
+                .map(({ item }) => item);
             renderResults(items);
             searchMessage.textContent = items.length ? "" : "I couldn’t find anything. Try a different search?";
         } catch (error) {
