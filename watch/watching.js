@@ -9,8 +9,8 @@
             id: "vidrock",
             name: "Xero",
             quality: "HD",
-            origin: "https://vidrock.ru",
-            buildUrl: (type, id, season, episode) => `https://vidrock.ru/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
+            origin: "https://vidrock.to",
+            buildUrl: (type, id, season, episode) => `https://vidrock.to/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
         },
         {
             id: "vidsrc",
