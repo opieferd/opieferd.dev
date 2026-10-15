@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Watch · opieferd</title>
     <meta name="description" content="Opie's streaming site">
-    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.ru https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
     <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="stylesheet" href="watching.css">
     <link rel="stylesheet" href="../subpage-enhancements.css">
@@ -115,6 +115,18 @@
                 <label for="episode-select">Episode</label>
                 <select id="episode-select"></select>
             </div>
+            <div id="audio-controls" class="audio-controls" hidden>
+                <div class="server-heading"><span id="audio-heading">Audio</span></div>
+                <div class="audio-row">
+                    <div id="audio-list" class="server-list" role="group" aria-labelledby="audio-heading">
+                        <button class="server-button active" type="button" data-audio="default" aria-pressed="true">Server default</button>
+                        <button class="server-button" type="button" data-audio="sub" aria-pressed="false">Sub</button>
+                        <button class="server-button" type="button" data-audio="dub" aria-pressed="false">Dub</button>
+                    </div>
+                    <select id="mal-select" aria-label="Which MyAnimeList entry to play" hidden></select>
+                </div>
+                <p id="audio-status" class="audio-status" role="status"></p>
+            </div>
             <div class="server-controls" aria-labelledby="server-heading">
                 <div class="server-heading">
                     <span id="server-heading">Streaming server</span>
@@ -128,7 +140,7 @@
             <div class="download-actions">
                 <div id="download-actions-content" class="download-actions-content">
                     <a id="vidvault-link" class="secondary-button" href="https://vidvault.to" target="_blank" rel="noopener noreferrer">
-                        Open torrenting options in VidVault <span aria-hidden="true">↗</span>
+                        Open download options in VidVault <span aria-hidden="true">↗</span>
                     </a>
                     <p class="download-note">Downloads are handled by VidVault in a separate tab.</p>
                 </div>
