@@ -9,8 +9,8 @@
             id: "vidrock",
             name: "Xero",
             quality: "HD",
-            origin: "https://vidrock.to",
-            buildUrl: (type, id, season, episode) => `https://vidrock.to/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
+            origin: "https://vidrock.ru",
+            buildUrl: (type, id, season, episode) => `https://vidrock.ru/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
         },
         {
             id: "vidsrc",
@@ -88,6 +88,7 @@
     let activeProviderId = PROVIDERS[0].id;
     let activePlayback = { currentTime: 0, duration: 0 };
     let recommendationsTimer = null;
+    let searchRequestId = 0;
 
     function setDownloadActionsVisible(visible) {
         downloadActionsContent.hidden = !visible;
@@ -328,12 +329,14 @@
     async function search() {
         const query = searchInput.value.trim();
         if (!query) return;
+        const requestId = ++searchRequestId;
         searchMessage.textContent = "Looking around…";
         resultsSection.hidden = true;
         try {
             const response = await fetch(`${TMDB_API}/search/${searchType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}&include_adult=false&page=1`);
             if (!response.ok) throw new Error(`Search failed (${response.status})`);
             const data = await response.json();
+            if (requestId !== searchRequestId) return;
             const items = (data.results || [])
                 .filter((item) => mediaType(item) === "movie" || mediaType(item) === "tv")
                 .map((item) => ({ item, score: scoreSearchResult(item, query) }))
@@ -343,6 +346,7 @@
             renderResults(items);
             searchMessage.textContent = items.length ? "" : "I couldn’t find anything. Try a different search?";
         } catch (error) {
+            if (requestId !== searchRequestId) return;
             console.error(error);
             searchMessage.textContent = "Looks like search is taking a break. Try again in a moment?";
         }
@@ -557,6 +561,15 @@
     searchForm.addEventListener("submit", (event) => {
         event.preventDefault();
         search();
+    });
+    // Clicking the native "x" in the search field clears the query and closes the results
+    searchInput.addEventListener("search", () => {
+        if (searchInput.value.trim()) return;
+        searchRequestId += 1;
+        resultsSection.hidden = true;
+        results.innerHTML = "";
+        resultCount.textContent = "";
+        searchMessage.textContent = "";
     });
     document.querySelectorAll(".type-button").forEach((button) => button.addEventListener("click", () => {
         document.querySelector(".type-button.active").classList.remove("active");
