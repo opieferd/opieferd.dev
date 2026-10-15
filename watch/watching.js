@@ -4,6 +4,7 @@
     const TMDB_API = "https://api.themoviedb.org/3";
     const TMDB_KEY = "54e00466a09676df57ba51c4ca30b1a6";
     const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+    const JIKAN_API = "https://api.jikan.moe/v4";
     const PROVIDERS = [
         {
             id: "vidrock",
@@ -24,7 +25,11 @@
             name: "Maze",
             quality: "HD",
             origin: "https://vidlink.pro",
-            buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`
+            buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`,
+            // Sub/dub route: takes a MyAnimeList id, not a TMDB id
+            anime: {
+                buildUrl: (malId, episode, audio) => `https://vidlink.pro/anime/${malId}/${episode}/${audio}`
+            }
         },
         {
             id: "vaplayer",
@@ -68,6 +73,10 @@
     const episodeSelect = document.getElementById("episode-select");
     const serverList = document.getElementById("server-list");
     const serverStatus = document.getElementById("server-status");
+    const audioControls = document.getElementById("audio-controls");
+    const audioList = document.getElementById("audio-list");
+    const audioStatus = document.getElementById("audio-status");
+    const malSelect = document.getElementById("mal-select");
     const historySection = document.getElementById("history-section");
     const history = document.getElementById("history");
     const popularShowsResults = document.getElementById("popular-shows-results");
@@ -89,6 +98,10 @@
     let activePlayback = { currentTime: 0, duration: 0 };
     let recommendationsTimer = null;
     let searchRequestId = 0;
+    let audioMode = "default"; // "default" | "sub" | "dub"
+    let malOverride = null;    // index into the matched MyAnimeList entries, or null for auto
+    let playerRequestId = 0;
+    const animeEntryCache = new Map();
 
     function setDownloadActionsVisible(visible) {
         downloadActionsContent.hidden = !visible;
@@ -105,11 +118,18 @@
     const mediaType = (item) => item.media_type || searchType;
     const activeProvider = () => PROVIDERS.find((provider) => provider.id === activeProviderId) || PROVIDERS[0];
 
+    const isAnime = () => Boolean(activeMedia
+        && activeMedia.original_language === "ja"
+        && (activeMedia.genres || []).some((genre) => genre.id === 16));
+    const audioProvider = () => PROVIDERS.find((provider) => provider.anime);
+    const normalizeTitle = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
     function renderServerList() {
         serverList.innerHTML = PROVIDERS.map((provider) => `
             <button class="server-button${provider.id === activeProviderId ? " active" : ""}" type="button" data-server="${provider.id}" aria-pressed="${provider.id === activeProviderId}">
                 <span>${provider.name}</span>
                 <small>${provider.quality}</small>
+                ${isAnime() && provider.anime ? "<small>SUB/DUB</small>" : ""}
             </button>
         `).join("");
         serverList.querySelectorAll(".server-button").forEach((button) => button.addEventListener("click", () => {
@@ -119,14 +139,114 @@
         }));
     }
 
-    function updatePlayer(season, episode) {
+    function renderAudioControls() {
+        audioControls.hidden = !isAnime();
+        audioList.querySelectorAll("button").forEach((button) => {
+            const active = button.dataset.audio === audioMode;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-pressed", String(active));
+        });
+    }
+
+    // Look up the title on MyAnimeList (via Jikan) because the sub/dub route is keyed by MAL id
+    function fetchAnimeEntries(media, type) {
+        const key = `${type}:${media.id}`;
+        if (!animeEntryCache.has(key)) {
+            const request = (async () => {
+                const names = [media.name, media.title, media.original_name, media.original_title].map(normalizeTitle).filter(Boolean);
+                const query = media.name || media.title;
+                const response = await fetch(`${JIKAN_API}/anime?q=${encodeURIComponent(query)}&type=${type === "tv" ? "tv" : "movie"}&order_by=start_date&sort=asc&limit=25`);
+                if (!response.ok) throw new Error(`MyAnimeList lookup failed (${response.status})`);
+                const data = await response.json();
+                const startYear = Number(String(media.first_air_date || media.release_date || "").slice(0, 4)) || 0;
+                const seen = new Set();
+                return (data.data || []).filter((entry) => {
+                    if (seen.has(entry.mal_id)) return false;
+                    seen.add(entry.mal_id);
+                    const titles = (entry.titles || []).map((item) => normalizeTitle(item.title)).filter(Boolean);
+                    const named = names.some((name) => titles.some((title) => title.includes(name) || (title.length >= 6 && name.includes(title))));
+                    const entryYear = Number(entry.aired && entry.aired.prop && entry.aired.prop.from && entry.aired.prop.from.year) || 0;
+                    return named && (!startYear || !entryYear || entryYear >= startYear - 1);
+                }).map((entry) => ({
+                    malId: entry.mal_id,
+                    title: entry.title_english || entry.title,
+                    year: Number(entry.aired && entry.aired.prop && entry.aired.prop.from && entry.aired.prop.from.year) || 0
+                }));
+            })();
+            request.catch(() => animeEntryCache.delete(key));
+            animeEntryCache.set(key, request);
+        }
+        return animeEntryCache.get(key);
+    }
+
+    function pickAnimeTarget(entries, season, episode) {
+        if (activeMediaType === "movie") {
+            const startYear = Number(String(activeMedia.release_date || "").slice(0, 4)) || 0;
+            const entry = startYear
+                ? [...entries].sort((a, b) => Math.abs((a.year || startYear) - startYear) - Math.abs((b.year || startYear) - startYear))[0]
+                : entries[0];
+            return { entry, episode: 1 };
+        }
+        if (malOverride !== null && entries[malOverride]) return { entry: entries[malOverride], episode };
+        const seasons = (activeMedia.seasons || []).filter((item) => item.season_number > 0);
+        if (entries.length === 1 && seasons.length > 1) {
+            // One long MAL entry (e.g. One Piece) vs. TMDB's per-arc seasons: use the absolute episode number
+            const before = seasons.filter((item) => item.season_number < season).reduce((total, item) => total + (item.episode_count || 0), 0);
+            return { entry: entries[0], episode: before + episode };
+        }
+        const index = Math.min(season - 1, entries.length - 1);
+        return { entry: entries[index], episode, guessed: season > entries.length };
+    }
+
+    function populateMalSelect(entries) {
+        malSelect.hidden = activeMediaType !== "tv" || entries.length < 2;
+        malSelect.innerHTML = `<option value="auto">Auto-match by season</option>${entries.map((entry, index) => `<option value="${index}">${escapeHtml(entry.title)}${entry.year ? ` (${entry.year})` : ""}</option>`).join("")}`;
+        malSelect.value = malOverride === null ? "auto" : String(malOverride);
+    }
+
+    async function updatePlayer(season, episode) {
         if (!activeMedia || !activeMediaType) return;
         const currentSeason = Number(season || seasonSelect.value) || 1;
         const currentEpisode = Number(episode || episodeSelect.value) || 1;
         const provider = activeProvider();
+        const requestId = ++playerRequestId;
         activePlayback = getSavedProgress(currentSeason, currentEpisode);
-        player.src = provider.buildUrl(activeMediaType, activeMedia.id, currentSeason, currentEpisode);
-        serverStatus.textContent = `Using ${provider.name}`;
+        let url = provider.buildUrl(activeMediaType, activeMedia.id, currentSeason, currentEpisode);
+        let status = `Using ${provider.name}`;
+        audioStatus.textContent = "";
+
+        if (isAnime() && audioMode !== "default") {
+            const label = audioMode === "dub" ? "Dub" : "Sub";
+            if (provider.anime) {
+                serverStatus.textContent = "Matching to MyAnimeList…";
+                try {
+                    const entries = await fetchAnimeEntries(activeMedia, activeMediaType);
+                    if (requestId !== playerRequestId) return;
+                    populateMalSelect(entries);
+                    const target = entries.length ? pickAnimeTarget(entries, currentSeason, currentEpisode) : null;
+                    if (target) {
+                        url = provider.anime.buildUrl(target.entry.malId, target.episode, audioMode);
+                        status = `Using ${provider.name} · ${label}`;
+                        audioStatus.textContent = `Matched to “${target.entry.title}”, episode ${target.episode}.`
+                            + (target.guessed ? " This season didn’t line up with MyAnimeList, so that’s a best guess. Use the picker to choose the right entry." : "")
+                            + ` If it doesn’t load, that episode may not have a ${label.toLowerCase()} yet.`;
+                    } else {
+                        audioStatus.textContent = "Couldn’t match this title on MyAnimeList, so the server’s default audio is playing.";
+                    }
+                } catch (error) {
+                    if (requestId !== playerRequestId) return;
+                    console.error(error);
+                    audioStatus.textContent = "MyAnimeList lookup failed, so the server’s default audio is playing.";
+                }
+            } else {
+                const capable = audioProvider();
+                audioStatus.textContent = `${provider.name} plays its own default audio.${capable ? ` Switch to ${capable.name} to pick Sub or Dub.` : ""}`;
+            }
+        }
+
+        if (requestId !== playerRequestId) return;
+        player.src = url;
+        serverStatus.textContent = status;
         player.addEventListener("load", () => sendResumePosition(), { once: true });
     }
 
@@ -500,6 +620,10 @@
             if (!response.ok) throw new Error(`Details failed (${response.status})`);
             activeMedia = await response.json();
             activeMediaType = type;
+            malOverride = null;
+            malSelect.hidden = true;
+            renderServerList();
+            renderAudioControls();
             playerSection.hidden = false;
             playerHeading.textContent = mediaTitle(activeMedia);
             playerMeta.textContent = `${type === "tv" ? "Show" : "Movie"} · ${year(activeMedia.release_date || activeMedia.first_air_date)} · ${activeMedia.overview || "Ready when you are"}`;
@@ -576,7 +700,25 @@
         button.classList.add("active");
         searchType = button.dataset.type;
     }));
-    seasonSelect.addEventListener("change", () => loadEpisodes(activeMedia.id, seasonSelect.value));
+    seasonSelect.addEventListener("change", () => {
+        malOverride = null;
+        loadEpisodes(activeMedia.id, seasonSelect.value);
+    });
+    malSelect.addEventListener("change", () => {
+        malOverride = malSelect.value === "auto" ? null : Number(malSelect.value);
+        updatePlayer();
+    });
+    audioList.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+        audioMode = button.dataset.audio;
+        const capable = audioProvider();
+        // Only some servers can honour Sub/Dub, so hop to one that can
+        if (audioMode !== "default" && capable && !activeProvider().anime) {
+            activeProviderId = capable.id;
+            renderServerList();
+        }
+        renderAudioControls();
+        updatePlayer();
+    }));
     episodeSelect.addEventListener("change", () => {
         updatePlayer(Number(seasonSelect.value), Number(episodeSelect.value));
         updateVidVaultLink(Number(seasonSelect.value), Number(episodeSelect.value));
@@ -589,6 +731,9 @@
         playerSection.hidden = true;
         activeMedia = null;
         activeMediaType = null;
+        playerRequestId += 1;
+        renderServerList();
+        renderAudioControls();
         setDownloadActionsVisible(true);
     });
     hideDownloadActions.addEventListener("click", () => setDownloadActionsVisible(false));
