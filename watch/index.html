@@ -44,11 +44,22 @@
             <p id="search-message" class="form-message" role="status"></p>
         </section>
 
+        <section id="results-section" class="results-section" aria-labelledby="results-heading" hidden>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Here’s what I found</p>
+                    <h2 id="results-heading">What sounds good?</h2>
+                </div>
+                <span id="result-count" class="result-count"></span>
+            </div>
+            <div id="results" class="results-grid"></div>
+        </section>
+
         <section id="history-section" class="history-section" aria-labelledby="history-heading" hidden>
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Your picks</p>
-                    <h2 id="history-heading">Continue from where you left off</h2>
+                    <h2 id="history-heading">Pick up where you left off</h2>
                 </div>
                 <button id="clear-history" class="text-button" type="button">Clear these</button>
             </div>
@@ -58,7 +69,7 @@
         <section id="popular-shows-section" class="recommendation-section" aria-labelledby="popular-shows-heading">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">Trending shows</p>
+                    <p class="eyebrow">Trending on TMDB</p>
                     <h2 id="popular-shows-heading">Popular shows right now</h2>
                 </div>
             </div>
@@ -70,7 +81,7 @@
         <section id="popular-movies-section" class="recommendation-section" aria-labelledby="popular-movies-heading">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">Trending movies</p>
+                    <p class="eyebrow">Trending on TMDB</p>
                     <h2 id="popular-movies-heading">Popular movies right now</h2>
                 </div>
             </div>
@@ -82,22 +93,11 @@
         <section id="recommended-section" class="recommendation-section" aria-labelledby="recommended-heading" hidden>
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">Based on what you've been watching</p>
+                    <p class="eyebrow">Based on your picks</p>
                     <h2 id="recommended-heading">You might like</h2>
                 </div>
             </div>
             <div id="recommended-results" class="recommendation-grid" aria-live="polite"></div>
-        </section>
-
-        <section id="results-section" class="results-section" aria-labelledby="results-heading" hidden>
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">Here’s what I found</p>
-                    <h2 id="results-heading">What sounds good?</h2>
-                </div>
-                <span id="result-count" class="result-count"></span>
-            </div>
-            <div id="results" class="results-grid"></div>
         </section>
 
         <section id="player-section" class="player-section card" aria-labelledby="player-heading" hidden>
