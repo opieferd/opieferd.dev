@@ -102,6 +102,34 @@
     let malOverride = null;    // index into the matched MyAnimeList entries, or null for auto
     let playerRequestId = 0;
     const animeEntryCache = new Map();
+    let genreBrowse = null;
+    const RATING_KEY = "watch-max-rating";
+    const UNRATED_KEY = "watch-include-unrated";
+    // Ladder used for the setting: 1 = G/TV-Y/TV-G, 2 = PG/TV-Y7/TV-PG, 3 = PG-13/TV-14, 4 = R/TV-MA, 5 = NC-17
+    const RATING_RANK = {
+        "G": 1, "TV-Y": 1, "TV-G": 1,
+        "PG": 2, "TV-Y7": 2, "TV-Y7-FV": 2, "TV-PG": 2,
+        "PG-13": 3, "TV-14": 3,
+        "R": 4, "TV-MA": 4,
+        "NC-17": 5, "X": 5
+    };
+    const RATING_LEVELS = [
+        { value: 0, label: "No limit" },
+        { value: 1, label: "G · TV-Y · TV-G" },
+        { value: 2, label: "PG · TV-Y7 · TV-PG" },
+        { value: 3, label: "PG-13 · TV-14" },
+        { value: 4, label: "R · TV-MA" }
+    ];
+    const certificationCache = new Map();
+    const readStored = (key) => {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            return null;
+        }
+    };
+    let maxRating = Math.min(Math.max(Number(readStored(RATING_KEY)) || 0, 0), RATING_LEVELS.length - 1);
+    let includeUnrated = readStored(UNRATED_KEY) === "true";
 
     function setDownloadActionsVisible(visible) {
         downloadActionsContent.hidden = !visible;
@@ -446,10 +474,52 @@
             : 0;
     }
 
+    // ---- Content rating filter (US ratings, looked up per title and cached) ----
+    function ratingRank(label) {
+        return RATING_RANK[String(label || "").trim().toUpperCase()] || null;
+    }
+
+    function getCertificationRank(item, type) {
+        const key = `${type}:${item.id}`;
+        if (!certificationCache.has(key)) {
+            const request = (async () => {
+                if (type === "tv") {
+                    const response = await fetch(`${TMDB_API}/tv/${item.id}/content_ratings?api_key=${TMDB_KEY}`);
+                    if (!response.ok) throw new Error(`Content rating lookup failed (${response.status})`);
+                    const data = await response.json();
+                    const us = (data.results || []).find((entry) => entry.iso_3166_1 === "US");
+                    return us ? ratingRank(us.rating) : null;
+                }
+                const response = await fetch(`${TMDB_API}/movie/${item.id}/release_dates?api_key=${TMDB_KEY}`);
+                if (!response.ok) throw new Error(`Content rating lookup failed (${response.status})`);
+                const data = await response.json();
+                const us = (data.results || []).find((entry) => entry.iso_3166_1 === "US");
+                // Use the strictest US certification if a movie has several
+                const ranks = us ? (us.release_dates || []).map((release) => ratingRank(release.certification)).filter(Boolean) : [];
+                return ranks.length ? Math.max(...ranks) : null;
+            })();
+            request.catch(() => certificationCache.delete(key));
+            certificationCache.set(key, request);
+        }
+        return certificationCache.get(key).catch(() => null);
+    }
+
+    async function filterByCertification(items) {
+        if (!maxRating || !items.length) return items;
+        const ranks = [];
+        for (let index = 0; index < items.length; index += 10) {
+            const chunk = items.slice(index, index + 10);
+            ranks.push(...await Promise.all(chunk.map((item) => getCertificationRank(item, mediaType(item)))));
+        }
+        return items.filter((item, index) => ranks[index] === null ? includeUnrated : ranks[index] <= maxRating);
+    }
+
     async function search() {
         const query = searchInput.value.trim();
         if (!query) return;
         const requestId = ++searchRequestId;
+        closeGenrePanel();
+        resetGenreResults();
         searchMessage.textContent = "Looking around…";
         resultsSection.hidden = true;
         try {
@@ -463,8 +533,12 @@
                 .filter(({ score }) => score > 0)
                 .sort((left, right) => right.score - left.score)
                 .map(({ item }) => item);
-            renderResults(items);
-            searchMessage.textContent = items.length ? "" : "I couldn’t find anything. Try a different search?";
+            const visible = await filterByCertification(items);
+            if (requestId !== searchRequestId) return;
+            renderResults(visible);
+            searchMessage.textContent = visible.length ? "" : (items.length
+                ? "Nothing matched your rating setting. You can change it in settings."
+                : "I couldn’t find anything. Try a different search?");
         } catch (error) {
             if (requestId !== searchRequestId) return;
             console.error(error);
@@ -487,21 +561,27 @@
         results.querySelectorAll(".result-card").forEach((card) => card.addEventListener("click", () => openMedia(Number(card.dataset.id), card.dataset.type)));
     }
 
-    function renderRecommendationCards(container, items, emptyMessage) {
-        if (!items.length) {
-            container.innerHTML = `<p class="recommendation-message">${emptyMessage}</p>`;
-            return;
-        }
-        const uniqueItems = [...new Map(items.map((item) => [`${mediaType(item)}:${item.id}`, item])).values()];
-        container.innerHTML = uniqueItems.map((item) => {
-            const title = mediaTitle(item);
-            const type = mediaType(item);
-            const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
-            return `<button class="recommendation-card" type="button" title="${escapeHtml(title)}" data-id="${item.id}" data-type="${type}">
+    function mediaCardMarkup(item) {
+        const title = mediaTitle(item);
+        const type = mediaType(item);
+        const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
+        return `<button class="recommendation-card" type="button" title="${escapeHtml(title)}" data-id="${item.id}" data-type="${type}">
                 <span class="recommendation-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : "<span>No poster</span>"}</span>
                 <span class="recommendation-copy"><small>${type === "tv" ? "Show" : "Movie"} · ${year(item.release_date || item.first_air_date)}</small><strong>${escapeHtml(title)}</strong></span>
             </button>`;
-        }).join("");
+    }
+
+    async function renderRecommendationCards(container, items, emptyMessage) {
+        const token = (container._renderToken = (container._renderToken || 0) + 1);
+        const hadItems = items.length > 0;
+        items = await filterByCertification(items);
+        if (token !== container._renderToken) return;
+        if (!items.length) {
+            container.innerHTML = `<p class="recommendation-message">${hadItems ? "Nothing here matches your rating setting." : emptyMessage}</p>`;
+            return;
+        }
+        const uniqueItems = [...new Map(items.map((item) => [`${mediaType(item)}:${item.id}`, item])).values()];
+        container.innerHTML = uniqueItems.map(mediaCardMarkup).join("");
         container.onclick = (event) => {
             const card = event.target.closest(".recommendation-card");
             if (!card || card.getAttribute("aria-hidden") === "true") return;
@@ -511,6 +591,10 @@
     }
 
     function setupInfiniteRail(container) {
+        if (container._railScroll) {
+            container.removeEventListener("scroll", container._railScroll);
+            container._railScroll = null;
+        }
         const cards = [...container.querySelectorAll(".recommendation-card")];
         if (cards.length < 2) return;
         const fragmentBefore = document.createDocumentFragment();
@@ -529,7 +613,7 @@
             (cards.length - 1) * parseFloat(getComputedStyle(container).gap);
         container.scrollLeft = setWidth;
         let adjusting = false;
-        container.addEventListener("scroll", () => {
+        container._railScroll = () => {
             if (adjusting || setWidth <= 0) return;
             if (container.scrollLeft < setWidth * .5) {
                 adjusting = true;
@@ -540,7 +624,8 @@
                 container.scrollLeft -= setWidth;
                 requestAnimationFrame(() => { adjusting = false; });
             }
-        }, { passive: true });
+        };
+        container.addEventListener("scroll", container._railScroll, { passive: true });
     }
 
     async function loadPopularShows() {
@@ -699,7 +784,10 @@
     clearSearchButton.title = "Clear search";
     clearSearchButton.setAttribute("aria-label", "Clear search");
     clearSearchButton.hidden = !searchInput.value;
-    searchField.appendChild(clearSearchButton);
+    const searchActions = document.createElement("div");
+    searchActions.className = "search-actions";
+    searchActions.appendChild(clearSearchButton);
+    searchField.appendChild(searchActions);
     searchInput.addEventListener("input", () => {
         clearSearchButton.hidden = !searchInput.value;
     });
@@ -723,8 +811,393 @@
         results.innerHTML = "";
         resultCount.textContent = "";
         searchMessage.textContent = "";
+        resetGenreResults();
         searchInput.focus();
     });
+    // ---- Browse by genre: a down arrow in the search box opens a Movies / TV shows panel ----
+    const ANIME_GENRE = { label: "Anime", params: "with_genres=16&with_original_language=ja" };
+    // TMDB has no "adult animation" genre, so use its keyword (looked up at click time) with a rough fallback
+    const ADULT_ANIMATION_GENRE = {
+        label: "Adult animation",
+        keyword: "adult animation",
+        params: "with_genres=16",
+        fallback: "with_genres=16&without_genres=10751,10762&with_original_language=en"
+    };
+    const GENRES = {
+        movie: [
+            ANIME_GENRE,
+            ADULT_ANIMATION_GENRE,
+            { label: "Animation", params: "with_genres=16" },
+            { label: "Action", params: "with_genres=28" },
+            { label: "Adventure", params: "with_genres=12" },
+            { label: "Comedy", params: "with_genres=35" },
+            { label: "Crime", params: "with_genres=80" },
+            { label: "Documentary", params: "with_genres=99" },
+            { label: "Drama", params: "with_genres=18" },
+            { label: "Family", params: "with_genres=10751" },
+            { label: "Fantasy", params: "with_genres=14" },
+            { label: "Horror", params: "with_genres=27" },
+            { label: "Mystery", params: "with_genres=9648" },
+            { label: "Romance", params: "with_genres=10749" },
+            { label: "Sci-Fi", params: "with_genres=878" },
+            { label: "Thriller", params: "with_genres=53" },
+            { label: "War", params: "with_genres=10752" },
+            { label: "Western", params: "with_genres=37" }
+        ],
+        tv: [
+            ANIME_GENRE,
+            ADULT_ANIMATION_GENRE,
+            { label: "Animation", params: "with_genres=16" },
+            { label: "Action & Adventure", params: "with_genres=10759" },
+            { label: "Comedy", params: "with_genres=35" },
+            { label: "Crime", params: "with_genres=80" },
+            { label: "Documentary", params: "with_genres=99" },
+            { label: "Drama", params: "with_genres=18" },
+            { label: "Family", params: "with_genres=10751" },
+            // TMDB has no TV "Horror" genre, so use its keyword
+            { label: "Horror", keyword: "horror", params: "" },
+            { label: "Kids", params: "with_genres=10762" },
+            { label: "Mystery", params: "with_genres=9648" },
+            { label: "Reality", params: "with_genres=10764" },
+            // TMDB combines these two for TV
+            { label: "Sci-Fi & Fantasy", params: "with_genres=10765" },
+            { label: "War & Politics", params: "with_genres=10768" },
+            { label: "Western", params: "with_genres=37" }
+        ]
+    };
+    const genreKeywordCache = new Map();
+    let genreTab = "movie";
+
+    const genreToggle = document.createElement("button");
+    genreToggle.type = "button";
+    genreToggle.className = "search-genres-toggle";
+    genreToggle.title = "Browse by genre";
+    genreToggle.setAttribute("aria-label", "Browse by genre");
+    genreToggle.setAttribute("aria-expanded", "false");
+    genreToggle.setAttribute("aria-controls", "genre-panel");
+    genreToggle.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    searchActions.appendChild(genreToggle);
+
+    const genrePanel = document.createElement("div");
+    genrePanel.id = "genre-panel";
+    genrePanel.className = "genre-panel";
+    genrePanel.hidden = true;
+    genrePanel.innerHTML = `
+        <div class="genre-tabs" role="group" aria-label="Browse genres for">
+            <button class="genre-tab" type="button" data-type="movie">Movies</button>
+            <button class="genre-tab" type="button" data-type="tv">TV shows</button>
+        </div>
+        <div class="genre-list" role="group" aria-label="Genres"></div>`;
+    searchField.appendChild(genrePanel);
+    const genreList = genrePanel.querySelector(".genre-list");
+
+    function renderGenrePanel() {
+        genrePanel.querySelectorAll(".genre-tab").forEach((tab) => {
+            const active = tab.dataset.type === genreTab;
+            tab.classList.toggle("active", active);
+            tab.setAttribute("aria-pressed", String(active));
+        });
+        genreList.innerHTML = GENRES[genreTab].map((genre, index) => `<button class="genre-chip" type="button" data-index="${index}">${escapeHtml(genre.label)}</button>`).join("");
+    }
+
+    function closeGenrePanel() {
+        genrePanel.hidden = true;
+        genreToggle.setAttribute("aria-expanded", "false");
+    }
+
+    function openGenrePanel() {
+        if (searchType === "movie" || searchType === "tv") genreTab = searchType;
+        renderGenrePanel();
+        genrePanel.hidden = false;
+        genreToggle.setAttribute("aria-expanded", "true");
+    }
+
+    async function resolveKeywordId(name) {
+        if (!genreKeywordCache.has(name)) {
+            const request = (async () => {
+                const response = await fetch(`${TMDB_API}/search/keyword?api_key=${TMDB_KEY}&query=${encodeURIComponent(name)}`);
+                if (!response.ok) throw new Error(`Keyword lookup failed (${response.status})`);
+                const data = await response.json();
+                const match = (data.results || []).find((keyword) => keyword.name.toLowerCase() === name.toLowerCase());
+                return match ? match.id : null;
+            })();
+            request.catch(() => genreKeywordCache.delete(name));
+            genreKeywordCache.set(name, request);
+        }
+        return genreKeywordCache.get(name);
+    }
+
+    // ---- Genre results: poster grid (5 x 3 on desktop, 3 x 3 on phones), most popular first,
+    //      30 titles up front and more as you scroll, up to 60 ----
+    const GENRE_INITIAL_ITEMS = 30;
+    const GENRE_BATCH_ITEMS = 15;
+    const GENRE_MAX_ITEMS = 60;
+    const GENRE_MAX_SCAN_PAGES = 15;
+    const GENRE_VISIBLE_ROWS = 3;
+    const resultsHeading = document.getElementById("results-heading");
+    const genreGrid = document.createElement("div");
+    genreGrid.className = "genre-grid";
+    genreGrid.hidden = true;
+    results.parentNode.insertBefore(genreGrid, results);
+    let genreObserver = null;
+
+    function resetGenreResults() {
+        genreBrowse = null;
+        if (genreObserver) {
+            genreObserver.disconnect();
+            genreObserver = null;
+        }
+        genreGrid.hidden = true;
+        genreGrid.innerHTML = "";
+        genreGrid.style.maxHeight = "";
+        results.hidden = false;
+        resultsHeading.textContent = "What sounds good?";
+    }
+
+    // Keep loading TMDB pages (already filtered by the rating setting) until we have enough titles
+    async function fillGenreItems(state, needed) {
+        while (state.items.length < needed && !state.exhausted) {
+            const page = state.nextPage++;
+            const response = await fetch(`${TMDB_API}/discover/${state.type}?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&include_adult=false&vote_count.gte=50&${state.params}&page=${page}`);
+            if (!response.ok) throw new Error(`Genre browse failed (${response.status})`);
+            const data = await response.json();
+            if (page >= (data.total_pages || 1) || page >= GENRE_MAX_SCAN_PAGES) state.exhausted = true;
+            const batch = (data.results || [])
+                .filter((item) => !state.seen.has(item.id) && state.seen.add(item.id))
+                .map((item) => ({ ...item, media_type: state.type }));
+            state.items.push(...await filterByCertification(batch));
+            if (state.items.length >= GENRE_MAX_ITEMS) {
+                state.items.length = GENRE_MAX_ITEMS;
+                state.exhausted = true;
+            }
+        }
+    }
+
+    function loadGenreItems(state, needed) {
+        // One load at a time so the popularity order can't get shuffled
+        const run = (state.queue || Promise.resolve()).then(() => fillGenreItems(state, needed));
+        state.queue = run.catch(() => {});
+        return run;
+    }
+
+    // Size the scroll box to exactly 3 rows of cards
+    function sizeGenreGrid() {
+        const card = genreGrid.querySelector(".recommendation-card");
+        if (!card) {
+            genreGrid.style.maxHeight = "";
+            return;
+        }
+        const styles = getComputedStyle(genreGrid);
+        const gap = parseFloat(styles.rowGap) || 0;
+        const padding = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+        genreGrid.style.maxHeight = `${card.getBoundingClientRect().height * GENRE_VISIBLE_ROWS + gap * (GENRE_VISIBLE_ROWS - 1) + padding}px`;
+    }
+
+    function appendGenreCards(state, upTo) {
+        const batch = state.items.slice(state.rendered, upTo);
+        if (!batch.length) return;
+        state.rendered += batch.length;
+        genreGrid.querySelector(".genre-grid-status").insertAdjacentHTML("beforebegin", batch.map(mediaCardMarkup).join(""));
+    }
+
+    const genreDone = (state) => state.exhausted && state.rendered >= state.items.length;
+
+    function updateGenreStatus(state) {
+        const status = genreGrid.querySelector(".genre-grid-status");
+        if (state.loadFailed) status.textContent = "Couldn’t load more right now. Retrying…";
+        else if (state.loadingMore) status.textContent = "Loading more…";
+        else if (genreDone(state)) status.textContent = state.items.length >= GENRE_MAX_ITEMS ? `That’s the top ${GENRE_MAX_ITEMS}.` : "That’s everything for this genre.";
+        else status.textContent = "";
+        resultCount.textContent = `${state.type === "tv" ? "TV shows" : "Movies"} · ${state.rendered} shown`;
+    }
+
+    // Watch the bottom of the scroll box and load the next batch when the user gets near it
+    function observeGenreEnd(state) {
+        if (genreObserver) {
+            genreObserver.disconnect();
+            genreObserver = null;
+        }
+        if (genreBrowse !== state || genreDone(state)) return;
+        genreObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) loadMoreGenre(state);
+        }, { root: genreGrid, rootMargin: "0px 0px 150px 0px" });
+        genreObserver.observe(genreGrid.querySelector(".genre-grid-status"));
+    }
+
+    async function loadMoreGenre(state) {
+        if (genreBrowse !== state || state.loadingMore || genreDone(state)) return;
+        state.loadingMore = true;
+        state.loadFailed = false;
+        updateGenreStatus(state);
+        let failed = false;
+        try {
+            await loadGenreItems(state, Math.min(state.rendered + GENRE_BATCH_ITEMS, GENRE_MAX_ITEMS));
+            if (genreBrowse !== state) return;
+            appendGenreCards(state, Math.min(state.rendered + GENRE_BATCH_ITEMS, state.items.length));
+        } catch (error) {
+            console.error(error);
+            failed = true;
+        } finally {
+            state.loadingMore = false;
+        }
+        if (genreBrowse !== state) return;
+        state.loadFailed = failed;
+        updateGenreStatus(state);
+        // Re-arm the observer (after a pause if the last load failed)
+        if (failed) setTimeout(() => observeGenreEnd(state), 3000);
+        else observeGenreEnd(state);
+    }
+
+    async function startGenreBrowse(type, genre) {
+        const requestId = ++searchRequestId;
+        closeGenrePanel();
+        resetGenreResults();
+        searchInput.value = "";
+        clearSearchButton.hidden = true;
+        searchMessage.textContent = `Finding ${genre.label.toLowerCase()}…`;
+        resultsSection.hidden = true;
+        try {
+            let params = genre.params;
+            if (genre.keyword) {
+                const keywordId = await resolveKeywordId(genre.keyword);
+                if (keywordId) params = `${params}&with_keywords=${keywordId}`;
+                else if (genre.fallback) params = genre.fallback;
+                else throw new Error(`No TMDB keyword found for ${genre.keyword}`);
+            }
+            if (requestId !== searchRequestId) return;
+            const state = { type, genre, params, items: [], seen: new Set(), nextPage: 1, exhausted: false, rendered: 0, loadingMore: false, loadFailed: false, queue: null };
+            genreBrowse = state;
+            await loadGenreItems(state, GENRE_INITIAL_ITEMS);
+            if (genreBrowse !== state) return;
+            if (!state.items.length) {
+                searchMessage.textContent = maxRating
+                    ? "Nothing in this genre matched your rating setting. You can change it in settings."
+                    : "Nothing came up for that genre. Try another?";
+                return;
+            }
+            searchMessage.textContent = "";
+            resultsHeading.textContent = `Popular right now · ${genre.label}`;
+            results.hidden = true;
+            genreGrid.innerHTML = '<div class="genre-grid-status" role="status"></div>';
+            genreGrid.hidden = false;
+            resultsSection.hidden = false;
+            appendGenreCards(state, Math.min(GENRE_INITIAL_ITEMS, state.items.length));
+            genreGrid.scrollTop = 0;
+            sizeGenreGrid();
+            updateGenreStatus(state);
+            observeGenreEnd(state);
+            resultsSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (error) {
+            if (requestId !== searchRequestId) return;
+            console.error(error);
+            searchMessage.textContent = "Couldn’t load that genre right now. Try again in a moment?";
+        }
+    }
+
+    genreGrid.addEventListener("click", (event) => {
+        const card = event.target.closest(".recommendation-card");
+        if (card) openMedia(Number(card.dataset.id), card.dataset.type);
+    });
+    window.addEventListener("resize", () => {
+        if (!genreGrid.hidden) sizeGenreGrid();
+    });
+
+    genreToggle.addEventListener("click", () => {
+        if (genrePanel.hidden) openGenrePanel();
+        else closeGenrePanel();
+    });
+    genrePanel.querySelectorAll(".genre-tab").forEach((tab) => tab.addEventListener("click", () => {
+        genreTab = tab.dataset.type;
+        renderGenrePanel();
+    }));
+    genreList.addEventListener("click", (event) => {
+        const chip = event.target.closest(".genre-chip");
+        if (!chip) return;
+        startGenreBrowse(genreTab, GENRES[genreTab][Number(chip.dataset.index)]);
+    });
+    document.addEventListener("click", (event) => {
+        if (!genrePanel.hidden && !searchField.contains(event.target)) closeGenrePanel();
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !genrePanel.hidden) {
+            closeGenrePanel();
+            genreToggle.focus();
+        }
+    });
+
+    // ---- Settings: maximum content rating (gear icon, top right of the page) ----
+    const settingsButton = document.createElement("button");
+    settingsButton.type = "button";
+    settingsButton.className = "settings-button";
+    settingsButton.title = "Settings";
+    settingsButton.setAttribute("aria-label", "Settings");
+    settingsButton.setAttribute("aria-haspopup", "dialog");
+    settingsButton.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke-width="3.2" stroke-dasharray="3.2 3.555"/><circle cx="12" cy="12" r="6.4" stroke-width="2.4"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/></svg>';
+    document.body.appendChild(settingsButton);
+
+    const settingsDialog = document.createElement("dialog");
+    settingsDialog.id = "settings-dialog";
+    settingsDialog.className = "disclaimer";
+    settingsDialog.setAttribute("aria-labelledby", "settings-heading");
+    settingsDialog.innerHTML = `
+        <div class="disclaimer-content">
+            <p class="eyebrow">Settings</p>
+            <h2 id="settings-heading">Content rating</h2>
+            <p>Hide titles rated above this. Uses US ratings: G to R for movies and TV-Y to TV-MA for shows.</p>
+            <label class="settings-label" for="rating-select">Maximum rating</label>
+            <select id="rating-select">${RATING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}</select>
+            <label class="settings-check" id="unrated-label"><input type="checkbox" id="unrated-checkbox"> Include titles with no rating</label>
+            <div class="confirm-actions">
+                <button id="save-settings" class="primary-button" type="button">Save</button>
+                <button id="cancel-settings" class="grey-button" type="button">Cancel</button>
+            </div>
+        </div>`;
+    document.body.appendChild(settingsDialog);
+    const ratingSelect = settingsDialog.querySelector("#rating-select");
+    const unratedCheckbox = settingsDialog.querySelector("#unrated-checkbox");
+    const unratedLabel = settingsDialog.querySelector("#unrated-label");
+
+    function syncUnratedCheckbox() {
+        const limited = Number(ratingSelect.value) > 0;
+        unratedCheckbox.disabled = !limited;
+        unratedLabel.classList.toggle("is-disabled", !limited);
+    }
+
+    function applyRatingChange() {
+        // Re-run whatever is on screen so it respects the new setting
+        loadPopularShows();
+        loadRecommendations();
+        if (genreBrowse) startGenreBrowse(genreBrowse.type, genreBrowse.genre);
+        else if (searchInput.value.trim()) search();
+    }
+
+    settingsButton.addEventListener("click", () => {
+        ratingSelect.value = String(maxRating);
+        unratedCheckbox.checked = includeUnrated;
+        syncUnratedCheckbox();
+        settingsDialog.showModal();
+    });
+    ratingSelect.addEventListener("change", syncUnratedCheckbox);
+    settingsDialog.querySelector("#cancel-settings").addEventListener("click", () => settingsDialog.close());
+    settingsDialog.addEventListener("click", (event) => {
+        if (event.target === settingsDialog) settingsDialog.close();
+    });
+    settingsDialog.querySelector("#save-settings").addEventListener("click", () => {
+        const nextRating = Number(ratingSelect.value) || 0;
+        const nextUnrated = unratedCheckbox.checked;
+        settingsDialog.close();
+        if (nextRating === maxRating && nextUnrated === includeUnrated) return;
+        maxRating = nextRating;
+        includeUnrated = nextUnrated;
+        try {
+            localStorage.setItem(RATING_KEY, String(maxRating));
+            localStorage.setItem(UNRATED_KEY, String(includeUnrated));
+        } catch (error) {
+            console.error(error);
+        }
+        applyRatingChange();
+    });
+
     document.querySelectorAll(".type-button").forEach((button) => button.addEventListener("click", () => {
         document.querySelector(".type-button.active").classList.remove("active");
         button.classList.add("active");
