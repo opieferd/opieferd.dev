@@ -889,3 +889,9 @@ dialog.disclaimer[open] {
     line-height: 1.15;
     color: var(--accent);
 }
+
+/* ---- Built-in ad protection ---- */
+.player-frame { position: relative; }
+.player-shield { position: absolute; inset: 0; z-index: 5; cursor: pointer; background: transparent; }
+.protection-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-top: .75rem; }
+.protection-hint { color: var(--muted); font-size: .75rem; }

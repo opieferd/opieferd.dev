@@ -61,7 +61,7 @@
     const results = document.getElementById("results");
     const resultCount = document.getElementById("result-count");
     const playerSection = document.getElementById("player-section");
-    const player = document.getElementById("player");
+    let player = document.getElementById("player");
     const playerHeading = document.getElementById("player-heading");
     const playerMeta = document.getElementById("player-meta");
     const vidvaultLink = document.getElementById("vidvault-link");
@@ -155,8 +155,105 @@
     const audioProvider = () => PROVIDERS.find((provider) => provider.anime);
     const normalizeTitle = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+    // ---- Built-in ad protection ----
+    // Strict mode: sandboxed iframe with no popups and no top-level navigation.
+    // Compatibility mode (per server, user-toggled): no sandbox, but a click shield
+    // and a leave-site prompt cover the common popunder and redirect tricks.
+    const PROTECTION_KEY = "watch-protection";
+    const SANDBOX_FLAGS = "allow-scripts allow-same-origin allow-forms allow-presentation";
+    let protectionPrefs = {};
+    try {
+        protectionPrefs = JSON.parse(localStorage.getItem(PROTECTION_KEY) || "{}") || {};
+    } catch (error) {
+        protectionPrefs = {};
+    }
+    const isStrict = (providerId) => protectionPrefs[providerId] !== "compat";
+
+    function setStrict(providerId, strict) {
+        protectionPrefs[providerId] = strict ? "strict" : "compat";
+        try {
+            localStorage.setItem(PROTECTION_KEY, JSON.stringify(protectionPrefs));
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // Click shield: absorbs the first click so popunder triggers don't fire.
+    let shield = null;
+    function setShield(on) {
+        const frameBox = document.querySelector(".player-frame");
+        if (!frameBox) return;
+        if (!shield) {
+            shield = document.createElement("div");
+            shield.className = "player-shield";
+            shield.title = "Click to start (ad protection)";
+            shield.addEventListener("click", () => {
+                shield.hidden = true;
+                clearTimeout(shield._timer);
+                // Re-arm after a while so later popunder triggers are caught too
+                shield._timer = setTimeout(() => { shield.hidden = false; }, 45000);
+            });
+            frameBox.appendChild(shield);
+        }
+        clearTimeout(shield._timer);
+        shield.hidden = !on;
+    }
+
+    // Leave-site prompt if something tries to redirect the page while a player is open.
+    function guardNavigation(on) {
+        window.onbeforeunload = on ? (event) => {
+            event.preventDefault();
+            event.returnValue = "";
+        } : null;
+    }
+
+    // Rebuild the iframe so the sandbox setting takes effect on a fresh document.
+    function mountPlayer(url, strict) {
+        const frame = document.createElement("iframe");
+        frame.id = "player";
+        frame.title = "Video player";
+        frame.allow = "autoplay; fullscreen; picture-in-picture";
+        frame.setAttribute("allowfullscreen", "");
+        frame.referrerPolicy = "no-referrer";
+        if (strict) {
+            frame.setAttribute("sandbox", SANDBOX_FLAGS);
+            frame.setAttribute("credentialless", "");
+        }
+        frame.src = url;
+        player.replaceWith(frame);
+        player = frame;
+        setShield(!strict);
+        guardNavigation(!strict);
+    }
+
+    const protectionRow = document.createElement("div");
+    protectionRow.className = "protection-row";
+    protectionRow.innerHTML = '<button id="protection-toggle" class="text-button" type="button"></button><span id="protection-hint" class="protection-hint"></span>';
+    if (serverList) serverList.insertAdjacentElement("afterend", protectionRow);
+    const protectionToggle = protectionRow.querySelector("#protection-toggle");
+    const protectionHint = protectionRow.querySelector("#protection-hint");
+
+    function renderProtectionRow() {
+        const provider = activeProvider();
+        const strict = isStrict(provider.id);
+        protectionToggle.textContent = strict
+            ? `Video not loading? Turn off protection for ${provider.name}`
+            : `Turn protection back on for ${provider.name}`;
+        protectionHint.textContent = strict
+            ? "Protection on: popups and redirects are blocked."
+            : "Protection limited: click shield only, so some ads may get through.";
+    }
+
+    protectionToggle.addEventListener("click", () => {
+        const provider = activeProvider();
+        setStrict(provider.id, !isStrict(provider.id));
+        renderProtectionRow();
+        updatePlayer();
+    });
+
     function renderServerList() {
         if (!serverList) return;
+        renderProtectionRow();
         serverList.innerHTML = PROVIDERS.map((provider) => `
             <button class="server-button${provider.id === activeProviderId ? " active" : ""}" type="button" data-server="${provider.id}" aria-pressed="${provider.id === activeProviderId}">
                 <span>${provider.name}</span>
@@ -279,7 +376,7 @@
         }
 
         if (requestId !== playerRequestId) return;
-        player.src = url;
+        mountPlayer(url, isStrict(provider.id));
         if (serverStatus) serverStatus.textContent = status;
         player.addEventListener("load", () => sendResumePosition(), { once: true });
     }
@@ -1235,6 +1332,8 @@
     if (closePlayer && playerSection) {
         closePlayer.addEventListener("click", () => {
             if (player) player.src = "";
+            guardNavigation(false);
+            setShield(false);
             playerSection.hidden = true;
             activeMedia = null;
             activeMediaType = null;
