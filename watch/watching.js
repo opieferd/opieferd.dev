@@ -1054,7 +1054,7 @@
         <div class="disclaimer-content">
             <p class="eyebrow">Settings</p>
             <h2 id="settings-heading">Content rating</h2>
-            <p>Hide titles rated above this. Uses US ratings: G to R for movies and TV-Y to TV-MA for shows.</p>
+            <p>Choose your content rating. Any content rated above your maximum rating will be hidden.</p>
             <label class="settings-label" for="rating-select">Maximum rating</label>
             <select id="rating-select">${RATING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}</select>
             <label class="settings-check" id="unrated-label"><input type="checkbox" id="unrated-checkbox"> Include titles with no rating</label>
