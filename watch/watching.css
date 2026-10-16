@@ -722,14 +722,14 @@ a { color: var(--accent); }
 }
 
 /* Mobile responsive styles */
-@media (max-width: 768px) {
+@media (max-width: 500px) {
     .watch-sidebar {
         top: auto;
         bottom: 0.85rem;
         left: 0.85rem;
         right: 0.85rem;
         width: auto;
-        max-width: 400px;
+        max-width: 500px;
         margin: 0 auto;
         height: 62px;
         flex-direction: row;
