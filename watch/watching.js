@@ -1282,8 +1282,8 @@
         clearDialog.showModal();
     });
     renderServerList();
-    // "Don't show again" option for the heads-up (remembered in this browser)
-    const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
+    // "Don't show again" option for the heads-up (remembered in this browser) [Currently Disabled For Update]
+    /*const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
     const dismissDisclaimerForever = document.createElement("button");
     dismissDisclaimerForever.type = "button";
     dismissDisclaimerForever.className = "grey-button";
@@ -1310,4 +1310,4 @@
     if (!disclaimerHidden) disclaimer.showModal();
     updateSessionView();
     loadPopularShows();
-})();
+})(); */
