@@ -796,14 +796,11 @@ a { color: var(--accent); }
         height: 19px;
     }
 
-.watch-app-layout .watch-main-content,
-.watch-app-layout.sidebar-collapsed .watch-main-content {
-    margin-left: 0;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    padding-bottom: 5.5rem;
-}
+    .watch-main-content {
+        margin-left: 0;
+        width: 100%;
+        padding-bottom: 5.5rem;
+    }
 
     .watching-page {
         width: min(100% - 1.5rem, 100%);
