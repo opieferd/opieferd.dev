@@ -347,7 +347,7 @@
             const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
             const episode = item.type === "tv" && item.season ? `S${item.season} · E${item.episode}` : "Movie";
             const progress = item.progress ? formatProgress(item.progress) : "";
-            return `<button class="history-card" type="button" data-id="${item.id}" data-type="${item.type}" data-season="${item.season || ""}" data-episode="${item.episode || ""}">
+            return `<button class="history-card" type="button" title="${escapeHtml(item.title)}" data-id="${item.id}" data-type="${item.type}" data-season="${item.season || ""}" data-episode="${item.episode || ""}">
                 ${poster ? `<img class="history-poster" src="${poster}" alt="" loading="lazy">` : "<span class=\"history-poster history-poster-placeholder\">No poster</span>"}
                 <span class="history-copy"><small>${episode}${progress ? ` · ${progress}` : ""}</small><strong>${escapeHtml(item.title)}</strong></span>
             </button>`;
@@ -497,7 +497,7 @@
             const title = mediaTitle(item);
             const type = mediaType(item);
             const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
-            return `<button class="recommendation-card" type="button" data-id="${item.id}" data-type="${type}">
+            return `<button class="recommendation-card" type="button" title="${escapeHtml(title)}" data-id="${item.id}" data-type="${type}">
                 <span class="recommendation-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : "<span>No poster</span>"}</span>
                 <span class="recommendation-copy"><small>${type === "tv" ? "Show" : "Movie"} · ${year(item.release_date || item.first_air_date)}</small><strong>${escapeHtml(title)}</strong></span>
             </button>`;
@@ -686,14 +686,44 @@
         event.preventDefault();
         search();
     });
-    // Clicking the native "x" in the search field clears the query and closes the results
-    searchInput.addEventListener("search", () => {
-        if (searchInput.value.trim()) return;
+    // Custom "x" in the search field (the browser's built-in one can't show a tooltip).
+    // It clears the query and closes the results.
+    const searchField = document.createElement("div");
+    searchField.className = "search-field";
+    searchInput.parentNode.insertBefore(searchField, searchInput);
+    searchField.appendChild(searchInput);
+    const clearSearchButton = document.createElement("button");
+    clearSearchButton.type = "button";
+    clearSearchButton.className = "search-clear";
+    clearSearchButton.textContent = "×";
+    clearSearchButton.title = "Clear search";
+    clearSearchButton.setAttribute("aria-label", "Clear search");
+    clearSearchButton.hidden = !searchInput.value;
+    searchField.appendChild(clearSearchButton);
+    searchInput.addEventListener("input", () => {
+        clearSearchButton.hidden = !searchInput.value;
+    });
+    clearSearchButton.addEventListener("click", () => {
+        searchInput.value = "";
+        // Keep the button visible just long enough for the quick spin, then hide it
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) {
+            clearSearchButton.hidden = true;
+        } else {
+            clearSearchButton.classList.remove("is-spinning");
+            void clearSearchButton.offsetWidth; // restart the animation on rapid clicks
+            clearSearchButton.classList.add("is-spinning");
+            setTimeout(() => {
+                clearSearchButton.classList.remove("is-spinning");
+                clearSearchButton.hidden = !searchInput.value;
+            }, 260);
+        }
         searchRequestId += 1;
         resultsSection.hidden = true;
         results.innerHTML = "";
         resultCount.textContent = "";
         searchMessage.textContent = "";
+        searchInput.focus();
     });
     document.querySelectorAll(".type-button").forEach((button) => button.addEventListener("click", () => {
         document.querySelector(".type-button.active").classList.remove("active");
@@ -743,15 +773,62 @@
         localStorage.setItem("watch-history-enabled", "true");
         updateSessionView();
     });
-    clearHistory.addEventListener("click", () => {
+    // "Are you sure?" prompt for the Clear these button (built here so it reuses the disclaimer dialog styling)
+    const clearDialog = document.createElement("dialog");
+    clearDialog.id = "clear-history-dialog";
+    clearDialog.className = "disclaimer";
+    clearDialog.setAttribute("aria-labelledby", "clear-history-dialog-heading");
+    clearDialog.innerHTML = `
+        <div class="disclaimer-content">
+            <h2 id="clear-history-dialog-heading">Are you sure?</h2>
+            <div class="confirm-actions">
+                <button id="confirm-clear-history" class="primary-button" type="button">Confirm</button>
+                <button id="cancel-clear-history" class="grey-button" type="button" autofocus>Go back</button>
+            </div>
+        </div>`;
+    document.body.appendChild(clearDialog);
+    clearDialog.addEventListener("click", (event) => {
+        if (event.target === clearDialog) clearDialog.close();
+    });
+    clearDialog.querySelector("#cancel-clear-history").addEventListener("click", () => clearDialog.close());
+    clearDialog.querySelector("#confirm-clear-history").addEventListener("click", () => {
+        clearDialog.close();
         if (!historyEnabled) return;
         localStorage.removeItem(historyKey);
         renderHistory();
         loadRecommendations();
     });
+    clearHistory.addEventListener("click", () => {
+        if (!historyEnabled) return;
+        clearDialog.showModal();
+    });
     renderServerList();
+    // "Don't show again" option for the heads-up (remembered in this browser)
+    const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
+    const dismissDisclaimerForever = document.createElement("button");
+    dismissDisclaimerForever.type = "button";
+    dismissDisclaimerForever.className = "grey-button";
+    dismissDisclaimerForever.textContent = "Don’t show again";
+    const disclaimerActions = document.createElement("div");
+    disclaimerActions.className = "confirm-actions";
+    closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
+    disclaimerActions.append(closeDisclaimer, dismissDisclaimerForever);
     closeDisclaimer.addEventListener("click", () => disclaimer.close());
-    disclaimer.showModal();
+    dismissDisclaimerForever.addEventListener("click", () => {
+        try {
+            localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
+        } catch (error) {
+            console.error(error);
+        }
+        disclaimer.close();
+    });
+    let disclaimerHidden = false;
+    try {
+        disclaimerHidden = localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+    } catch (error) {
+        console.error(error);
+    }
+    if (!disclaimerHidden) disclaimer.showModal();
     updateSessionView();
     loadPopularShows();
 })();
