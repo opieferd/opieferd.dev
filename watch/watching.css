@@ -85,7 +85,14 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .genre-grid-status { grid-column: 1 / -1; min-height: 1.25rem; color: var(--muted); font-size: .8rem; text-align: center; }
 @media (max-width: 700px) { .genre-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; } }
 .settings-button { position: absolute; top: 1.25rem; right: 1.25rem; z-index: 20; display: grid; width: 2.6rem; height: 2.6rem; padding: 0; place-items: center; border-color: var(--border); border-radius: 50%; background: var(--card); color: var(--muted); }
-.settings-button:hover, .settings-button:focus-visible { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.settings-button:hover, .settings-button:focus-visible { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); transform: rotate(90deg); }
+.settings-button { transition: transform .3s ease-in-out; }
+.settings-button.is-spinning { animation: search-clear-click .25s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+    .settings-button { transition: none; }
+    .settings-button:hover, .settings-button:focus-visible { transform: none; }
+    .settings-button.is-spinning { animation: none; }
+}
 .settings-label { display: block; margin-bottom: .4rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
 .settings-check { display: flex; align-items: center; gap: .6rem; margin-top: 1rem; color: var(--muted); font-size: .9rem; cursor: pointer; }
 .settings-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
