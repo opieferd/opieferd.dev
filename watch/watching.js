@@ -26,7 +26,6 @@
             quality: "HD",
             origin: "https://vidlink.pro",
             buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`,
-            // Sub/dub route: takes a MyAnimeList id, not a TMDB id
             anime: {
                 buildUrl: (malId, episode, audio) => `https://vidlink.pro/anime/${malId}/${episode}/${audio}`
             }
@@ -53,6 +52,7 @@
             buildUrl: (type, id, season, episode) => `https://vixsrc.to/${type}/${id}${type === "tv" ? `/${season}/${episode}/` : "/"}`
         }
     ];
+
     const searchForm = document.getElementById("search-form");
     const searchInput = document.getElementById("search-input");
     const searchMessage = document.getElementById("search-message");
@@ -88,6 +88,7 @@
     const saveHistoryButton = document.getElementById("save-history-button");
     const disclaimer = document.getElementById("vidrock-disclaimer");
     const closeDisclaimer = document.getElementById("close-disclaimer");
+
     let searchType = "multi";
     let activeMedia = null;
     let activeMediaType = null;
@@ -98,14 +99,14 @@
     let activePlayback = { currentTime: 0, duration: 0 };
     let recommendationsTimer = null;
     let searchRequestId = 0;
-    let audioMode = "default"; // "default" | "sub" | "dub"
-    let malOverride = null;    // index into the matched MyAnimeList entries, or null for auto
+    let audioMode = "default";
+    let malOverride = null;
     let playerRequestId = 0;
     const animeEntryCache = new Map();
     let genreBrowse = null;
     const RATING_KEY = "watch-max-rating";
     const UNRATED_KEY = "watch-include-unrated";
-    // Ladder used for the setting: 1 = G/TV-Y/TV-G, 2 = PG/TV-Y7/TV-PG, 3 = PG-13/TV-14, 4 = R/TV-MA, 5 = NC-17
+
     const RATING_RANK = {
         "G": 1, "TV-Y": 1, "TV-G": 1,
         "PG": 2, "TV-Y7": 2, "TV-Y7-FV": 2, "TV-PG": 2,
@@ -132,9 +133,9 @@
     let includeUnrated = readStored(UNRATED_KEY) === "true";
 
     function setDownloadActionsVisible(visible) {
-        downloadActionsContent.hidden = !visible;
-        hideDownloadActions.hidden = !visible;
-        showDownloadActions.hidden = visible;
+        if (downloadActionsContent) downloadActionsContent.hidden = !visible;
+        if (hideDownloadActions) hideDownloadActions.hidden = !visible;
+        if (showDownloadActions) showDownloadActions.hidden = visible;
     }
 
     const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({
@@ -153,6 +154,7 @@
     const normalizeTitle = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
     function renderServerList() {
+        if (!serverList) return;
         serverList.innerHTML = PROVIDERS.map((provider) => `
             <button class="server-button${provider.id === activeProviderId ? " active" : ""}" type="button" data-server="${provider.id}" aria-pressed="${provider.id === activeProviderId}">
                 <span>${provider.name}</span>
@@ -168,6 +170,7 @@
     }
 
     function renderAudioControls() {
+        if (!audioControls || !audioList) return;
         audioControls.hidden = !isAnime();
         audioList.querySelectorAll("button").forEach((button) => {
             const active = button.dataset.audio === audioMode;
@@ -176,7 +179,6 @@
         });
     }
 
-    // Look up the title on MyAnimeList (via Jikan) because the sub/dub route is keyed by MAL id
     function fetchAnimeEntries(media, type) {
         const key = `${type}:${media.id}`;
         if (!animeEntryCache.has(key)) {
@@ -218,7 +220,6 @@
         if (malOverride !== null && entries[malOverride]) return { entry: entries[malOverride], episode };
         const seasons = (activeMedia.seasons || []).filter((item) => item.season_number > 0);
         if (entries.length === 1 && seasons.length > 1) {
-            // One long MAL entry (e.g. One Piece) vs. TMDB's per-arc seasons: use the absolute episode number
             const before = seasons.filter((item) => item.season_number < season).reduce((total, item) => total + (item.episode_count || 0), 0);
             return { entry: entries[0], episode: before + episode };
         }
@@ -227,26 +228,27 @@
     }
 
     function populateMalSelect(entries) {
+        if (!malSelect) return;
         malSelect.hidden = activeMediaType !== "tv" || entries.length < 2;
         malSelect.innerHTML = `<option value="auto">Auto-match by season</option>${entries.map((entry, index) => `<option value="${index}">${escapeHtml(entry.title)}${entry.year ? ` (${entry.year})` : ""}</option>`).join("")}`;
         malSelect.value = malOverride === null ? "auto" : String(malOverride);
     }
 
     async function updatePlayer(season, episode) {
-        if (!activeMedia || !activeMediaType) return;
-        const currentSeason = Number(season || seasonSelect.value) || 1;
-        const currentEpisode = Number(episode || episodeSelect.value) || 1;
+        if (!activeMedia || !activeMediaType || !player) return;
+        const currentSeason = Number(season || (seasonSelect ? seasonSelect.value : 1)) || 1;
+        const currentEpisode = Number(episode || (episodeSelect ? episodeSelect.value : 1)) || 1;
         const provider = activeProvider();
         const requestId = ++playerRequestId;
         activePlayback = getSavedProgress(currentSeason, currentEpisode);
         let url = provider.buildUrl(activeMediaType, activeMedia.id, currentSeason, currentEpisode);
         let status = `Using ${provider.name}`;
-        audioStatus.textContent = "";
+        if (audioStatus) audioStatus.textContent = "";
 
         if (isAnime() && audioMode !== "default") {
             const label = audioMode === "dub" ? "Dub" : "Sub";
             if (provider.anime) {
-                serverStatus.textContent = "Matching to MyAnimeList…";
+                if (serverStatus) serverStatus.textContent = "Matching to MyAnimeList…";
                 try {
                     const entries = await fetchAnimeEntries(activeMedia, activeMediaType);
                     if (requestId !== playerRequestId) return;
@@ -255,18 +257,20 @@
                     if (target) {
                         url = provider.anime.buildUrl(target.entry.malId, target.episode, audioMode);
                         status = `Using ${provider.name} · ${label}`;
-                        audioStatus.textContent = `Matched to “${target.entry.title}”, episode ${target.episode}.`
-                            + (target.guessed ? " This season didn’t line up with MyAnimeList, so that’s a best guess. Use the picker to choose the right entry." : "")
-                            + ` If it doesn’t load, that episode may not have a ${label.toLowerCase()} yet.`;
-                    } else {
+                        if (audioStatus) {
+                            audioStatus.textContent = `Matched to “${target.entry.title}”, episode ${target.episode}.`
+                                + (target.guessed ? " This season didn’t line up with MyAnimeList, so that’s a best guess. Use the picker to choose the right entry." : "")
+                                + ` If it doesn’t load, that episode may not have a ${label.toLowerCase()} yet.`;
+                        }
+                    } else if (audioStatus) {
                         audioStatus.textContent = "Couldn’t match this title on MyAnimeList, so the server’s default audio is playing.";
                     }
                 } catch (error) {
                     if (requestId !== playerRequestId) return;
                     console.error(error);
-                    audioStatus.textContent = "MyAnimeList lookup failed, so the server’s default audio is playing.";
+                    if (audioStatus) audioStatus.textContent = "MyAnimeList lookup failed, so the server’s default audio is playing.";
                 }
-            } else {
+            } else if (audioStatus) {
                 const capable = audioProvider();
                 audioStatus.textContent = `${provider.name} plays its own default audio.${capable ? ` Switch to ${capable.name} to pick Sub or Dub.` : ""}`;
             }
@@ -274,7 +278,7 @@
 
         if (requestId !== playerRequestId) return;
         player.src = url;
-        serverStatus.textContent = status;
+        if (serverStatus) serverStatus.textContent = status;
         player.addEventListener("load", () => sendResumePosition(), { once: true });
     }
 
@@ -297,7 +301,7 @@
     }
 
     function sendResumePosition() {
-        if (!activePlayback.currentTime || !player.contentWindow) return;
+        if (!activePlayback.currentTime || !player || !player.contentWindow) return;
         player.contentWindow.postMessage({
             type: "watch-progress-resume",
             currentTime: activePlayback.currentTime
@@ -312,8 +316,7 @@
     }
 
     function handlePlaybackMessage(event) {
-        const provider = activeProvider();
-        if (event.source !== player.contentWindow || event.origin !== provider.origin || !activeMedia) return;
+        if (!player || event.source !== player.contentWindow || event.origin !== activeProvider().origin || !activeMedia) return;
         const data = typeof event.data === "string" ? (() => {
             try { return JSON.parse(event.data); } catch { return null; }
         })() : event.data;
@@ -327,11 +330,12 @@
             duration: Number.isFinite(duration) && duration > 0 ? duration : activePlayback.duration
         };
         saveCurrentMedia(
-            activeMediaType === "tv" ? Number(seasonSelect.value) || 1 : 0,
-            activeMediaType === "tv" ? Number(episodeSelect.value) || 1 : 0,
+            activeMediaType === "tv" ? Number(seasonSelect?.value) || 1 : 0,
+            activeMediaType === "tv" ? Number(episodeSelect?.value) || 1 : 0,
             activePlayback
         );
     }
+
     function updateDiscordPresence(season, episode) {
         if (!activeMedia) return;
         const title = mediaTitle(activeMedia);
@@ -341,10 +345,9 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, episode: episodeLabel, image })
-        }).catch(() => {
-            // The helper is optional; playback should work without it.
-        });
+        }).catch(() => {});
     }
+
     const readHistory = () => {
         if (!historyEnabled) return [];
         try {
@@ -369,6 +372,7 @@
     const saveHistory = (items) => localStorage.setItem(historyKey, JSON.stringify(items.slice(0, 24)));
 
     function renderHistory() {
+        if (!history || !historySection) return;
         const items = readHistory();
         historySection.hidden = !historyEnabled;
         history.innerHTML = items.length ? items.map((item) => {
@@ -386,7 +390,7 @@
     }
 
     function updateSessionView() {
-        saveHistoryPrompt.hidden = historyEnabled;
+        if (saveHistoryPrompt) saveHistoryPrompt.hidden = historyEnabled;
         renderHistory();
         loadRecommendations();
     }
@@ -396,7 +400,7 @@
         recommendationsTimer = setTimeout(loadRecommendations, 500);
     }
 
-    function saveCurrentMedia(season, episode, progress = activePlayback) {
+    function saveCurrentMedia(season = 0, episode = 0, progress = activePlayback) {
         if (!historyEnabled || !activeMedia) return;
         const item = {
             id: activeMedia.id,
@@ -474,7 +478,6 @@
             : 0;
     }
 
-    // ---- Content rating filter (US ratings, looked up per title and cached) ----
     function ratingRank(label) {
         return RATING_RANK[String(label || "").trim().toUpperCase()] || null;
     }
@@ -494,7 +497,6 @@
                 if (!response.ok) throw new Error(`Content rating lookup failed (${response.status})`);
                 const data = await response.json();
                 const us = (data.results || []).find((entry) => entry.iso_3166_1 === "US");
-                // Use the strictest US certification if a movie has several
                 const ranks = us ? (us.release_dates || []).map((release) => ratingRank(release.certification)).filter(Boolean) : [];
                 return ranks.length ? Math.max(...ranks) : null;
             })();
@@ -515,13 +517,14 @@
     }
 
     async function search() {
+        if (!searchInput) return;
         const query = searchInput.value.trim();
         if (!query) return;
         const requestId = ++searchRequestId;
-        closeGenrePanel();
-        resetGenreResults();
-        searchMessage.textContent = "Looking around…";
-        resultsSection.hidden = true;
+        if (typeof closeGenrePanel === "function") closeGenrePanel();
+        if (typeof resetGenreResults === "function") resetGenreResults();
+        if (searchMessage) searchMessage.textContent = "Looking around…";
+        if (resultsSection) resultsSection.hidden = true;
         try {
             const response = await fetch(`${TMDB_API}/search/${searchType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}&include_adult=false&page=1`);
             if (!response.ok) throw new Error(`Search failed (${response.status})`);
@@ -536,18 +539,21 @@
             const visible = await filterByCertification(items);
             if (requestId !== searchRequestId) return;
             renderResults(visible);
-            searchMessage.textContent = visible.length ? "" : (items.length
-                ? "Nothing matched your rating setting. You can change it in settings."
-                : "I couldn’t find anything. Try a different search?");
+            if (searchMessage) {
+                searchMessage.textContent = visible.length ? "" : (items.length
+                    ? "Nothing matched your rating setting. You can change it in settings."
+                    : "I couldn’t find anything. Try a different search?");
+            }
         } catch (error) {
             if (requestId !== searchRequestId) return;
             console.error(error);
-            searchMessage.textContent = "Looks like search is taking a break. Try again in a moment?";
+            if (searchMessage) searchMessage.textContent = "Looks like search is taking a break. Try again in a moment?";
         }
     }
 
     function renderResults(items) {
-        resultCount.textContent = `${items.length} result${items.length === 1 ? "" : "s"}`;
+        if (!results || !resultsSection) return;
+        if (resultCount) resultCount.textContent = `${items.length} result${items.length === 1 ? "" : "s"}`;
         results.innerHTML = items.map((item) => {
             const title = mediaTitle(item);
             const type = mediaType(item);
@@ -561,17 +567,20 @@
         results.querySelectorAll(".result-card").forEach((card) => card.addEventListener("click", () => openMedia(Number(card.dataset.id), card.dataset.type)));
     }
 
-    function mediaCardMarkup(item) {
+    function mediaCardMarkup(item, options = {}) {
         const title = mediaTitle(item);
         const type = mediaType(item);
         const poster = item.poster_path ? `${IMAGE_BASE}${item.poster_path}` : "";
-        return `<button class="recommendation-card" type="button" title="${escapeHtml(title)}" data-id="${item.id}" data-type="${type}">
+        const rankBadge = options.rank ? `<span class="rank-badge ${options.rank <= 3 ? "top-three" : ""}">${options.rank}</span>` : "";
+        return `<button class="recommendation-card ${options.rank ? "ranked-card" : ""}" type="button" title="${escapeHtml(title)}" data-id="${item.id}" data-type="${type}">
+                ${rankBadge}
                 <span class="recommendation-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : "<span>No poster</span>"}</span>
                 <span class="recommendation-copy"><small>${type === "tv" ? "Show" : "Movie"} · ${year(item.release_date || item.first_air_date)}</small><strong>${escapeHtml(title)}</strong></span>
             </button>`;
     }
 
     async function renderRecommendationCards(container, items, emptyMessage) {
+        if (!container) return;
         const token = (container._renderToken = (container._renderToken || 0) + 1);
         const hadItems = items.length > 0;
         items = await filterByCertification(items);
@@ -581,7 +590,7 @@
             return;
         }
         const uniqueItems = [...new Map(items.map((item) => [`${mediaType(item)}:${item.id}`, item])).values()];
-        container.innerHTML = uniqueItems.map(mediaCardMarkup).join("");
+        container.innerHTML = uniqueItems.map((item) => mediaCardMarkup(item)).join("");
         container.onclick = (event) => {
             const card = event.target.closest(".recommendation-card");
             if (!card || card.getAttribute("aria-hidden") === "true") return;
@@ -591,6 +600,7 @@
     }
 
     function setupInfiniteRail(container) {
+        if (!container) return;
         if (container._railScroll) {
             container.removeEventListener("scroll", container._railScroll);
             container._railScroll = null;
@@ -629,6 +639,7 @@
     }
 
     async function loadPopularShows() {
+        if (!popularShowsResults) return;
         try {
             const responses = await Promise.all([1, 2, 3].map((page) =>
                 fetch(`${TMDB_API}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&page=${page}`)
@@ -648,6 +659,7 @@
     }
 
     async function loadPopularMovies() {
+        if (!popularMoviesResults) return;
         try {
             const responses = await Promise.all([1, 2, 3].map((page) =>
                 fetch(`${TMDB_API}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&page=${page}`)
@@ -666,6 +678,7 @@
     }
 
     async function loadRecommendations() {
+        if (!recommendedSection || !recommendedResults) return;
         if (!historyEnabled) {
             recommendedSection.hidden = true;
             return;
@@ -699,40 +712,43 @@
     }
 
     async function openMedia(id, type, preferredSeason, preferredEpisode) {
-        searchMessage.textContent = "Getting the details…";
+        if (searchMessage) searchMessage.textContent = "Getting the details…";
         try {
             const response = await fetch(`${TMDB_API}/${type}/${id}?api_key=${TMDB_KEY}&language=en-US`);
             if (!response.ok) throw new Error(`Details failed (${response.status})`);
             activeMedia = await response.json();
             activeMediaType = type;
             malOverride = null;
-            malSelect.hidden = true;
+            if (malSelect) malSelect.hidden = true;
             renderServerList();
             renderAudioControls();
-            playerSection.hidden = false;
-            playerHeading.textContent = mediaTitle(activeMedia);
-            playerMeta.textContent = `${type === "tv" ? "Show" : "Movie"} · ${year(activeMedia.release_date || activeMedia.first_air_date)} · ${activeMedia.overview || "Ready when you are"}`;
+            if (playerSection) {
+                playerSection.hidden = false;
+                if (playerHeading) playerHeading.textContent = mediaTitle(activeMedia);
+                if (playerMeta) playerMeta.textContent = `${type === "tv" ? "Show" : "Movie"} · ${year(activeMedia.release_date || activeMedia.first_air_date)} · ${activeMedia.overview || "Ready when you are"}`;
+            }
             updateVidVaultLink();
             if (type === "tv") {
                 setupEpisodes(activeMedia, preferredSeason, preferredEpisode);
             } else {
-                episodeControls.hidden = true;
+                if (episodeControls) episodeControls.hidden = true;
                 updatePlayer();
                 saveCurrentMedia();
                 updateDiscordPresence(0, 0);
             }
-            playerSection.scrollIntoView({ behavior: "smooth", block: "start" });
-            searchMessage.textContent = "";
+            if (playerSection) playerSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (searchMessage) searchMessage.textContent = "";
         } catch (error) {
             console.error(error);
-            searchMessage.textContent = "I couldn’t load that one. Want to try another?";
+            if (searchMessage) searchMessage.textContent = "I couldn’t load that one. Want to try another?";
         }
     }
 
     function setupEpisodes(show, preferredSeason, preferredEpisode) {
+        if (!seasonSelect) return;
         const seasons = (show.seasons || []).filter((season) => season.season_number > 0);
         seasonSelect.innerHTML = seasons.map((season) => `<option value="${season.season_number}">Season ${season.season_number}</option>`).join("");
-        episodeControls.hidden = !seasons.length;
+        if (episodeControls) episodeControls.hidden = !seasons.length;
         if (seasons.length) {
             const season = seasons.some((item) => item.season_number === preferredSeason) ? preferredSeason : seasons[0].season_number;
             seasonSelect.value = season;
@@ -741,6 +757,7 @@
     }
 
     async function loadEpisodes(showId, seasonNumber, preferredEpisode) {
+        if (!episodeSelect) return;
         episodeSelect.innerHTML = "<option>Finding episodes…</option>";
         try {
             const response = await fetch(`${TMDB_API}/tv/${showId}/season/${seasonNumber}?api_key=${TMDB_KEY}&language=en-US`);
@@ -760,63 +777,15 @@
     }
 
     function updateVidVaultLink(season, episode) {
-        if (!activeMedia || !activeMediaType) return;
+        if (!vidvaultLink || !activeMedia || !activeMediaType) return;
         const path = activeMediaType === "tv" && season && episode
             ? `/tv/${activeMedia.id}/${season}/${episode}`
             : `/${activeMediaType}/${activeMedia.id}`;
         vidvaultLink.href = `https://vidvault.to${path}`;
     }
 
-    searchForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        search();
-    });
-    // Custom "x" in the search field (the browser's built-in one can't show a tooltip).
-    // It clears the query and closes the results.
-    const searchField = document.createElement("div");
-    searchField.className = "search-field";
-    searchInput.parentNode.insertBefore(searchField, searchInput);
-    searchField.appendChild(searchInput);
-    const clearSearchButton = document.createElement("button");
-    clearSearchButton.type = "button";
-    clearSearchButton.className = "search-clear";
-    clearSearchButton.textContent = "×";
-    clearSearchButton.title = "Clear search";
-    clearSearchButton.setAttribute("aria-label", "Clear search");
-    clearSearchButton.hidden = !searchInput.value;
-    const searchActions = document.createElement("div");
-    searchActions.className = "search-actions";
-    searchActions.appendChild(clearSearchButton);
-    searchField.appendChild(searchActions);
-    searchInput.addEventListener("input", () => {
-        clearSearchButton.hidden = !searchInput.value;
-    });
-    clearSearchButton.addEventListener("click", () => {
-        searchInput.value = "";
-        // Keep the button visible just long enough for the quick spin, then hide it
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if (reduceMotion) {
-            clearSearchButton.hidden = true;
-        } else {
-            clearSearchButton.classList.remove("is-spinning");
-            void clearSearchButton.offsetWidth; // restart the animation on rapid clicks
-            clearSearchButton.classList.add("is-spinning");
-            setTimeout(() => {
-                clearSearchButton.classList.remove("is-spinning");
-                clearSearchButton.hidden = !searchInput.value;
-            }, 260);
-        }
-        searchRequestId += 1;
-        resultsSection.hidden = true;
-        results.innerHTML = "";
-        resultCount.textContent = "";
-        searchMessage.textContent = "";
-        resetGenreResults();
-        searchInput.focus();
-    });
-    // ---- Browse by genre: a down arrow in the search box opens a Movies / TV shows panel ----
+    // Genre catalog
     const ANIME_GENRE = { label: "Anime", params: "with_genres=16&with_original_language=ja" };
-    // TMDB has no "adult animation" genre, so use its keyword (looked up at click time) with a rough fallback
     const ADULT_ANIMATION_GENRE = {
         label: "Adult animation",
         keyword: "adult animation",
@@ -854,72 +823,25 @@
             { label: "Documentary", params: "with_genres=99" },
             { label: "Drama", params: "with_genres=18" },
             { label: "Family", params: "with_genres=10751" },
-            // TMDB has no TV "Horror" genre, so use its keyword
             { label: "Horror", keyword: "horror", params: "" },
             { label: "Kids", params: "with_genres=10762" },
             { label: "Mystery", params: "with_genres=9648" },
             { label: "Reality", params: "with_genres=10764" },
-            // TMDB combines these two for TV
             { label: "Sci-Fi & Fantasy", params: "with_genres=10765" },
             { label: "War & Politics", params: "with_genres=10768" },
             { label: "Western", params: "with_genres=37" }
         ]
     };
+
     const genreKeywordCache = new Map();
-    let genreTab = "movie";
-
-    const genreToggle = document.createElement("button");
-    genreToggle.type = "button";
-    genreToggle.className = "search-genres-toggle";
-    genreToggle.title = "Browse by genre";
-    genreToggle.setAttribute("aria-label", "Browse by genre");
-    genreToggle.setAttribute("aria-expanded", "false");
-    genreToggle.setAttribute("aria-controls", "genre-panel");
-    genreToggle.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    searchActions.appendChild(genreToggle);
-
-    const genrePanel = document.createElement("div");
-    genrePanel.id = "genre-panel";
-    genrePanel.className = "genre-panel";
-    genrePanel.hidden = true;
-    genrePanel.innerHTML = `
-        <div class="genre-tabs" role="group" aria-label="Browse genres for">
-            <button class="genre-tab" type="button" data-type="movie">Movies</button>
-            <button class="genre-tab" type="button" data-type="tv">TV shows</button>
-        </div>
-        <div class="genre-list" role="group" aria-label="Genres"></div>`;
-    searchField.appendChild(genrePanel);
-    const genreList = genrePanel.querySelector(".genre-list");
-
-    function renderGenrePanel() {
-        genrePanel.querySelectorAll(".genre-tab").forEach((tab) => {
-            const active = tab.dataset.type === genreTab;
-            tab.classList.toggle("active", active);
-            tab.setAttribute("aria-pressed", String(active));
-        });
-        genreList.innerHTML = GENRES[genreTab].map((genre, index) => `<button class="genre-chip" type="button" data-index="${index}">${escapeHtml(genre.label)}</button>`).join("");
-    }
-
-    function closeGenrePanel() {
-        genrePanel.hidden = true;
-        genreToggle.setAttribute("aria-expanded", "false");
-    }
-
-    function openGenrePanel() {
-        if (searchType === "movie" || searchType === "tv") genreTab = searchType;
-        renderGenrePanel();
-        genrePanel.hidden = false;
-        genreToggle.setAttribute("aria-expanded", "true");
-    }
-
     async function resolveKeywordId(name) {
         if (!genreKeywordCache.has(name)) {
             const request = (async () => {
                 const response = await fetch(`${TMDB_API}/search/keyword?api_key=${TMDB_KEY}&query=${encodeURIComponent(name)}`);
                 if (!response.ok) throw new Error(`Keyword lookup failed (${response.status})`);
                 const data = await response.json();
-                const match = (data.results || []).find((keyword) => keyword.name.toLowerCase() === name.toLowerCase());
-                return match ? match.id : null;
+                const matched = (data.results || []).find((entry) => entry.name.toLowerCase() === name.toLowerCase()) || (data.results || [])[0];
+                return matched ? matched.id : null;
             })();
             request.catch(() => genreKeywordCache.delete(name));
             genreKeywordCache.set(name, request);
@@ -927,205 +849,139 @@
         return genreKeywordCache.get(name);
     }
 
-    // ---- Genre results: poster grid (5 x 3 on desktop, 3 x 3 on phones), most popular first,
-    //      30 titles up front and more as you scroll, up to 60 ----
-    const GENRE_INITIAL_ITEMS = 30;
-    const GENRE_BATCH_ITEMS = 15;
-    const GENRE_MAX_ITEMS = 120;
-    const GENRE_MAX_SCAN_PAGES = 15;
-    const GENRE_VISIBLE_ROWS = 3;
-    const resultsHeading = document.getElementById("results-heading");
-    const genreGrid = document.createElement("div");
-    genreGrid.className = "genre-grid";
-    genreGrid.hidden = true;
-    results.parentNode.insertBefore(genreGrid, results);
-    let genreObserver = null;
+    // Setup clear search button & genre dropdown if on search form
+    let searchField = null;
+    let genreToggle = null;
+    let genrePanel = null;
+    let closeGenrePanel = () => {};
+    let openGenrePanel = () => {};
+    let resetGenreResults = () => {};
 
-    function resetGenreResults() {
-        genreBrowse = null;
-        if (genreObserver) {
-            genreObserver.disconnect();
-            genreObserver = null;
-        }
-        genreGrid.hidden = true;
-        genreGrid.innerHTML = "";
-        genreGrid.style.maxHeight = "";
-        results.hidden = false;
-        resultsHeading.textContent = "What sounds good?";
-    }
+    if (searchForm && searchInput) {
+        searchForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            search();
+        });
 
-    // Keep loading TMDB pages (already filtered by the rating setting) until we have enough titles
-    async function fillGenreItems(state, needed) {
-        while (state.items.length < needed && !state.exhausted) {
-            const page = state.nextPage++;
-            const response = await fetch(`${TMDB_API}/discover/${state.type}?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&include_adult=false&vote_count.gte=50&${state.params}&page=${page}`);
-            if (!response.ok) throw new Error(`Genre browse failed (${response.status})`);
-            const data = await response.json();
-            if (page >= (data.total_pages || 1) || page >= GENRE_MAX_SCAN_PAGES) state.exhausted = true;
-            const batch = (data.results || [])
-                .filter((item) => !state.seen.has(item.id) && state.seen.add(item.id))
-                .map((item) => ({ ...item, media_type: state.type }));
-            state.items.push(...await filterByCertification(batch));
-            if (state.items.length >= GENRE_MAX_ITEMS) {
-                state.items.length = GENRE_MAX_ITEMS;
-                state.exhausted = true;
+        searchField = document.createElement("div");
+        searchField.className = "search-field";
+        searchInput.parentNode.insertBefore(searchField, searchInput);
+        searchField.appendChild(searchInput);
+
+        const clearSearchButton = document.createElement("button");
+        clearSearchButton.type = "button";
+        clearSearchButton.className = "search-clear";
+        clearSearchButton.textContent = "×";
+        clearSearchButton.title = "Clear search";
+        clearSearchButton.setAttribute("aria-label", "Clear search");
+        clearSearchButton.hidden = !searchInput.value;
+
+        const searchActions = document.createElement("div");
+        searchActions.className = "search-actions";
+        searchActions.appendChild(clearSearchButton);
+        searchField.appendChild(searchActions);
+
+        searchInput.addEventListener("input", () => {
+            clearSearchButton.hidden = !searchInput.value;
+        });
+
+        clearSearchButton.addEventListener("click", () => {
+            searchInput.value = "";
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reduceMotion) {
+                clearSearchButton.hidden = true;
+            } else {
+                clearSearchButton.classList.remove("is-spinning");
+                void clearSearchButton.offsetWidth;
+                clearSearchButton.classList.add("is-spinning");
+                setTimeout(() => {
+                    clearSearchButton.classList.remove("is-spinning");
+                    clearSearchButton.hidden = !searchInput.value;
+                }, 260);
             }
+            searchRequestId += 1;
+            if (resultsSection) resultsSection.hidden = true;
+            if (results) results.innerHTML = "";
+            if (resultCount) resultCount.textContent = "";
+            if (searchMessage) searchMessage.textContent = "";
+            resetGenreResults();
+            searchInput.focus();
+        });
+
+        genreToggle = document.createElement("button");
+        genreToggle.type = "button";
+        genreToggle.className = "search-genres-toggle";
+        genreToggle.title = "Browse by genre";
+        genreToggle.setAttribute("aria-label", "Browse by genre");
+        genreToggle.setAttribute("aria-expanded", "false");
+        genreToggle.setAttribute("aria-controls", "genre-panel");
+        genreToggle.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        searchActions.appendChild(genreToggle);
+
+        genrePanel = document.createElement("div");
+        genrePanel.id = "genre-panel";
+        genrePanel.className = "genre-panel";
+        genrePanel.hidden = true;
+        genrePanel.innerHTML = `
+            <div class="genre-tabs" role="group" aria-label="Browse genres for">
+                <button class="genre-tab active" type="button" data-type="movie">Movies</button>
+                <button class="genre-tab" type="button" data-type="tv">TV shows</button>
+            </div>
+            <div class="genre-list" role="group" aria-label="Genres"></div>`;
+        searchField.appendChild(genrePanel);
+        const genreList = genrePanel.querySelector(".genre-list");
+        let genreTab = "movie";
+
+        function renderGenrePanel() {
+            genrePanel.querySelectorAll(".genre-tab").forEach((tab) => {
+                const active = tab.dataset.type === genreTab;
+                tab.classList.toggle("active", active);
+                tab.setAttribute("aria-pressed", String(active));
+            });
+            genreList.innerHTML = GENRES[genreTab].map((genre, index) => `<button class="genre-chip" type="button" data-index="${index}">${escapeHtml(genre.label)}</button>`).join("");
         }
-    }
 
-    function loadGenreItems(state, needed) {
-        // One load at a time so the popularity order can't get shuffled
-        const run = (state.queue || Promise.resolve()).then(() => fillGenreItems(state, needed));
-        state.queue = run.catch(() => {});
-        return run;
-    }
+        closeGenrePanel = function () {
+            genrePanel.hidden = true;
+            genreToggle.setAttribute("aria-expanded", "false");
+        };
 
-    // Size the scroll box to exactly 3 rows of cards
-    function sizeGenreGrid() {
-        const card = genreGrid.querySelector(".recommendation-card");
-        if (!card) {
-            genreGrid.style.maxHeight = "";
-            return;
-        }
-        const styles = getComputedStyle(genreGrid);
-        const gap = parseFloat(styles.rowGap) || 0;
-        const padding = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
-        genreGrid.style.maxHeight = `${card.getBoundingClientRect().height * GENRE_VISIBLE_ROWS + gap * (GENRE_VISIBLE_ROWS - 1) + padding}px`;
-    }
+        openGenrePanel = function () {
+            if (searchType === "movie" || searchType === "tv") genreTab = searchType;
+            renderGenrePanel();
+            genrePanel.hidden = false;
+            genreToggle.setAttribute("aria-expanded", "true");
+        };
 
-    function appendGenreCards(state, upTo) {
-        const batch = state.items.slice(state.rendered, upTo);
-        if (!batch.length) return;
-        state.rendered += batch.length;
-        genreGrid.querySelector(".genre-grid-status").insertAdjacentHTML("beforebegin", batch.map(mediaCardMarkup).join(""));
-    }
+        genreToggle.addEventListener("click", () => {
+            if (genrePanel.hidden) openGenrePanel();
+            else closeGenrePanel();
+        });
 
-    const genreDone = (state) => state.exhausted && state.rendered >= state.items.length;
+        genrePanel.querySelectorAll(".genre-tab").forEach((tab) => tab.addEventListener("click", () => {
+            genreTab = tab.dataset.type;
+            renderGenrePanel();
+        }));
 
-    function updateGenreStatus(state) {
-        const status = genreGrid.querySelector(".genre-grid-status");
-        if (state.loadFailed) status.textContent = "Couldn’t load more right now. Retrying…";
-        else if (state.loadingMore) status.textContent = "Loading more…";
-        else if (genreDone(state)) status.textContent = state.items.length >= GENRE_MAX_ITEMS ? `That’s the top ${GENRE_MAX_ITEMS}.` : "That’s everything for this genre.";
-        else status.textContent = "";
-        resultCount.textContent = `${state.type === "tv" ? "TV shows" : "Movies"} · ${state.rendered} shown`;
-    }
+        genreList.addEventListener("click", (event) => {
+            const chip = event.target.closest(".genre-chip");
+            if (!chip) return;
+            startGenreBrowse(genreTab, GENRES[genreTab][Number(chip.dataset.index)]);
+        });
 
-    // Watch the bottom of the scroll box and load the next batch when the user gets near it
-    function observeGenreEnd(state) {
-        if (genreObserver) {
-            genreObserver.disconnect();
-            genreObserver = null;
-        }
-        if (genreBrowse !== state || genreDone(state)) return;
-        genreObserver = new IntersectionObserver((entries) => {
-            if (entries.some((entry) => entry.isIntersecting)) loadMoreGenre(state);
-        }, { root: genreGrid, rootMargin: "0px 0px 150px 0px" });
-        genreObserver.observe(genreGrid.querySelector(".genre-grid-status"));
-    }
+        document.addEventListener("click", (event) => {
+            if (!genrePanel.hidden && !searchField.contains(event.target)) closeGenrePanel();
+        });
 
-    async function loadMoreGenre(state) {
-        if (genreBrowse !== state || state.loadingMore || genreDone(state)) return;
-        state.loadingMore = true;
-        state.loadFailed = false;
-        updateGenreStatus(state);
-        let failed = false;
-        try {
-            await loadGenreItems(state, Math.min(state.rendered + GENRE_BATCH_ITEMS, GENRE_MAX_ITEMS));
-            if (genreBrowse !== state) return;
-            appendGenreCards(state, Math.min(state.rendered + GENRE_BATCH_ITEMS, state.items.length));
-        } catch (error) {
-            console.error(error);
-            failed = true;
-        } finally {
-            state.loadingMore = false;
-        }
-        if (genreBrowse !== state) return;
-        state.loadFailed = failed;
-        updateGenreStatus(state);
-        // Re-arm the observer (after a pause if the last load failed)
-        if (failed) setTimeout(() => observeGenreEnd(state), 3000);
-        else observeGenreEnd(state);
-    }
-
-    async function startGenreBrowse(type, genre) {
-        const requestId = ++searchRequestId;
-        closeGenrePanel();
-        resetGenreResults();
-        searchInput.value = "";
-        clearSearchButton.hidden = true;
-        searchMessage.textContent = `Finding ${genre.label.toLowerCase()}…`;
-        resultsSection.hidden = true;
-        try {
-            let params = genre.params;
-            if (genre.keyword) {
-                const keywordId = await resolveKeywordId(genre.keyword);
-                if (keywordId) params = `${params}&with_keywords=${keywordId}`;
-                else if (genre.fallback) params = genre.fallback;
-                else throw new Error(`No TMDB keyword found for ${genre.keyword}`);
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !genrePanel.hidden) {
+                closeGenrePanel();
+                genreToggle.focus();
             }
-            if (requestId !== searchRequestId) return;
-            const state = { type, genre, params, items: [], seen: new Set(), nextPage: 1, exhausted: false, rendered: 0, loadingMore: false, loadFailed: false, queue: null };
-            genreBrowse = state;
-            await loadGenreItems(state, GENRE_INITIAL_ITEMS);
-            if (genreBrowse !== state) return;
-            if (!state.items.length) {
-                searchMessage.textContent = maxRating
-                    ? "Nothing in this genre matched your rating setting. You can change it in settings."
-                    : "Nothing came up for that genre. Try another?";
-                return;
-            }
-            searchMessage.textContent = "";
-            resultsHeading.textContent = `Popular right now · ${genre.label}`;
-            results.hidden = true;
-            genreGrid.innerHTML = '<div class="genre-grid-status" role="status"></div>';
-            genreGrid.hidden = false;
-            resultsSection.hidden = false;
-            appendGenreCards(state, Math.min(GENRE_INITIAL_ITEMS, state.items.length));
-            genreGrid.scrollTop = 0;
-            sizeGenreGrid();
-            updateGenreStatus(state);
-            observeGenreEnd(state);
-            resultsSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        } catch (error) {
-            if (requestId !== searchRequestId) return;
-            console.error(error);
-            searchMessage.textContent = "Couldn’t load that genre right now. Try again in a moment?";
-        }
+        });
     }
 
-    genreGrid.addEventListener("click", (event) => {
-        const card = event.target.closest(".recommendation-card");
-        if (card) openMedia(Number(card.dataset.id), card.dataset.type);
-    });
-    window.addEventListener("resize", () => {
-        if (!genreGrid.hidden) sizeGenreGrid();
-    });
-
-    genreToggle.addEventListener("click", () => {
-        if (genrePanel.hidden) openGenrePanel();
-        else closeGenrePanel();
-    });
-    genrePanel.querySelectorAll(".genre-tab").forEach((tab) => tab.addEventListener("click", () => {
-        genreTab = tab.dataset.type;
-        renderGenrePanel();
-    }));
-    genreList.addEventListener("click", (event) => {
-        const chip = event.target.closest(".genre-chip");
-        if (!chip) return;
-        startGenreBrowse(genreTab, GENRES[genreTab][Number(chip.dataset.index)]);
-    });
-    document.addEventListener("click", (event) => {
-        if (!genrePanel.hidden && !searchField.contains(event.target)) closeGenrePanel();
-    });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !genrePanel.hidden) {
-            closeGenrePanel();
-            genreToggle.focus();
-        }
-    });
-
-    // ---- Settings: maximum content rating (gear icon, top right of the page) ----
+    // Settings dialog (content rating)
     const settingsButton = document.createElement("button");
     settingsButton.type = "button";
     settingsButton.className = "settings-button";
@@ -1163,18 +1019,10 @@
         unratedLabel.classList.toggle("is-disabled", !limited);
     }
 
-    function applyRatingChange() {
-        // Re-run whatever is on screen so it respects the new setting
-        loadPopularShows();
-        loadRecommendations();
-        if (genreBrowse) startGenreBrowse(genreBrowse.type, genreBrowse.genre);
-        else if (searchInput.value.trim()) search();
-    }
-
-    settingsButton.addEventListener("click", () => {
+    function openSettingsDialog() {
         if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             settingsButton.classList.remove("is-spinning");
-            void settingsButton.offsetWidth; // restart the animation on rapid clicks
+            void settingsButton.offsetWidth;
             settingsButton.classList.add("is-spinning");
             setTimeout(() => settingsButton.classList.remove("is-spinning"), 260);
         }
@@ -1182,7 +1030,15 @@
         unratedCheckbox.checked = includeUnrated;
         syncUnratedCheckbox();
         settingsDialog.showModal();
-    });
+    }
+
+    settingsButton.addEventListener("click", openSettingsDialog);
+
+    const sidebarSettingsBtn = document.getElementById("sidebar-settings-btn");
+    if (sidebarSettingsBtn) {
+        sidebarSettingsBtn.addEventListener("click", openSettingsDialog);
+    }
+
     ratingSelect.addEventListener("change", syncUnratedCheckbox);
     settingsDialog.querySelector("#cancel-settings").addEventListener("click", () => settingsDialog.close());
     settingsDialog.addEventListener("click", (event) => {
@@ -1201,150 +1057,516 @@
         } catch (error) {
             console.error(error);
         }
-        applyRatingChange();
+        // Refresh current page content
+        const pType = document.body.dataset.page || "home";
+        if (pType === "home") {
+            loadPopularShows();
+            loadRecommendations();
+        } else if (pType === "movies") {
+            loadMovies();
+        } else if (pType === "tv") {
+            loadTv();
+        } else if (pType === "trending") {
+            loadTrending();
+        } else if (pType === "categories" && activeCategoryGenre) {
+            loadCategoryTitles(activeCategoryType, activeCategoryGenre);
+        } else if (searchInput && searchInput.value.trim()) {
+            search();
+        }
     });
 
+    // Subdomain & Base URL Normalization
+    function normalizeSubdomainNavigation() {
+        if (window.location.hostname.startsWith("watch.")) {
+            document.querySelectorAll(".sidebar-nav-item").forEach((item) => {
+                const nav = item.dataset.nav;
+                if (nav === "home") item.href = "/";
+                else if (nav) item.href = `/${nav}/`;
+            });
+            const brandLink = document.querySelector(".brand-link");
+            if (brandLink) brandLink.href = "/";
+            const backLink = document.querySelector(".sidebar-back-link");
+            if (backLink) backLink.href = "https://opieferd.dev";
+        }
+    }
+    normalizeSubdomainNavigation();
+
+    // Type buttons (All, Movies, TV shows on Search page)
     document.querySelectorAll(".type-button").forEach((button) => button.addEventListener("click", () => {
-        document.querySelector(".type-button.active").classList.remove("active");
+        const active = document.querySelector(".type-button.active");
+        if (active) active.classList.remove("active");
         button.classList.add("active");
         searchType = button.dataset.type;
+        if (searchInput && searchInput.value.trim()) search();
     }));
-    seasonSelect.addEventListener("change", () => {
-        malOverride = null;
-        loadEpisodes(activeMedia.id, seasonSelect.value);
-    });
-    malSelect.addEventListener("change", () => {
-        malOverride = malSelect.value === "auto" ? null : Number(malSelect.value);
-        updatePlayer();
-    });
-    audioList.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
-        audioMode = button.dataset.audio;
-        const capable = audioProvider();
-        // Only some servers can honour Sub/Dub, so hop to one that can
-        if (audioMode !== "default" && capable && !activeProvider().anime) {
-            activeProviderId = capable.id;
-            renderServerList();
-        }
-        renderAudioControls();
-        updatePlayer();
-    }));
-    episodeSelect.addEventListener("change", () => {
-        updatePlayer(Number(seasonSelect.value), Number(episodeSelect.value));
-        updateVidVaultLink(Number(seasonSelect.value), Number(episodeSelect.value));
-        saveCurrentMedia(Number(seasonSelect.value), Number(episodeSelect.value));
-        updateDiscordPresence(Number(seasonSelect.value), Number(episodeSelect.value));
-    });
+
+    if (seasonSelect) {
+        seasonSelect.addEventListener("change", () => {
+            malOverride = null;
+            if (activeMedia) loadEpisodes(activeMedia.id, seasonSelect.value);
+        });
+    }
+
+    if (malSelect) {
+        malSelect.addEventListener("change", () => {
+            malOverride = malSelect.value === "auto" ? null : Number(malSelect.value);
+            updatePlayer();
+        });
+    }
+
+    if (audioList) {
+        audioList.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+            audioMode = button.dataset.audio;
+            const capable = audioProvider();
+            if (audioMode !== "default" && capable && !activeProvider().anime) {
+                activeProviderId = capable.id;
+                renderServerList();
+            }
+            renderAudioControls();
+            updatePlayer();
+        }));
+    }
+
+    if (episodeSelect && seasonSelect) {
+        episodeSelect.addEventListener("change", () => {
+            updatePlayer(Number(seasonSelect.value), Number(episodeSelect.value));
+            updateVidVaultLink(Number(seasonSelect.value), Number(episodeSelect.value));
+            saveCurrentMedia(Number(seasonSelect.value), Number(episodeSelect.value));
+            updateDiscordPresence(Number(seasonSelect.value), Number(episodeSelect.value));
+        });
+    }
+
     window.addEventListener("message", handlePlaybackMessage);
-    closePlayer.addEventListener("click", () => {
-        player.src = "";
-        playerSection.hidden = true;
-        activeMedia = null;
-        activeMediaType = null;
-        playerRequestId += 1;
-        renderServerList();
-        renderAudioControls();
-        setDownloadActionsVisible(true);
-    });
-    hideDownloadActions.addEventListener("click", () => setDownloadActionsVisible(false));
-    showDownloadActions.addEventListener("click", () => setDownloadActionsVisible(true));
-    saveHistoryButton.addEventListener("click", () => {
-        historyEnabled = true;
-        localStorage.setItem("watch-history-enabled", "true");
-        updateSessionView();
-    });
-    // "Are you sure?" prompt for the Clear these button (built here so it reuses the disclaimer dialog styling)
-    const clearDialog = document.createElement("dialog");
-    clearDialog.id = "clear-history-dialog";
-    clearDialog.className = "disclaimer";
-    clearDialog.setAttribute("aria-labelledby", "clear-history-dialog-heading");
-    clearDialog.innerHTML = `
-        <div class="disclaimer-content">
-            <h2 id="clear-history-dialog-heading">Are you sure?</h2>
-            <div class="confirm-actions">
-                <button id="confirm-clear-history" class="primary-button" type="button">Confirm</button>
-                <button id="cancel-clear-history" class="grey-button" type="button" autofocus>Go back</button>
-            </div>
-        </div>`;
-    document.body.appendChild(clearDialog);
-    clearDialog.addEventListener("click", (event) => {
-        if (event.target === clearDialog) clearDialog.close();
-    });
-    clearDialog.querySelector("#cancel-clear-history").addEventListener("click", () => clearDialog.close());
-    clearDialog.querySelector("#confirm-clear-history").addEventListener("click", () => {
-        clearDialog.close();
-        if (!historyEnabled) return;
-        localStorage.removeItem(historyKey);
-        renderHistory();
-        loadRecommendations();
-    });
-    clearHistory.addEventListener("click", () => {
-        if (!historyEnabled) return;
-        clearDialog.showModal();
-    });
+
+    if (closePlayer && playerSection) {
+        closePlayer.addEventListener("click", () => {
+            if (player) player.src = "";
+            playerSection.hidden = true;
+            activeMedia = null;
+            activeMediaType = null;
+            playerRequestId += 1;
+            renderServerList();
+            renderAudioControls();
+            setDownloadActionsVisible(true);
+        });
+    }
+
+    if (hideDownloadActions) hideDownloadActions.addEventListener("click", () => setDownloadActionsVisible(false));
+    if (showDownloadActions) showDownloadActions.addEventListener("click", () => setDownloadActionsVisible(true));
+
+    if (saveHistoryButton) {
+        saveHistoryButton.addEventListener("click", () => {
+            historyEnabled = true;
+            localStorage.setItem("watch-history-enabled", "true");
+            updateSessionView();
+        });
+    }
+
+    if (clearHistory) {
+        const clearDialog = document.createElement("dialog");
+        clearDialog.id = "clear-history-dialog";
+        clearDialog.className = "disclaimer";
+        clearDialog.setAttribute("aria-labelledby", "clear-history-dialog-heading");
+        clearDialog.innerHTML = `
+            <div class="disclaimer-content">
+                <h2 id="clear-history-dialog-heading">Are you sure?</h2>
+                <div class="confirm-actions">
+                    <button id="confirm-clear-history" class="primary-button" type="button">Confirm</button>
+                    <button id="cancel-clear-history" class="grey-button" type="button" autofocus>Go back</button>
+                </div>
+            </div>`;
+        document.body.appendChild(clearDialog);
+        clearDialog.addEventListener("click", (event) => {
+            if (event.target === clearDialog) clearDialog.close();
+        });
+        clearDialog.querySelector("#cancel-clear-history").addEventListener("click", () => clearDialog.close());
+        clearDialog.querySelector("#confirm-clear-history").addEventListener("click", () => {
+            clearDialog.close();
+            if (!historyEnabled) return;
+            localStorage.removeItem(historyKey);
+            renderHistory();
+            loadRecommendations();
+        });
+        clearHistory.addEventListener("click", () => {
+            if (!historyEnabled) return;
+            clearDialog.showModal();
+        });
+    }
+
     renderServerList();
-    // "Don't show again" option for the heads-up (remembered in this browser) [Announcement Mode on For Update]
-  
 
+    // Disclaimer Announcement Modal
+    if (disclaimer && closeDisclaimer) {
+        const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
+        const ANNOUNCEMENT_MODE = true;
 
-    // ---- Disclaimer / announcement modal ----
-    const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
+        const dismissDisclaimerForever = document.createElement("button");
+        dismissDisclaimerForever.type = "button";
+        dismissDisclaimerForever.className = "grey-button";
+        dismissDisclaimerForever.textContent = "Don't show again";
+        dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
 
-    // true = force the modal to show, regardless of saved preferences
-    const ANNOUNCEMENT_MODE = true;
+        let disclaimerActions = closeDisclaimer.parentElement;
+        if (!disclaimerActions.classList.contains("confirm-actions")) {
+            disclaimerActions = document.createElement("div");
+            disclaimerActions.className = "confirm-actions";
+            closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
+            disclaimerActions.appendChild(closeDisclaimer);
+        }
+        if (!disclaimerActions.contains(dismissDisclaimerForever)) {
+            disclaimerActions.appendChild(dismissDisclaimerForever);
+        }
 
-    const dismissDisclaimerForever = document.createElement("button");
-    dismissDisclaimerForever.type = "button";
-    dismissDisclaimerForever.className = "grey-button";
-    dismissDisclaimerForever.textContent = "Don't show again";
-    dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
+        closeDisclaimer.addEventListener("click", () => disclaimer.close());
+        dismissDisclaimerForever.addEventListener("click", () => {
+            try {
+                localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
+            } catch (error) {
+                console.error("Couldn't save disclaimer preference:", error);
+            }
+            disclaimer.close();
+        });
 
-    // Reuse the existing dialog's action area if one already exists.
-    let disclaimerActions = closeDisclaimer.parentElement;
-
-    if (!disclaimerActions.classList.contains("confirm-actions")) {
-        disclaimerActions = document.createElement("div");
-        disclaimerActions.className = "confirm-actions";
-        closeDisclaimer.parentNode.insertBefore(
-            disclaimerActions,
-            closeDisclaimer
-        );
-        disclaimerActions.appendChild(closeDisclaimer);
+        let disclaimerHidden = false;
+        if (!ANNOUNCEMENT_MODE) {
+            try {
+                disclaimerHidden = localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
+            if (!disclaimer.open) disclaimer.showModal();
+        }
     }
 
-    if (!disclaimerActions.contains(dismissDisclaimerForever)) {
-        disclaimerActions.appendChild(dismissDisclaimerForever);
-    }
+    // -------------------------------------------------------------
+    // Page Initializers: Movies, TV, Trending, Categories, Search
+    // -------------------------------------------------------------
+    let moviesPage = 1;
+    let moviesFilter = "popular";
+    let moviesLoading = false;
 
-    closeDisclaimer.addEventListener("click", () => disclaimer.close());
-
-    dismissDisclaimerForever.addEventListener("click", () => {
+    async function loadMovies(replace = true) {
+        const grid = document.getElementById("movies-grid");
+        const status = document.getElementById("movies-status");
+        if (!grid) return;
+        if (replace) {
+            moviesPage = 1;
+            grid.innerHTML = "";
+            if (status) status.textContent = "Loading movies…";
+        }
+        moviesLoading = true;
         try {
-            localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
+            let url = "";
+            if (moviesFilter === "top_rated") {
+                url = `${TMDB_API}/movie/top_rated?api_key=${TMDB_KEY}&language=en-US&page=${moviesPage}`;
+            } else if (moviesFilter === "trending") {
+                url = `${TMDB_API}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&page=${moviesPage}`;
+            } else if (moviesFilter.startsWith("genre:")) {
+                const genreId = moviesFilter.split(":")[1];
+                url = `${TMDB_API}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=${moviesPage}`;
+            } else {
+                url = `${TMDB_API}/movie/popular?api_key=${TMDB_KEY}&language=en-US&page=${moviesPage}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to load movies");
+            const data = await response.json();
+            const rawItems = (data.results || []).map((item) => ({ ...item, media_type: "movie" }));
+            const items = await filterByCertification(rawItems);
+
+            if (items.length) {
+                const markup = items.map((item) => mediaCardMarkup(item)).join("");
+                grid.insertAdjacentHTML("beforeend", markup);
+                grid.querySelectorAll(".recommendation-card").forEach((card) => {
+                    if (!card._hasClickListener) {
+                        card._hasClickListener = true;
+                        card.addEventListener("click", () => openMedia(Number(card.dataset.id), "movie"));
+                    }
+                });
+                if (status) status.textContent = "";
+            } else if (replace) {
+                if (status) status.textContent = "No movies found matching current settings.";
+            }
         } catch (error) {
-            console.error("Couldn't save disclaimer preference:", error);
+            console.error(error);
+            if (status) status.textContent = "Couldn’t load movies right now.";
+        } finally {
+            moviesLoading = false;
         }
+    }
 
-        disclaimer.close();
-    });
+    let tvPage = 1;
+    let tvFilter = "popular";
+    let tvLoading = false;
 
-    let disclaimerHidden = false;
-
-    if (!ANNOUNCEMENT_MODE) {
+    async function loadTv(replace = true) {
+        const grid = document.getElementById("tv-grid");
+        const status = document.getElementById("tv-status");
+        if (!grid) return;
+        if (replace) {
+            tvPage = 1;
+            grid.innerHTML = "";
+            if (status) status.textContent = "Loading TV shows…";
+        }
+        tvLoading = true;
         try {
-            disclaimerHidden =
-                localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+            let url = "";
+            if (tvFilter === "top_rated") {
+                url = `${TMDB_API}/tv/top_rated?api_key=${TMDB_KEY}&language=en-US&page=${tvPage}`;
+            } else if (tvFilter === "trending") {
+                url = `${TMDB_API}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&page=${tvPage}`;
+            } else if (tvFilter === "anime") {
+                url = `${TMDB_API}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&with_genres=16&with_original_language=ja&page=${tvPage}`;
+            } else if (tvFilter.startsWith("genre:")) {
+                const genreId = tvFilter.split(":")[1];
+                url = `${TMDB_API}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=${tvPage}`;
+            } else {
+                url = `${TMDB_API}/tv/popular?api_key=${TMDB_KEY}&language=en-US&page=${tvPage}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to load TV shows");
+            const data = await response.json();
+            const rawItems = (data.results || []).map((item) => ({ ...item, media_type: "tv" }));
+            const items = await filterByCertification(rawItems);
+
+            if (items.length) {
+                const markup = items.map((item) => mediaCardMarkup(item)).join("");
+                grid.insertAdjacentHTML("beforeend", markup);
+                grid.querySelectorAll(".recommendation-card").forEach((card) => {
+                    if (!card._hasClickListener) {
+                        card._hasClickListener = true;
+                        card.addEventListener("click", () => openMedia(Number(card.dataset.id), "tv"));
+                    }
+                });
+                if (status) status.textContent = "";
+            } else if (replace) {
+                if (status) status.textContent = "No shows found matching current settings.";
+            }
         } catch (error) {
-            console.error("Couldn't read disclaimer preference:", error);
+            console.error(error);
+            if (status) status.textContent = "Couldn’t load TV shows right now.";
+        } finally {
+            tvLoading = false;
         }
     }
 
-    if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
-        if (!disclaimer.open) {
-            disclaimer.showModal();
+    let trendingType = "all";
+    let trendingWindow = "week";
+
+    async function loadTrending() {
+        const grid = document.getElementById("trending-grid");
+        const status = document.getElementById("trending-status");
+        if (!grid) return;
+        grid.innerHTML = "";
+        if (status) status.textContent = "Finding trending titles…";
+        try {
+            const responses = await Promise.all([1, 2].map((page) =>
+                fetch(`${TMDB_API}/trending/${trendingType}/${trendingWindow}?api_key=${TMDB_KEY}&language=en-US&page=${page}`)
+            ));
+            const pages = await Promise.all(responses.map((res) => res.json()));
+            let items = pages.flatMap((data) => data.results || [])
+                .filter((item) => item.media_type === "movie" || item.media_type === "tv" || trendingType !== "all")
+                .map((item) => ({ ...item, media_type: item.media_type || trendingType }));
+            items = await filterByCertification(items);
+
+            if (items.length) {
+                grid.innerHTML = items.slice(0, 30).map((item, index) => mediaCardMarkup(item, { rank: index + 1 })).join("");
+                grid.querySelectorAll(".recommendation-card").forEach((card) => {
+                    card.addEventListener("click", () => openMedia(Number(card.dataset.id), card.dataset.type));
+                });
+                if (status) status.textContent = "";
+            } else if (status) {
+                status.textContent = "Nothing trending matches your settings.";
+            }
+        } catch (error) {
+            console.error(error);
+            if (status) status.textContent = "Couldn’t load trending titles right now.";
         }
     }
 
-    updateSessionView();
-    loadPopularShows();
+    let activeCategoryType = "movie";
+    let activeCategoryGenre = GENRES.movie[0];
+    let categoryPage = 1;
+    let categoryLoading = false;
+
+    async function loadCategoryTitles(type, genre, replace = true) {
+        const grid = document.getElementById("category-results-grid");
+        const status = document.getElementById("category-status");
+        const heading = document.getElementById("category-results-heading");
+        if (!grid) return;
+
+        activeCategoryType = type;
+        activeCategoryGenre = genre;
+
+        if (replace) {
+            categoryPage = 1;
+            grid.innerHTML = "";
+            if (heading) heading.textContent = `Popular in ${genre.label}`;
+            if (status) status.textContent = `Finding ${genre.label.toLowerCase()}…`;
+        }
+        categoryLoading = true;
+        try {
+            let params = genre.params || "";
+            if (genre.keyword) {
+                const keywordId = await resolveKeywordId(genre.keyword);
+                if (keywordId) params = `with_keywords=${keywordId}`;
+                else if (genre.fallback) params = genre.fallback;
+            }
+
+            const response = await fetch(`${TMDB_API}/discover/${type}?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&include_adult=false&${params}&page=${categoryPage}`);
+            if (!response.ok) throw new Error("Category browse failed");
+            const data = await response.json();
+            const rawItems = (data.results || []).map((item) => ({ ...item, media_type: type }));
+            const items = await filterByCertification(rawItems);
+
+            if (items.length) {
+                grid.insertAdjacentHTML("beforeend", items.map((item) => mediaCardMarkup(item)).join(""));
+                grid.querySelectorAll(".recommendation-card").forEach((card) => {
+                    if (!card._hasClickListener) {
+                        card._hasClickListener = true;
+                        card.addEventListener("click", () => openMedia(Number(card.dataset.id), type));
+                    }
+                });
+                if (status) status.textContent = "";
+            } else if (replace) {
+                if (status) status.textContent = "Nothing in this category matched your rating settings.";
+            }
+        } catch (error) {
+            console.error(error);
+            if (status) status.textContent = "Couldn’t load that category right now.";
+        } finally {
+            categoryLoading = false;
+        }
+    }
+
+    function renderCategoryPills() {
+        const container = document.getElementById("category-pills");
+        if (!container) return;
+        const list = GENRES[activeCategoryType] || [];
+        container.innerHTML = list.map((genre, idx) => `
+            <button class="category-pill${genre === activeCategoryGenre ? " active" : ""}" type="button" data-index="${idx}">
+                ${escapeHtml(genre.label)}
+            </button>
+        `).join("");
+        container.querySelectorAll(".category-pill").forEach((pill) => {
+            pill.addEventListener("click", () => {
+                container.querySelectorAll(".category-pill").forEach((p) => p.classList.remove("active"));
+                pill.classList.add("active");
+                const selectedGenre = list[Number(pill.dataset.index)];
+                loadCategoryTitles(activeCategoryType, selectedGenre, true);
+            });
+        });
+    }
+
+    // -------------------------------------------------------------
+    // Router / Init based on body data-page attribute
+    // -------------------------------------------------------------
+    const pageType = document.body.dataset.page || "home";
+
+    if (pageType === "home") {
+        updateSessionView();
+        loadPopularShows();
+    } else if (pageType === "search") {
+        updateSessionView();
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryParam = urlParams.get("q");
+        if (queryParam && searchInput) {
+            searchInput.value = queryParam;
+            search();
+        } else if (searchInput) {
+            searchInput.focus();
+        }
+    } else if (pageType === "movies") {
+        document.querySelectorAll(".movie-filter-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".movie-filter-tab").forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                moviesFilter = tab.dataset.filter || "popular";
+                loadMovies(true);
+            });
+        });
+        const loadMoreMovies = document.getElementById("load-more-movies");
+        if (loadMoreMovies) {
+            loadMoreMovies.addEventListener("click", () => {
+                if (moviesLoading) return;
+                moviesPage += 1;
+                loadMovies(false);
+            });
+        }
+        loadMovies(true);
+    } else if (pageType === "tv") {
+        document.querySelectorAll(".tv-filter-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".tv-filter-tab").forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                tvFilter = tab.dataset.filter || "popular";
+                loadTv(true);
+            });
+        });
+        const loadMoreTv = document.getElementById("load-more-tv");
+        if (loadMoreTv) {
+            loadMoreTv.addEventListener("click", () => {
+                if (tvLoading) return;
+                tvPage += 1;
+                loadTv(false);
+            });
+        }
+        loadTv(true);
+    } else if (pageType === "trending") {
+        document.querySelectorAll(".trending-type-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".trending-type-tab").forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                trendingType = tab.dataset.type || "all";
+                loadTrending();
+            });
+        });
+        document.querySelectorAll(".trending-window-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".trending-window-tab").forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                trendingWindow = tab.dataset.window || "week";
+                loadTrending();
+            });
+        });
+        loadTrending();
+    } else if (pageType === "categories") {
+        document.querySelectorAll(".category-type-tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".category-type-tab").forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                activeCategoryType = tab.dataset.type || "movie";
+                activeCategoryGenre = GENRES[activeCategoryType][0];
+                renderCategoryPills();
+                loadCategoryTitles(activeCategoryType, activeCategoryGenre, true);
+            });
+        });
+        const loadMoreCategories = document.getElementById("load-more-category");
+        if (loadMoreCategories) {
+            loadMoreCategories.addEventListener("click", () => {
+                if (categoryLoading) return;
+                categoryPage += 1;
+                loadCategoryTitles(activeCategoryType, activeCategoryGenre, false);
+            });
+        }
+        renderCategoryPills();
+        loadCategoryTitles(activeCategoryType, activeCategoryGenre, true);
+    }
+
+    // Auto-play from URL: ?watch=movie:123 or ?watch=tv:456 or ?id=123&type=tv
+    const urlParams = new URLSearchParams(window.location.search);
+    const watchParam = urlParams.get("watch") || urlParams.get("play");
+    if (watchParam) {
+        let wType = urlParams.get("type") || "movie";
+        let wId = watchParam;
+        if (watchParam.includes(":")) {
+            [wType, wId] = watchParam.split(":");
+        }
+        if (wId && (wType === "movie" || wType === "tv")) {
+            openMedia(Number(wId), wType);
+        }
+    }
 })();
-
