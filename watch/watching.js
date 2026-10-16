@@ -1172,6 +1172,12 @@
     }
 
     settingsButton.addEventListener("click", () => {
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            settingsButton.classList.remove("is-spinning");
+            void settingsButton.offsetWidth; // restart the animation on rapid clicks
+            settingsButton.classList.add("is-spinning");
+            setTimeout(() => settingsButton.classList.remove("is-spinning"), 260);
+        }
         ratingSelect.value = String(maxRating);
         unratedCheckbox.checked = includeUnrated;
         syncUnratedCheckbox();
