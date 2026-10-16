@@ -931,7 +931,7 @@
     //      30 titles up front and more as you scroll, up to 60 ----
     const GENRE_INITIAL_ITEMS = 30;
     const GENRE_BATCH_ITEMS = 15;
-    const GENRE_MAX_ITEMS = 60;
+    const GENRE_MAX_ITEMS = 120;
     const GENRE_MAX_SCAN_PAGES = 15;
     const GENRE_VISIBLE_ROWS = 3;
     const resultsHeading = document.getElementById("results-heading");
@@ -1284,51 +1284,67 @@
     renderServerList();
     // "Don't show again" option for the heads-up (remembered in this browser) [Announcement Mode on For Update]
   
-const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
-// set to true when using modal for announcements
-const ANNOUNCEMENT_MODE = true;
-
-const dismissDisclaimerForever = document.createElement("button");
-dismissDisclaimerForever.type = "button";
-dismissDisclaimerForever.className = "grey-button";
-dismissDisclaimerForever.textContent = "Don’t show again";
-
-const disclaimerActions = document.createElement("div");
-disclaimerActions.className = "confirm-actions";
-closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
 
 
-dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
+    // ---- Disclaimer / announcement modal ----
+    const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
 
-disclaimerActions.append(closeDisclaimer, dismissDisclaimerForever);
+    // true = force the modal to show, regardless of saved preferences
+    const ANNOUNCEMENT_MODE = true;
 
-closeDisclaimer.addEventListener("click", () => disclaimer.close());
+    const dismissDisclaimerForever = document.createElement("button");
+    dismissDisclaimerForever.type = "button";
+    dismissDisclaimerForever.className = "grey-button";
+    dismissDisclaimerForever.textContent = "Don't show again";
+    dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
 
-dismissDisclaimerForever.addEventListener("click", () => {
-    try {
-        localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
-    } catch (error) {
-        console.error(error);
+    // Reuse the existing dialog's action area if one already exists.
+    let disclaimerActions = closeDisclaimer.parentElement;
+
+    if (!disclaimerActions.classList.contains("confirm-actions")) {
+        disclaimerActions = document.createElement("div");
+        disclaimerActions.className = "confirm-actions";
+        closeDisclaimer.parentNode.insertBefore(
+            disclaimerActions,
+            closeDisclaimer
+        );
+        disclaimerActions.appendChild(closeDisclaimer);
     }
 
-    disclaimer.close();
-});
-
-let disclaimerHidden = false;
-
-if (!ANNOUNCEMENT_MODE) {
-    try {
-        disclaimerHidden =
-            localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
-    } catch (error) {
-        console.error(error);
+    if (!disclaimerActions.contains(dismissDisclaimerForever)) {
+        disclaimerActions.appendChild(dismissDisclaimerForever);
     }
-}
 
-if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
-    disclaimer.showModal();
-}
+    closeDisclaimer.addEventListener("click", () => disclaimer.close());
 
-updateSessionView();
-loadPopularShows();
+    dismissDisclaimerForever.addEventListener("click", () => {
+        try {
+            localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
+        } catch (error) {
+            console.error("Couldn't save disclaimer preference:", error);
+        }
+
+        disclaimer.close();
+    });
+
+    let disclaimerHidden = false;
+
+    if (!ANNOUNCEMENT_MODE) {
+        try {
+            disclaimerHidden =
+                localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+        } catch (error) {
+            console.error("Couldn't read disclaimer preference:", error);
+        }
+    }
+
+    if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
+        if (!disclaimer.open) {
+            disclaimer.showModal();
+        }
+    }
+
+    updateSessionView();
+    loadPopularShows();
 })();
+
