@@ -13,6 +13,11 @@
 <body data-page="search">
     <div class="watch-app-layout">
         <aside class="watch-sidebar" id="watch-sidebar" aria-label="Watch navigation">
+            <button id="sidebar-toggle-btn" class="sidebar-collapse-toggle" type="button" aria-label="Collapse sidebar" title="Toggle sidebar">
+                <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                    <path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </button>
             <div class="sidebar-brand">
                 <a href="../" class="brand-link" title="Opie Watch Home">
                     <span class="brand-icon" aria-hidden="true">
@@ -186,15 +191,16 @@
                     <p class="player-note">Playback is provided by the selected third-party server. Only configured provider domains can load in the player. If it doesn’t load, try another server or episode.</p>
                 </section>
 
-                <section id="history-section" class="history-section" aria-labelledby="history-heading">
+                <section id="recommended-section" class="recommendation-section" aria-labelledby="recommended-heading">
                     <div class="section-heading">
                         <div>
-                            <p class="eyebrow">Your picks</p>
-                            <h2 id="history-heading">Pick up where you left off</h2>
+                            <p class="eyebrow">Suggestions</p>
+                            <h2 id="recommended-heading">You might like</h2>
                         </div>
-                        <button id="clear-history" class="text-button" type="button">Clear these</button>
                     </div>
-                    <div id="history" class="history-grid"></div>
+                    <div id="recommended-results" class="recommendation-grid" aria-live="polite">
+                        <p class="recommendation-message">Loading suggestions…</p>
+                    </div>
                 </section>
 
                 <p class="attribution">Search powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>. DMCA Disclaimer: The third-party providers are content aggregators that scrape publicly available sources.</p>

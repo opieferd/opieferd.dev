@@ -13,6 +13,11 @@
 <body data-page="home">
     <div class="watch-app-layout">
         <aside class="watch-sidebar" id="watch-sidebar" aria-label="Watch navigation">
+            <button id="sidebar-toggle-btn" class="sidebar-collapse-toggle" type="button" aria-label="Collapse sidebar" title="Toggle sidebar">
+                <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+                    <path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </button>
             <div class="sidebar-brand">
                 <a href="./" class="brand-link" title="Opie Watch Home">
                     <span class="brand-icon" aria-hidden="true">
@@ -115,7 +120,20 @@
 
                 <header class="page-header">
                     <p class="eyebrow">opieferd.dev / watch</p>
-                    <h1>Opie Watch<span class="title-mark"></span></h1>
+                    <div class="home-brand-hero">
+                        <div class="home-brand-badge">
+                            <span class="home-brand-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                            </span>
+                            <div class="home-brand-meta">
+                                <span class="home-brand-name">Opie Watch</span>
+                                <span class="brand-badge">Stream</span>
+                            </div>
+                        </div>
+                        <h1 class="home-heading">Home<span class="title-mark">.</span></h1>
+                    </div>
                     <p class="intro">Search for something to watch or continue watching</p>
                 </header>
 

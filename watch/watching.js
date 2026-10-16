@@ -57,6 +57,7 @@
     const searchInput = document.getElementById("search-input");
     const searchMessage = document.getElementById("search-message");
     const resultsSection = document.getElementById("results-section");
+    const resultsHeading = document.getElementById("results-heading");
     const results = document.getElementById("results");
     const resultCount = document.getElementById("result-count");
     const playerSection = document.getElementById("player-section");
@@ -82,6 +83,7 @@
     const popularShowsResults = document.getElementById("popular-shows-results");
     const popularMoviesResults = document.getElementById("popular-movies-results");
     const recommendedSection = document.getElementById("recommended-section");
+    const recommendedHeading = document.getElementById("recommended-heading");
     const recommendedResults = document.getElementById("recommended-results");
     const clearHistory = document.getElementById("clear-history");
     const saveHistoryPrompt = document.getElementById("save-history-prompt");
@@ -525,6 +527,7 @@
         if (typeof resetGenreResults === "function") resetGenreResults();
         if (searchMessage) searchMessage.textContent = "Looking around…";
         if (resultsSection) resultsSection.hidden = true;
+        if (recommendedSection) recommendedSection.hidden = true;
         try {
             const response = await fetch(`${TMDB_API}/search/${searchType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}&include_adult=false&page=1`);
             if (!response.ok) throw new Error(`Search failed (${response.status})`);
@@ -554,6 +557,10 @@
     function renderResults(items) {
         if (!results || !resultsSection) return;
         if (resultCount) resultCount.textContent = `${items.length} result${items.length === 1 ? "" : "s"}`;
+        const query = searchInput ? searchInput.value.trim() : "";
+        if (resultsHeading && query) {
+            resultsHeading.textContent = `Results for “${query}”`;
+        }
         results.innerHTML = items.map((item) => {
             const title = mediaTitle(item);
             const type = mediaType(item);
@@ -677,15 +684,33 @@
         }
     }
 
+    async function loadSearchTrendingRecommendations() {
+        if (!recommendedSection || !recommendedResults) return;
+        try {
+            const response = await fetch(`${TMDB_API}/trending/all/week?api_key=${TMDB_KEY}&language=en-US&page=1`);
+            if (!response.ok) throw new Error("Trending recommendations failed");
+            const data = await response.json();
+            const items = (data.results || [])
+                .filter((item) => (item.title || item.name) && item.poster_path)
+                .slice(0, 24);
+            recommendedSection.hidden = false;
+            if (recommendedHeading) recommendedHeading.textContent = "You might like";
+            renderRecommendationCards(recommendedResults, items, "Search for any movie or show to begin.");
+        } catch (error) {
+            console.error(error);
+            recommendedSection.hidden = true;
+        }
+    }
+
     async function loadRecommendations() {
         if (!recommendedSection || !recommendedResults) return;
-        if (!historyEnabled) {
-            recommendedSection.hidden = true;
-            return;
-        }
-        const savedShows = readHistory().filter((item) => item.type === "tv").slice(0, 5);
+        const savedShows = historyEnabled ? readHistory().filter((item) => item.type === "tv").slice(0, 5) : [];
         if (!savedShows.length) {
-            recommendedSection.hidden = true;
+            if (pageType === "search") {
+                loadSearchTrendingRecommendations();
+            } else {
+                recommendedSection.hidden = true;
+            }
             return;
         }
         try {
@@ -703,11 +728,24 @@
                 seenIds.add(item.id);
                 recommendations.push({ ...item, media_type: "tv" });
             });
+            if (!recommendations.length) {
+                if (pageType === "search") {
+                    loadSearchTrendingRecommendations();
+                } else {
+                    recommendedSection.hidden = true;
+                }
+                return;
+            }
             recommendedSection.hidden = false;
+            if (recommendedHeading) recommendedHeading.textContent = "You might like";
             renderRecommendationCards(recommendedResults, recommendations.slice(0, 30), "Watch a few shows and I’ll find more recommendations.");
         } catch (error) {
             console.error(error);
-            recommendedSection.hidden = true;
+            if (pageType === "search") {
+                loadSearchTrendingRecommendations();
+            } else {
+                recommendedSection.hidden = true;
+            }
         }
     }
 
@@ -883,6 +921,15 @@
 
         searchInput.addEventListener("input", () => {
             clearSearchButton.hidden = !searchInput.value;
+            if (!searchInput.value.trim() && pageType === "search") {
+                searchRequestId += 1;
+                if (resultsSection) resultsSection.hidden = true;
+                if (results) results.innerHTML = "";
+                if (resultCount) resultCount.textContent = "";
+                if (searchMessage) searchMessage.textContent = "";
+                if (resultsHeading) resultsHeading.textContent = "What sounds good?";
+                if (recommendedSection) recommendedSection.hidden = false;
+            }
         });
 
         clearSearchButton.addEventListener("click", () => {
@@ -904,6 +951,8 @@
             if (results) results.innerHTML = "";
             if (resultCount) resultCount.textContent = "";
             if (searchMessage) searchMessage.textContent = "";
+            if (resultsHeading) resultsHeading.textContent = "What sounds good?";
+            if (recommendedSection) recommendedSection.hidden = false;
             resetGenreResults();
             searchInput.focus();
         });
@@ -966,7 +1015,13 @@
         genreList.addEventListener("click", (event) => {
             const chip = event.target.closest(".genre-chip");
             if (!chip) return;
-            startGenreBrowse(genreTab, GENRES[genreTab][Number(chip.dataset.index)]);
+            const genre = GENRES[genreTab][Number(chip.dataset.index)];
+            closeGenrePanel();
+            const isWatchSubdomain = window.location.hostname.startsWith("watch.");
+            const targetBase = isWatchSubdomain
+                ? "/categories/"
+                : (pageType === "home" ? "categories/" : "../categories/");
+            window.location.href = `${targetBase}?type=${genreTab}&genre=${encodeURIComponent(genre.label)}`;
         });
 
         document.addEventListener("click", (event) => {
@@ -1090,6 +1145,45 @@
         }
     }
     normalizeSubdomainNavigation();
+
+    // Sidebar Collapse/Expand Toggle
+    const sidebarToggleBtn = document.getElementById("sidebar-toggle-btn");
+    const watchSidebar = document.getElementById("watch-sidebar");
+    const appLayout = document.querySelector(".watch-app-layout");
+    const SIDEBAR_COLLAPSED_KEY = "watch_sidebar_collapsed";
+
+    function applySidebarState(isCollapsed) {
+        if (!watchSidebar) return;
+        watchSidebar.classList.toggle("collapsed", isCollapsed);
+        if (appLayout) {
+            appLayout.classList.toggle("sidebar-collapsed", isCollapsed);
+        }
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+            sidebarToggleBtn.setAttribute("title", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
+            sidebarToggleBtn.setAttribute("aria-label", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
+        }
+    }
+
+    try {
+        const savedCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+        if (savedCollapsed) {
+            applySidebarState(true);
+        }
+    } catch (e) {
+        // localStorage might be unavailable in private browsing
+    }
+
+    if (sidebarToggleBtn && watchSidebar) {
+        sidebarToggleBtn.addEventListener("click", () => {
+            const isCurrentlyCollapsed = watchSidebar.classList.contains("collapsed");
+            const nextState = !isCurrentlyCollapsed;
+            applySidebarState(nextState);
+            try {
+                localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(nextState));
+            } catch (e) {}
+        });
+    }
 
     // Type buttons (All, Movies, TV shows on Search page)
     document.querySelectorAll(".type-button").forEach((button) => button.addEventListener("click", () => {
@@ -1551,6 +1645,20 @@
                 categoryPage += 1;
                 loadCategoryTitles(activeCategoryType, activeCategoryGenre, false);
             });
+        }
+        const catUrlParams = new URLSearchParams(window.location.search);
+        const catTypeParam = catUrlParams.get("type");
+        const catGenreParam = catUrlParams.get("genre");
+        if (catTypeParam && GENRES[catTypeParam]) {
+            activeCategoryType = catTypeParam;
+            document.querySelectorAll(".category-type-tab").forEach((t) => t.classList.toggle("active", t.dataset.type === catTypeParam));
+        }
+        if (catGenreParam) {
+            const matchedGenre = (GENRES[activeCategoryType] || []).find((g) => g.label.toLowerCase() === catGenreParam.toLowerCase());
+            if (matchedGenre) activeCategoryGenre = matchedGenre;
+            else activeCategoryGenre = GENRES[activeCategoryType][0];
+        } else {
+            activeCategoryGenre = GENRES[activeCategoryType][0];
         }
         renderCategoryPills();
         loadCategoryTitles(activeCategoryType, activeCategoryGenre, true);
