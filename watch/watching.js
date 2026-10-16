@@ -1282,32 +1282,53 @@
         clearDialog.showModal();
     });
     renderServerList();
-    // "Don't show again" option for the heads-up (remembered in this browser) [Currently Disabled For Update]
-    const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
-    const dismissDisclaimerForever = document.createElement("button");
-    dismissDisclaimerForever.type = "button";
-    dismissDisclaimerForever.className = "grey-button";
-    dismissDisclaimerForever.textContent = "Don’t show again"; */
-    const disclaimerActions = document.createElement("div");
-    disclaimerActions.className = "confirm-actions";
-    closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
-    disclaimerActions.append(closeDisclaimer, dismissDisclaimerForever);
-    closeDisclaimer.addEventListener("click", () => disclaimer.close());
-    dismissDisclaimerForever.addEventListener("click", () => {
-        try {
-            localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
-        } catch (error) {
-            console.error(error);
-        }
-        disclaimer.close();
-    }); 
-    let disclaimerHidden = false;
+    // "Don't show again" option for the heads-up (remembered in this browser) [Announcement Mode on For Update]
+  
+const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
+// set to true when using modal for announcements
+const ANNOUNCEMENT_MODE = true;
+
+const dismissDisclaimerForever = document.createElement("button");
+dismissDisclaimerForever.type = "button";
+dismissDisclaimerForever.className = "grey-button";
+dismissDisclaimerForever.textContent = "Don’t show again";
+
+const disclaimerActions = document.createElement("div");
+disclaimerActions.className = "confirm-actions";
+closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
+
+
+dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
+
+disclaimerActions.append(closeDisclaimer, dismissDisclaimerForever);
+
+closeDisclaimer.addEventListener("click", () => disclaimer.close());
+
+dismissDisclaimerForever.addEventListener("click", () => {
     try {
-        disclaimerHidden = localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+        localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
     } catch (error) {
         console.error(error);
     }
-    if (!disclaimerHidden) disclaimer.showModal();
-    updateSessionView();
-    loadPopularShows();
-})(); 
+
+    disclaimer.close();
+});
+
+let disclaimerHidden = false;
+
+if (!ANNOUNCEMENT_MODE) {
+    try {
+        disclaimerHidden =
+            localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
+    disclaimer.showModal();
+}
+
+updateSessionView();
+loadPopularShows();
+})();
