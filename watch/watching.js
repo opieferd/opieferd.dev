@@ -1293,14 +1293,14 @@
     closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
     disclaimerActions.append(closeDisclaimer, dismissDisclaimerForever);
     closeDisclaimer.addEventListener("click", () => disclaimer.close());
-  /*  dismissDisclaimerForever.addEventListener("click", () => {
+    dismissDisclaimerForever.addEventListener("click", () => {
         try {
             localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
         } catch (error) {
             console.error(error);
         }
         disclaimer.close();
-    }); */
+    }); 
     let disclaimerHidden = false;
     try {
         disclaimerHidden = localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
