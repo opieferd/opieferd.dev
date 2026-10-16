@@ -864,3 +864,28 @@ dialog.disclaimer[open] {
     .watch-main-content { margin-left: 0 !important; padding-bottom: 5.5rem; }
     .home-heading { font-size: clamp(2.6rem, 14vw, 4rem); }
 }
+
+/* ---- No-script disclaimer ---- */
+.noscript-disclaimer {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: .5rem;
+    padding: 2rem;
+    background: rgb(8 7 6 / 96%);
+    color: #fff;
+    text-align: center;
+}
+
+.noscript-disclaimer .eyebrow { margin: 0; }
+
+.noscript-disclaimer h2 {
+    max-width: 28rem;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    letter-spacing: -.03em;
+    line-height: 1.15;
+    color: var(--accent);
+}
