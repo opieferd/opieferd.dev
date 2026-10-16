@@ -727,7 +727,7 @@ a { color: var(--accent); }
         left: 0.85rem;
         right: 0.85rem;
         width: auto;
-        max-width: 500px;
+        max-width: 400px;
         margin: 0 auto;
         height: 62px;
         flex-direction: row;
