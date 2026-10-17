@@ -757,6 +757,7 @@
             if (!response.ok) throw new Error(`Details failed (${response.status})`);
             activeMedia = await response.json();
             activeMediaType = type;
+            window.dispatchEvent(new CustomEvent("watch:media-opened", { detail: { type, id: activeMedia.id, title: mediaTitle(activeMedia), poster_path: activeMedia.poster_path || "" } }));
             malOverride = null;
             if (malSelect) malSelect.hidden = true;
             renderServerList();
@@ -1232,6 +1233,7 @@
     }
 
     window.addEventListener("message", handlePlaybackMessage);
+    window.addEventListener("watch:open", (event) => { const detail = event.detail || {}; if (detail.id && (detail.type === "movie" || detail.type === "tv")) openMedia(Number(detail.id), detail.type); });
 
     if (closePlayer && playerSection) {
         closePlayer.addEventListener("click", () => {
@@ -1239,6 +1241,7 @@
             playerSection.hidden = true;
             activeMedia = null;
             activeMediaType = null;
+            window.dispatchEvent(new CustomEvent("watch:media-closed"));
             playerRequestId += 1;
             renderServerList();
             renderAudioControls();
@@ -1357,7 +1360,8 @@
                 banner.hidden = true;
             });
         }
-
+async function getLiveRaised() 
+{ if (document.readyState === "loading") { await new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, { once: true })); } const account = window.OpieAccount; if (!account || !account.client) return 0; try { const { data } = await account.client.rpc("donation_progress"); return data ? Number(data.raised) || 0 : 0; } catch (error) { return 0; } } 
         async function init() {
             try {
                 const response = await fetch(dataUrl, { cache: "no-cache" });
@@ -1367,7 +1371,8 @@
                 const goal = Math.max(Number(data.goal) || 0, 0);
                 const currency = data.currency || "$";
                 const raisedByMonth = data.raised && typeof data.raised === "object" ? data.raised : {};
-                const raised = Math.max(Number(raisedByMonth[monthId]) || 0, 0);
+                const manualRaised = Math.max(Number(raisedByMonth[monthId]) || 0, 0); 
+                const raised = Math.max(manualRaised, await getLiveRaised());
                 if (!goal) return;
 
                 const percent = Math.min(100, Math.round((raised / goal) * 100));
