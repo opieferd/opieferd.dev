@@ -2,11 +2,12 @@
     "use strict";
 
     /* =====================================================================
-       CONFIG: paste these from Supabase -> Project Settings -> API
-       (the anon key is meant to be public; row-level security protects data)
+       CONFIG (Supabase -> Project Settings -> API)
+       The publishable key is meant to be public; row-level security protects data.
+       NEVER put an sb_secret_ key in this file.
        ===================================================================== */
-    const SUPABASE_URL = "https://YOUR-PROJECT-ID.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+    const SUPABASE_URL = "https://ykipenudpfnzbgmxrepi.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_4_AkBab6OcvzLubqcONTvw_-LLsarF9";
     const KOFI_URL = "https://ko-fi.com/opieferd";
     const TMDB_POSTER = "https://image.tmdb.org/t/p/w342";
 
@@ -90,37 +91,86 @@
     }
 
     /* =====================================================================
-       Account buttons (sidebar footer + mobile floating button)
+       Top-right profile picture + menu (replaces the settings gear)
+       The original gear button stays in the page (hidden by accounts.css)
+       and is triggered from the "Settings" menu item.
        ===================================================================== */
     document.body.classList.add("has-accounts");
 
-    const footer = $(".sidebar-footer");
+    const settingsButton = $(".settings-button");
+    const topWrap = document.createElement("div");
+    topWrap.className = "acc-top";
+
     const accountButton = document.createElement("button");
     accountButton.id = "account-button";
     accountButton.type = "button";
-    accountButton.className = "sidebar-footer-btn acc-footer-btn";
-    if (footer) footer.insertBefore(accountButton, footer.firstChild);
+    accountButton.className = "acc-top-btn";
+    accountButton.setAttribute("aria-haspopup", "menu");
+    accountButton.setAttribute("aria-expanded", "false");
 
-    const accountFab = document.createElement("button");
-    accountFab.id = "account-fab";
-    accountFab.type = "button";
-    accountFab.className = "acc-fab";
-    accountFab.setAttribute("aria-label", "Account");
-    document.body.appendChild(accountFab);
+    const accountMenu = document.createElement("div");
+    accountMenu.className = "acc-menu";
+    accountMenu.setAttribute("role", "menu");
+    accountMenu.hidden = true;
+
+    topWrap.append(accountButton, accountMenu);
+    // Mount where the gear lives so we inherit the same positioned container
+    const mountPoint = settingsButton && settingsButton.parentNode ? settingsButton.parentNode : document.body;
+    mountPoint.insertBefore(topWrap, settingsButton || null);
+
+    const PERSON_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>';
 
     function renderAccountButtons() {
         const p = state.profile;
-        const iconSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>';
-        accountButton.innerHTML = `<i class="acc-btn-avatar">${p ? avatarHTML(p, "xs") : iconSvg}</i><span>${p ? esc(p.username) : "Sign in"}</span>`;
-        accountButton.title = p ? "Your profile" : "Sign in or create an account";
-        accountFab.innerHTML = p ? avatarHTML(p, "sm") : iconSvg;
+        accountButton.innerHTML = p ? avatarHTML(p, "md") : PERSON_ICON;
+        accountButton.classList.toggle("is-signed-in", Boolean(p));
+        accountButton.setAttribute("aria-label", p ? `Account menu for ${p.username}` : "Sign in or open settings");
+        accountButton.title = p ? p.username : "Account";
+        if (!accountMenu.hidden) renderMenu();
+        window.dispatchEvent(new CustomEvent("account:changed"));
     }
-    function onAccountClick() {
-        if (state.profile) openProfile(state.profile.username);
-        else openAuth("signin");
+
+    function renderMenu() {
+        const p = state.profile;
+        const item = (act, label) => `<button type="button" class="acc-menu-item" role="menuitem" data-menu="${act}">${label}</button>`;
+        const parts = [];
+        if (p) {
+            parts.push(`<div class="acc-menu-head">${avatarHTML(p, "sm")}<div><strong>${esc(p.username)}</strong><small>${esc(tierLabel(p))}</small></div></div>`);
+            parts.push(item("profile", "Your profile"), item("watchlist", "Watchlist"), item("customize", "Customize"));
+        } else {
+            parts.push(item("signin", "Sign in"), item("signup", "Create account"));
+        }
+        if (settingsButton) parts.push('<div class="acc-menu-sep" role="separator"></div>', item("settings", "Settings"));
+        if (p) parts.push(item("signout", "Sign out"));
+        accountMenu.innerHTML = parts.join("");
     }
-    accountButton.addEventListener("click", onAccountClick);
-    accountFab.addEventListener("click", onAccountClick);
+
+    function setMenu(open) {
+        if (open) renderMenu();
+        accountMenu.hidden = !open;
+        accountButton.setAttribute("aria-expanded", String(open));
+    }
+
+    accountButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setMenu(accountMenu.hidden);
+    });
+    accountMenu.addEventListener("click", async (event) => {
+        const target = event.target.closest("[data-menu]");
+        if (!target) return;
+        const act = target.dataset.menu;
+        setMenu(false);
+        if (act === "signin" || act === "signup") openAuth(act);
+        else if (act === "settings") { if (settingsButton) settingsButton.click(); }
+        else if (act === "signout") await sb.auth.signOut();
+        else if (state.profile) openProfile(state.profile.username, act);
+    });
+    document.addEventListener("click", (event) => {
+        if (!accountMenu.hidden && !topWrap.contains(event.target)) setMenu(false);
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !accountMenu.hidden) { setMenu(false); accountButton.focus(); }
+    });
 
     /* =====================================================================
        Auth dialog (sign in / create account / forgot / set new password)
@@ -394,7 +444,7 @@
             <div class="acc-membership">
                 <h3 class="acc-h3">Membership: ${esc(tierLabel(p))}</h3>
                 <p class="acc-muted">Basic ($5/mo): badge, accent colours, supporter wall. Gold ($10/mo): Gold badge, more colours, borders, banner, roadmap voting, early access.</p>
-                <p class="acc-muted">After you support on Ko-fi, include your Opie Watch username in the message and your tier will be applied.</p>
+                <p class="acc-muted">Join a membership tier on Ko-fi using the same email as this account, or write @yourusername in the Ko-fi message, and your tier is applied automatically.</p>
                 <a class="secondary-button" href="${KOFI_URL}" target="_blank" rel="noopener noreferrer">Support on Ko-fi <span aria-hidden="true">♥</span></a>
             </div>`;
     }
@@ -608,8 +658,7 @@
        ===================================================================== */
     document.addEventListener("click", (event) => {
         const name = event.target.closest(".acc-name[data-user]");
-        if (name && !profileDialog.contains(name)) openProfile(name.dataset.user);
-        else if (name) openProfile(name.dataset.user);
+        if (name) openProfile(name.dataset.user);
     });
 
     /* =====================================================================
@@ -855,6 +904,8 @@
     /* Handy for gating experimental features to Gold supporters:
        if (window.OpieAccount && window.OpieAccount.hasEarlyAccess()) { ... } */
     window.OpieAccount = {
+        client: sb,
+        openAuth: (mode) => openAuth(mode || "signin"),
         isSignedIn: () => Boolean(state.user),
         getProfile: () => state.profile,
         hasEarlyAccess: () => effTier(state.profile) === "gold"
