@@ -1,0 +1,291 @@
+/* =====================================================================
+   Opie Watch accounts UI  (loads AFTER your main stylesheet)
+   Built on your tokens: --bg --card --border --muted --accent --accent-soft.
+   Your global `button` rule fills orange on hover, so every custom button
+   below sets explicit hover/focus states to opt out of it.
+   ===================================================================== */
+
+:root {
+    --acc-ink: #17120b;            /* dark text on orange fills */
+    --acc-field: #0d0b09;          /* same as your inputs */
+    --acc-raise: #211a11;          /* same as your card hover */
+    --acc-danger: #e5484d;
+    --acc-ok: #30c48d;
+}
+
+/* ---------- avatars ---------- */
+.acc-avatar {
+    --size: 44px;
+    position: relative;
+    display: inline-grid; place-items: center; flex: none;
+    width: var(--size); height: var(--size);
+    border-radius: 50%;
+    background: var(--acc-raise);
+    box-shadow: 0 0 0 2px var(--u-accent, var(--accent));
+}
+.acc-avatar img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.acc-avatar-fallback {
+    display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%;
+    background: var(--u-accent, var(--accent)); color: var(--acc-ink);
+    font-weight: 800; font-size: calc(var(--size) * .45);
+}
+.acc-avatar-xs { --size: 22px; }
+.acc-avatar-sm { --size: 34px; }
+.acc-avatar-md { --size: 44px; }
+.acc-avatar-lg { --size: 64px; }
+.acc-avatar-xl { --size: 92px; }
+
+.acc-border-gold  { box-shadow: 0 0 0 3px #ffd700, 0 0 0 5px rgba(255, 215, 0, .25); }
+.acc-border-neon  { box-shadow: 0 0 0 2px #00f0ff, 0 0 12px 2px #00f0ff, 0 0 22px 4px rgba(255, 0, 200, .55); }
+.acc-border-ember { box-shadow: 0 0 0 3px #ff5e3a, 0 0 14px 2px rgba(255, 140, 0, .7); animation: acc-ember 2.6s ease-in-out infinite alternate; }
+.acc-border-owner { box-shadow: 0 0 0 3px var(--accent), 0 0 0 6px rgba(235, 175, 54, .3); }
+@keyframes acc-ember {
+    from { box-shadow: 0 0 0 3px #ff5e3a, 0 0 8px 1px rgba(255, 140, 0, .5); }
+    to   { box-shadow: 0 0 0 3px #ff9f1c, 0 0 18px 4px rgba(255, 94, 58, .8); }
+}
+
+/* ---------- badges & names ---------- */
+.acc-badge {
+    display: inline-flex; align-items: center; gap: .25em;
+    margin-left: .4em; padding: .05em .5em; border-radius: 999px;
+    font-size: .72rem; font-weight: 700; line-height: 1.6; vertical-align: middle; white-space: nowrap;
+}
+.acc-badge-basic { padding: 0 .2em; color: #ff7ab6; font-size: .85rem; }
+.acc-badge-gold  { border: 1px solid rgba(235, 175, 54, .5); background: var(--accent-soft); color: var(--accent); }
+.acc-badge-owner { background: var(--accent); color: var(--acc-ink); }
+
+.acc-name, .acc-name:hover, .acc-name:focus-visible {
+    margin: 0; padding: 0; border: 0; border-radius: 0; background: none;
+    color: var(--u-accent, #fff); font: inherit; font-weight: 600; text-align: left; cursor: pointer;
+}
+.acc-name:hover, .acc-name:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.acc-name.is-gold, .acc-name.is-owner { font-weight: 800; }
+
+/* ---------- top-right profile picture (replaces the settings gear) ----------
+   accounts.js mounts .acc-top in the same container as .settings-button, so it
+   sits exactly where the gear was. The gear stays in the DOM (hidden) and is
+   opened from the "Settings" menu item. If accounts.js is off, the gear returns. */
+.has-accounts .settings-button { display: none; }
+.acc-top { position: absolute; top: 1.25rem; right: 1.25rem; z-index: 60; }
+
+.acc-top-btn, .acc-top-btn:hover, .acc-top-btn:focus-visible {
+    display: grid; place-items: center; width: 2.6rem; height: 2.6rem; padding: 0;
+    border: 1px solid var(--border); border-radius: 50%;
+    background: var(--card); color: var(--muted); cursor: pointer;
+}
+.acc-top-btn:hover, .acc-top-btn:focus-visible, .acc-top-btn[aria-expanded="true"] {
+    border-color: var(--accent); color: var(--accent);
+    background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--card);
+}
+.acc-top-btn.is-signed-in, .acc-top-btn.is-signed-in:hover, .acc-top-btn.is-signed-in:focus-visible,
+.acc-top-btn.is-signed-in[aria-expanded="true"] { border-color: transparent; background: none; }
+.acc-top-btn .acc-avatar { --size: 2.6rem; }
+.acc-top-btn.is-signed-in:hover .acc-avatar, .acc-top-btn.is-signed-in[aria-expanded="true"] .acc-avatar { filter: brightness(1.15); }
+
+.acc-menu {
+    position: absolute; top: calc(100% + .6rem); right: 0; min-width: 13.5rem; padding: .4rem;
+    border: 1px solid var(--border); border-radius: .75rem; background: var(--card);
+    box-shadow: 0 1.2rem 3rem rgb(0 0 0 / 55%);
+}
+.acc-menu-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .3rem; padding: .55rem .6rem .75rem; border-bottom: 1px solid var(--border); }
+.acc-menu-head strong { display: block; overflow: hidden; max-width: 9rem; text-overflow: ellipsis; white-space: nowrap; }
+.acc-menu-head small { display: block; color: var(--muted); font-size: .72rem; }
+.acc-menu-item, .acc-menu-item:hover, .acc-menu-item:focus-visible {
+    display: block; width: 100%; padding: .6rem .7rem; border: 1px solid transparent; border-radius: .5rem;
+    background: transparent; color: #fff; font-size: .88rem; font-weight: 600; text-align: left; cursor: pointer;
+}
+.acc-menu-item:hover, .acc-menu-item:focus-visible { background: var(--accent-soft); color: var(--accent); }
+.acc-menu-sep { height: 1px; margin: .3rem .4rem; background: var(--border); }
+
+/* ---------- dialogs ----------
+   Your `dialog.disclaimer[open]` rule is more specific than a single class,
+   so the width and text overrides repeat both classes. */
+dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
+.disclaimer.acc-dialog p:not(.eyebrow) { margin: .4rem 0; font-size: .92rem; }
+.disclaimer.acc-dialog p.acc-bio { margin: 0 0 .8rem; color: #fff; font-size: 1rem; line-height: 1.55; overflow-wrap: anywhere; }
+.disclaimer.acc-dialog p.acc-hint { margin: .25rem 0 0; font-size: .8rem; }
+.disclaimer.acc-dialog p.form-message { min-height: 1.3rem; margin: .5rem 0; color: var(--acc-danger); font-size: .88rem; }
+.disclaimer.acc-dialog p.form-message.is-ok { color: var(--acc-ok); }
+
+.acc-muted { color: var(--muted); }
+.acc-lock {
+    margin-left: .5rem; padding: .1em .55em; border: 1px solid rgba(235, 175, 54, .45); border-radius: 999px;
+    color: var(--accent); font-size: .7rem; font-weight: 700; letter-spacing: 0;
+}
+
+/* tabs (same look as your .genre-tab / .type-button) */
+.acc-tabs { display: flex; gap: .5rem; margin: 0 0 1.1rem; }
+.acc-tabs-scroll { overflow-x: auto; scrollbar-width: none; }
+.acc-tabs-scroll::-webkit-scrollbar { display: none; }
+.acc-tab, .acc-tab:hover, .acc-tab:focus-visible {
+    flex: 0 0 auto; padding: .55rem .95rem; border: 1px solid transparent; border-radius: .5rem;
+    background: transparent; color: var(--muted); font-size: .85rem; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.acc-tab:hover, .acc-tab:focus-visible { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.acc-tab.active, .acc-tab.active:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+/* form fields (your input[type=text] rule doesn't cover email, password or textarea) */
+.acc-field { display: grid; gap: .35rem; margin-bottom: .9rem; }
+.acc-field span { color: var(--muted); font-size: .8rem; font-weight: 700; }
+.acc-field input[type="email"], .acc-field input[type="password"], .acc-field input[type="text"],
+.acc-textarea, .acc-inline input, .acc-inline select {
+    width: 100%; min-width: 0; padding: .8rem 1rem;
+    border: 1px solid var(--border); border-radius: .5rem; outline: none;
+    background: var(--acc-field); color: #fff; font: inherit;
+}
+.acc-field input:focus, .acc-textarea:focus, .acc-inline input:focus, .acc-inline select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.acc-textarea { min-height: 4.5rem; resize: vertical; }
+.acc-forgot { display: block; margin: 1rem auto 0; }
+
+/* ---------- profile ---------- */
+.acc-profile { position: relative; padding-bottom: 1.5rem; }
+.acc-banner {
+    height: 120px;
+    background: linear-gradient(135deg, var(--u-accent, var(--accent)), #1d1812 85%) center / cover no-repeat;
+}
+.acc-close, .acc-close:hover, .acc-close:focus-visible {
+    position: absolute; top: .7rem; right: .7rem; display: grid; place-items: center;
+    width: 2.2rem; height: 2.2rem; padding: 0; border: 1px solid var(--border); border-radius: 50%;
+    background: rgba(8, 7, 6, .7); color: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer;
+}
+.acc-close:hover, .acc-close:focus-visible { border-color: var(--accent); color: var(--accent); }
+.acc-head { display: flex; align-items: flex-end; gap: 1rem; margin-top: -46px; padding: 0 1.5rem; }
+.acc-head .acc-avatar { background: var(--card); }
+.acc-head-copy { min-width: 0; padding-bottom: .3rem; }
+.acc-head-copy .acc-muted { margin: .2rem 0 0; }
+.acc-profile .acc-username { margin: 0; font-size: 1.4rem; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.acc-profile .acc-username.is-gold, .acc-profile .acc-username.is-owner { color: var(--u-accent, var(--accent)); }
+.acc-profile .acc-tabs { margin: 1.2rem 1.5rem 0; }
+.acc-panel { padding: 1.1rem 1.5rem 0; }
+
+/* watchlist panel */
+.acc-wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .9rem; }
+.acc-wl-item { display: grid; gap: .35rem; min-width: 0; }
+.acc-wl-item .recommendation-card { flex: none; width: 100%; }
+.acc-wl-remove { justify-self: start; }
+
+/* customize panel */
+.acc-h3 { margin: 1.5rem 0 .6rem; font-size: .95rem; }
+.acc-h3 .text-button { margin-left: .5rem; }
+.acc-row { display: flex; align-items: center; gap: 1rem; }
+.acc-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.acc-swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
+.acc-swatch, .acc-swatch:hover, .acc-swatch:focus-visible {
+    width: 30px; height: 30px; padding: 0; border: 2px solid transparent; border-radius: 50%;
+    background: var(--sw); cursor: pointer;
+}
+.acc-swatch:hover, .acc-swatch:focus-visible { border-color: #fff; }
+.acc-swatch.active, .acc-swatch.active:hover { border-color: #fff; box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--sw); }
+.acc-swatch:disabled, .acc-swatch:disabled:hover { border-color: transparent; opacity: .25; cursor: not-allowed; }
+.acc-borders { display: flex; flex-wrap: wrap; gap: .5rem; }
+.acc-chip, .acc-chip:hover, .acc-chip:focus-visible {
+    padding: .45rem .8rem; border: 1px solid var(--border); border-radius: 999px;
+    background: transparent; color: var(--muted); font-size: .8rem; cursor: pointer;
+}
+.acc-chip:hover, .acc-chip:focus-visible, .acc-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.acc-chip:disabled, .acc-chip:disabled:hover { border-color: var(--border); background: transparent; color: var(--muted); opacity: .4; cursor: not-allowed; }
+.acc-profile .confirm-actions { margin-top: .75rem; }
+.acc-membership {
+    margin-top: 1.6rem; padding: 1rem 1.1rem;
+    border: 1px solid rgba(235, 175, 54, .4); border-radius: .75rem; background: var(--accent-soft);
+}
+.acc-membership .acc-h3 { margin-top: 0; }
+.acc-membership .secondary-button { margin-top: .6rem; }
+
+/* roadmap */
+.acc-feature { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+.acc-feature p { margin: .2rem 0 0; }
+
+/* owner panel */
+.acc-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.acc-inline input { flex: 1 1 140px; width: auto; }
+.acc-inline select { width: auto; }
+.acc-words { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.acc-word { display: inline-flex; align-items: center; gap: .4rem; padding: .15rem .25rem .15rem .7rem; border-radius: 999px; background: var(--acc-raise); font-size: .82rem; }
+.acc-word small { color: var(--muted); }
+.acc-word button, .acc-word button:hover, .acc-word button:focus-visible {
+    padding: 0 .4rem; border: 0; background: none; color: var(--muted); font-size: 1rem; line-height: 1.4; cursor: pointer;
+}
+.acc-word button:hover, .acc-word button:focus-visible { color: var(--acc-danger); }
+.acc-log { overflow-x: auto; font-size: .8rem; }
+.acc-log table { width: 100%; border-collapse: collapse; }
+.acc-log th, .acc-log td { padding: .45rem .5rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.acc-log th { color: var(--muted); font-weight: 700; }
+.acc-log-body { margin-top: .2rem; color: var(--muted); overflow-wrap: anywhere; }
+.acc-act { padding: .1em .5em; border-radius: .3rem; background: var(--acc-raise); }
+.acc-act-blocked, .acc-act-ban, .acc-act-auto_hidden { color: var(--acc-danger); }
+.acc-act-tier_change { color: var(--accent); }
+
+/* ---------- player: watchlist toggle ---------- */
+.acc-wl-toggle { flex: none; padding: .5rem .8rem; }
+.acc-wl-toggle.is-saved { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.acc-wl-toggle.is-saved:hover { background: var(--accent); color: var(--acc-ink); }
+
+/* ---------- supporter wall ---------- */
+.acc-wall .section-heading { align-items: center; }
+.acc-wall a.text-button { border: 1px solid var(--border); border-radius: .5rem; text-decoration: none; }
+.acc-wall a.text-button:hover, .acc-wall a.text-button:focus-visible { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.acc-wall-list { display: flex; flex-wrap: wrap; gap: .65rem; }
+.acc-wall-chip {
+    display: flex; align-items: center; gap: .6rem; padding: .35rem .95rem .35rem .4rem;
+    border: 1px solid var(--border); border-radius: 999px; background: rgba(23, 20, 17, .82);
+}
+.acc-wall-chip.is-spotlight { border-color: rgba(235, 175, 54, .55); background: var(--accent-soft); box-shadow: 0 0 16px rgba(235, 175, 54, .12); }
+.acc-wall-name { display: inline-flex; align-items: center; }
+
+/* ---------- comments ---------- */
+.acc-comments { margin: 2rem 0 1.5rem; }
+.acc-comments-title { margin: 0 0 1rem; font-size: 1.15rem; letter-spacing: -.02em; }
+.acc-compose { display: flex; gap: .75rem; margin-bottom: 1.4rem; }
+.acc-compose-main { flex: 1; min-width: 0; }
+.acc-compose-bar { display: flex; align-items: center; gap: .75rem; margin-top: .5rem; }
+.acc-compose-bar .form-message { flex: 1; min-height: 0; margin: 0; color: var(--acc-danger); }
+.acc-compose-bar .form-message.is-ok { color: var(--acc-ok); }
+.acc-compose-bar .primary-button { padding: .55rem 1.2rem; }
+.acc-comment-list { display: grid; gap: 1.1rem; }
+.acc-comment { display: flex; gap: .75rem; }
+.acc-comment.is-hidden { opacity: .5; }
+.acc-comment-main { flex: 1; min-width: 0; }
+.acc-comment-head { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .6rem; }
+.acc-comment-body { margin: .25rem 0; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.acc-comment-actions { display: flex; gap: 1rem; }
+.acc-link, .acc-link:hover, .acc-link:focus-visible {
+    padding: 0; border: 0; border-radius: 0; background: none; color: var(--muted);
+    font-size: .78rem; font-weight: 600; cursor: pointer;
+}
+.acc-link:hover, .acc-link:focus-visible { color: #fff; text-decoration: underline; }
+
+/* ---------- misc ---------- */
+.acc-dialog button:focus-visible, .acc-comments button:focus-visible, .acc-top button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .acc-border-ember { animation: none; } }
+
+@media (max-width: 480px) {
+    .acc-head, .acc-panel { padding-left: 1.1rem; padding-right: 1.1rem; }
+    .acc-profile .acc-tabs { margin-left: 1.1rem; margin-right: 1.1rem; }
+    .acc-compose-bar { flex-wrap: wrap; }
+}
+
+/* ---------- upgrade page (/watch/upgrade/) ---------- */
+.upgrade-section { margin-top: 1rem; }
+.upgrade-progress { margin-top: 1.5rem; }
+.upgrade-progress .eyebrow { margin-bottom: .8rem; }
+.tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.tier-card { display: flex; flex-direction: column; }
+.tier-card .eyebrow { margin: 0 0 .4rem; }
+.tier-price { font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -.04em; }
+.tier-price small { color: var(--muted); font-size: .9rem; font-weight: 600; letter-spacing: 0; }
+.tier-perks { display: grid; flex: 1; gap: .55rem; margin: .8rem 0 1.3rem; padding: 0; list-style: none; color: var(--muted); font-size: .92rem; line-height: 1.4; }
+.tier-perks li { position: relative; padding-left: 1.4rem; }
+.tier-perks li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 800; }
+.tier-card .secondary-button { justify-content: center; text-decoration: none; }
+.tier-card.is-gold { border-color: rgba(235, 175, 54, .7); box-shadow: 0 0 0 1px rgba(235, 175, 54, .2), 0 0 28px rgba(235, 175, 54, .12), 0 1.2rem 3rem rgb(0 0 0 / 28%); }
+.tier-card.is-gold .secondary-button { border-color: var(--accent); background: var(--accent); color: var(--acc-ink); }
+.tier-card.is-gold .secondary-button:hover, .tier-card.is-gold .secondary-button:focus-visible { background: #f3be4c; }
+.upgrade-steps ol { display: grid; gap: 1.2rem; margin: 1.1rem 0 0; padding-left: 1.3rem; line-height: 1.5; }
+.upgrade-steps li::marker { color: var(--accent); font-weight: 800; }
+.upgrade-steps p { margin: .3rem 0 0; }
+.upgrade-code { display: flex; align-items: center; gap: .6rem; margin-top: .6rem; }
+.upgrade-code code { padding: .5rem .8rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--acc-field); color: var(--accent); font-size: 1rem; }
