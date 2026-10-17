@@ -275,7 +275,7 @@ a { color: var(--accent); }
     bottom: var(--sidebar-floating-gap);
     width: var(--sidebar-width);
     height: calc(100vh - (var(--sidebar-floating-gap) * 2));
-    
+
     /* Semitransparent frosted-glass matching search bar and card */
     background: linear-gradient(
         150deg,
@@ -285,17 +285,17 @@ a { color: var(--accent); }
     );
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    
+
     /* Floating rounded corners */
     border-radius: 1rem;
-    
+
     /* Beveled orange outline */
     border: 1px solid rgba(235, 175, 54, 0.55);
     border-top: 1px solid rgba(235, 175, 54, 0.8);
     border-left: 1px solid rgba(235, 175, 54, 0.65);
     border-right: 1px solid rgba(235, 175, 54, 0.45);
     border-bottom: 1px solid rgba(235, 175, 54, 0.35);
-    
+
     box-shadow:
         /* Outer orange ambient glow & elevation */
         0 0 0 1px rgba(235, 175, 54, 0.18),
@@ -306,7 +306,7 @@ a { color: var(--accent); }
         inset 1px 1px 0 rgba(255, 255, 255, 0.16),
         inset 0 1px 2px rgba(235, 175, 54, 0.35),
         inset -1px -1px 0 rgba(0, 0, 0, 0.55);
-    
+
     display: flex;
     flex-direction: column;
     z-index: 100;
@@ -888,4 +888,50 @@ dialog.disclaimer[open] {
     letter-spacing: -.03em;
     line-height: 1.15;
     color: var(--accent);
+}
+
+/* ---- Donation banner ---- */
+.donation-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid rgba(235, 175, 54, 0.5);
+    border-radius: 1rem;
+    background: linear-gradient(150deg, rgba(26, 21, 16, 0.78) 0%, rgba(16, 13, 10, 0.72) 100%);
+    box-shadow: 0 0 0 1px rgba(235, 175, 54, 0.12), 0 0 24px rgba(235, 175, 54, 0.1), inset 1px 1px 0 rgba(255, 255, 255, 0.12);
+}
+.donation-copy { flex: 1 1 auto; min-width: 0; }
+.donation-copy .eyebrow { margin-bottom: .35rem; }
+.donation-title { margin: 0 0 .8rem; font-weight: 600; line-height: 1.4; }
+.donation-progress {
+    height: .6rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #0d0b09;
+}
+.donation-progress-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #b88118, var(--accent));
+    box-shadow: 0 0 10px rgba(235, 175, 54, .5);
+    transition: width .9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.donation-progress-label { margin: .45rem 0 0; color: var(--muted); font-size: .75rem; }
+.donation-progress-label span { color: var(--accent); font-weight: 700; }
+.donation-actions { display: flex; align-items: center; gap: .6rem; flex: none; }
+.donation-actions .secondary-button { white-space: nowrap; }
+
+@media (max-width: 560px) {
+    .donation-banner { flex-direction: column; align-items: stretch; }
+    .donation-actions { justify-content: space-between; }
+    .donation-actions .secondary-button { flex: 1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .donation-progress-fill { transition: none; }
 }
