@@ -588,61 +588,139 @@
                 </div>`).join("") : '<p class="acc-muted">No roadmap items yet.</p>'}`;
     }
 
-    /* ----- Owner panel ----- */
-    function ownerPanelHTML() {
-        return `
-            <p id="acc-panel-msg" class="form-message" role="status"></p>
+  
+/* ----- Owner panel ----- */
+function ownerPanelHTML() {
+    return `
+        <p id="acc-panel-msg" class="form-message" role="status"></p>
 
-            <h3 class="acc-h3">Set supporter tier</h3>
-            <div class="acc-inline">
-                <input id="own-tier-user" type="text" placeholder="username" maxlength="20">
-                <select id="own-tier-value"><option value="free">Member</option><option value="basic">Basic</option><option value="gold">Gold</option></select>
-                <button class="text-button" type="button" data-act="owner-tier">Apply</button>
-            </div>
+        <h3 class="acc-h3">Set supporter tier</h3>
+        <div class="acc-inline">
+            <input id="own-tier-user" type="text" placeholder="username" maxlength="20">
+            <select id="own-tier-value">
+                <option value="free">Member</option>
+                <option value="basic">Basic</option>
+                <option value="gold">Gold</option>
+            </select>
+            <button class="text-button" type="button" data-act="owner-tier">Apply</button>
+        </div>
 
-            <h3 class="acc-h3">Ban / unban commenting</h3>
-            <div class="acc-inline">
-                <input id="own-ban-user" type="text" placeholder="username" maxlength="20">
-                <button class="text-button" type="button" data-act="owner-ban" data-flag="true">Ban</button>
-                <button class="text-button" type="button" data-act="owner-ban" data-flag="false">Unban</button>
-            </div>
+        <h3 class="acc-h3">Manage moderators</h3>
+        <div class="acc-inline">
+            <input id="own-mod-user" type="text" placeholder="username" maxlength="20">
+            <button class="text-button" type="button" data-act="owner-mod" data-flag="true">
+                Make moderator
+            </button>
+            <button class="text-button" type="button" data-act="owner-mod" data-flag="false">
+                Remove moderator
+            </button>
+        </div>
 
-            <h3 class="acc-h3">Filter words</h3>
-            <div class="acc-inline">
-                <input id="own-word" type="text" placeholder="word or phrase" maxlength="40">
-                <select id="own-word-kind"><option value="word">Whole word</option><option value="contains">Contains</option></select>
-                <button class="text-button" type="button" data-act="owner-word-add">Add</button>
-            </div>
-            <div id="own-words" class="acc-words"></div>
+        <h3 class="acc-h3">Ban / unban commenting</h3>
+        <div class="acc-inline">
+            <input id="own-ban-user" type="text" placeholder="username" maxlength="20">
+            <button class="text-button" type="button" data-act="owner-ban" data-flag="true">Ban</button>
+            <button class="text-button" type="button" data-act="owner-ban" data-flag="false">Unban</button>
+        </div>
 
-            <h3 class="acc-h3">Roadmap</h3>
-            <div class="acc-inline">
-                <input id="own-feature" type="text" placeholder="New roadmap item" maxlength="80">
-                <button class="text-button" type="button" data-act="owner-feature-add">Add</button>
-            </div>
+        <h3 class="acc-h3">Filter words</h3>
+        <div class="acc-inline">
+            <input id="own-word" type="text" placeholder="word or phrase" maxlength="40">
+            <select id="own-word-kind">
+                <option value="word">Whole word</option>
+                <option value="contains">Contains</option>
+            </select>
+            <button class="text-button" type="button" data-act="owner-word-add">Add</button>
+        </div>
+        <div id="own-words" class="acc-words"></div>
 
-            <h3 class="acc-h3">Moderation log <button class="text-button" type="button" data-act="owner-log-refresh">Refresh</button></h3>
-            <div id="own-log" class="acc-log acc-muted">Loading…</div>`;
+        <h3 class="acc-h3">Roadmap</h3>
+        <div class="acc-inline">
+            <input id="own-feature" type="text" placeholder="New roadmap item" maxlength="80">
+            <button class="text-button" type="button" data-act="owner-feature-add">Add</button>
+        </div>
+
+        <h3 class="acc-h3">
+            Moderation log
+            <button class="text-button" type="button" data-act="owner-log-refresh">Refresh</button>
+        </h3>
+        <div id="own-log" class="acc-log acc-muted">Loading…</div>
+    `;
+}
+
+async function loadOwnerData() {
+    const [words, log] = await Promise.all([
+        sb.from("banned_words")
+            .select("id,word,kind")
+            .order("word"),
+
+        sb.from("moderation_log")
+            .select("id,created_at,action,actor_name,target_name,media_type,media_id,body,reason")
+            .order("created_at", { ascending: false })
+            .limit(100)
+    ]);
+
+    const wordsNode = $("#own-words");
+
+    if (wordsNode) {
+        wordsNode.innerHTML = (words.data || [])
+            .map((w) => `
+                <span class="acc-word">
+                    ${esc(w.word)}
+                    <small>${w.kind === "contains" ? "contains" : "word"}</small>
+                    <button
+                        type="button"
+                        data-act="owner-word-del"
+                        data-id="${w.id}"
+                        aria-label="Remove ${esc(w.word)}"
+                    >×</button>
+                </span>
+            `)
+            .join("") || '<span class="acc-muted">No words yet.</span>';
     }
 
-    async function loadOwnerData() {
-        const [words, log] = await Promise.all([
-            sb.from("banned_words").select("id,word,kind").order("word"),
-            sb.from("moderation_log").select("id,created_at,action,actor_name,target_name,media_type,media_id,body,reason").order("created_at", { ascending: false }).limit(100)
-        ]);
-        const wordsNode = $("#own-words");
-        if (wordsNode) {
-            wordsNode.innerHTML = (words.data || []).map((w) => `<span class="acc-word">${esc(w.word)}<small>${w.kind === "contains" ? "contains" : "word"}</small><button type="button" data-act="owner-word-del" data-id="${w.id}" aria-label="Remove ${esc(w.word)}">×</button></span>`).join("") || '<span class="acc-muted">No words yet.</span>';
-        }
-        const logNode = $("#own-log");
-        if (logNode) {
-            const rows = log.data || [];
-            logNode.className = "acc-log";
-            logNode.innerHTML = rows.length ? `<table><thead><tr><th>When</th><th>Action</th><th>By</th><th>Target</th><th>Detail</th></tr></thead><tbody>${rows.map((r) => `
-                <tr><td>${esc(ago(r.created_at))}</td><td><span class="acc-act acc-act-${esc(r.action)}">${esc(r.action)}</span></td><td>${esc(r.actor_name || "")}</td><td>${esc(r.target_name || "")}</td>
-                <td>${esc(r.reason || "")}${r.body ? `<div class="acc-log-body">${esc(r.body)}</div>` : ""}${r.media_id ? `<small> ${esc(r.media_type)} #${r.media_id}</small>` : ""}</td></tr>`).join("")}</tbody></table>` : '<p class="acc-muted">Nothing logged yet.</p>';
-        }
+    const logNode = $("#own-log");
+
+    if (logNode) {
+        const rows = log.data || [];
+        logNode.className = "acc-log";
+
+        logNode.innerHTML = rows.length
+            ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Action</th>
+                            <th>By</th>
+                            <th>Target</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((r) => `
+                            <tr>
+                                <td>${esc(ago(r.created_at))}</td>
+                                <td>
+                                    <span class="acc-act acc-act-${esc(r.action)}">
+                                        ${esc(r.action)}
+                                    </span>
+                                </td>
+                                <td>${esc(r.actor_name || "")}</td>
+                                <td>${esc(r.target_name || "")}</td>
+                                <td>
+                                    ${esc(r.reason || "")}
+                                    ${r.body ? `<div class="acc-log-body">${esc(r.body)}</div>` : ""}
+                                    ${r.media_id ? `<small> ${esc(r.media_type)} #${r.media_id}</small>` : ""}
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `
+            : '<p class="acc-muted">Nothing logged yet.</p>';
     }
+}
 
     /* ----- Profile click router ----- */
     async function onProfileClick(event) {
