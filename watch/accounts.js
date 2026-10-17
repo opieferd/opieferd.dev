@@ -823,6 +823,7 @@
     }
 
     function renderCommentsShell() {
+        console.log("[accounts] renderCommentsShell", { hasMedia: !!state.media, media: state.media });
         if (!state.media) { commentsRoot.hidden = true; return; }
         commentsRoot.hidden = false;
         const p = state.profile;
@@ -853,6 +854,7 @@
     }
 
     async function loadComments() {
+        console.log("[accounts] loadComments", { page: state.commentPages, media: state.media });
         if (!state.media) return;
         const media = state.media;
         const limit = state.commentPages * COMMENTS_PER_PAGE;
@@ -863,7 +865,8 @@
         if (!state.media || state.media.id !== media.id) return; // switched titles meanwhile
         const list = $("#acc-comment-list", commentsRoot);
         if (!list) return;
-        if (error) { list.innerHTML = '<p class="acc-muted">Couldn’t load comments right now.</p>'; return; }
+        if (error) { console.error("[accounts] loadComments error:", error); list.innerHTML = '<p class="acc-muted">Couldn’t load comments right now.</p>'; return; }
+        console.log("[accounts] loadComments loaded", { total: (data || []).length, shown: Math.min((data || []).length, limit) });
         const rows = data || [];
         const more = rows.length > limit;
         const shown = rows.slice(0, limit);
@@ -888,25 +891,38 @@
     }
 
     async function postComment() {
+        console.log("[accounts] postComment called", { media: state.media });
+        if (!state.media) {
+            const message = $("#acc-comment-msg", commentsRoot);
+            if (message) { message.textContent = "No media selected. Open a movie or show first."; message.classList.toggle("is-ok", false); }
+            return;
+        }
         const input = $("#acc-comment-input", commentsRoot);
         const button = $("#acc-comment-post", commentsRoot);
         const message = $("#acc-comment-msg", commentsRoot);
+        if (!input || !button || !message) {
+            console.error("[accounts] postComment: comment UI elements not found in commentsRoot");
+            return;
+        }
         const body = input.value.trim();
         const say = (text, ok = false) => { message.textContent = text; message.classList.toggle("is-ok", ok); };
         if (!body) return say("Write something first.");
         button.disabled = true;
         say("Posting…", true);
         try {
+            console.log("[accounts] postComment -> rpc post_comment", { type: state.media.type, id: state.media.id, bodyLen: body.length });
             const { data, error } = await sb.rpc("post_comment", { p_type: state.media.type, p_id: state.media.id, p_body: body });
+            console.log("[accounts] postComment <- rpc post_comment", { data, error });
             if (error) throw error;
             if (!data.ok) return say(data.error || "Couldn’t post that.");
             input.value = "";
             $("#acc-comment-count", commentsRoot).textContent = "0 / 500";
             say("");
             state.commentPages = 1;
+            console.log("[accounts] postComment: comment posted, reloading comments");
             await loadComments();
         } catch (error) {
-            console.error(error);
+            console.error("[accounts] postComment error:", error);
             say("Couldn’t post that. Please try again.");
         } finally {
             setTimeout(() => { button.disabled = false; }, 2000);
@@ -936,6 +952,7 @@
        Hooks from watching.js
        ===================================================================== */
     window.addEventListener("watch:media-opened", (event) => {
+        console.log("[accounts] watch:media-opened", event.detail);
         state.media = event.detail;
         state.commentPages = 1;
         updateWatchlistButton();

@@ -306,6 +306,7 @@ begin
 
   insert into public.comments (user_id, media_type, media_id, body)
   values (me.id, p_type, p_id, body);
+  perform public._log('posted', me.username, null, p_type, p_id, body, null);
   return jsonb_build_object('ok', true);
 end $$;
 
