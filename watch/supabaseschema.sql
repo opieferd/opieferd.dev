@@ -34,6 +34,7 @@ create table if not exists public.profiles (
   border        text not null default 'none' check (border in ('none','gold','neon','ember')),
   show_on_wall  boolean not null default false,
   banned        boolean not null default false,
+  moderator     boolean not null default false,
   created_at    timestamptz not null default now()
 );
 
@@ -47,6 +48,11 @@ create or replace function public.is_gold() returns boolean
 language sql security definer stable set search_path = public as $$
   select exists (select 1 from public.profiles
                  where id = auth.uid() and (role = 'owner' or tier = 'gold'));
+$$;
+
+create or replace function public.is_moderator() returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and moderator = true);
 $$;
 
 create or replace function public.is_reserved_username(n text) returns boolean
@@ -180,7 +186,8 @@ create table if not exists public.moderation_log (
 );
 alter table public.moderation_log enable row level security;
 drop policy if exists "log owner read" on public.moderation_log;
-create policy "log owner read" on public.moderation_log for select using (public.is_owner());
+create policy "log owner or moderator read" on public.moderation_log for select
+  using (public.is_owner() or public.is_moderator());
 revoke insert, update, delete on public.moderation_log from anon, authenticated;
 
 create or replace function public._log(p_action text, p_actor text, p_target text,
@@ -350,7 +357,7 @@ begin
   if not found then return jsonb_build_object('ok', false, 'error', 'Sign in first.'); end if;
   select * into c from public.comments where id = p_comment_id;
   if not found then return jsonb_build_object('ok', false, 'error', 'Comment not found.'); end if;
-  if c.user_id <> me.id and me.role <> 'owner' then
+  if c.user_id <> me.id and me.role <> 'owner' and not public.is_moderator() then
     return jsonb_build_object('ok', false, 'error', 'Not allowed.');
   end if;
   delete from public.comments where id = c.id;

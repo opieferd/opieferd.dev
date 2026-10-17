@@ -62,7 +62,7 @@
         { id: "ember", label: "Ember" }
     ];
     const TIER_LABEL = { free: "Member", basic: "Basic Supporter", gold: "Gold Supporter" };
-    const PROFILE_COLS = "id,username,role,tier,avatar_url,banner_url,bio,accent,border,show_on_wall,banned,created_at";
+    const PROFILE_COLS = "id,username,role,tier,moderator,avatar_url,banner_url,bio,accent,border,show_on_wall,banned,created_at";
     const COMMENTS_PER_PAGE = 25;
 
     const state = { user: null, profile: null, watchlist: [], media: null, commentPages: 1 };
@@ -83,6 +83,7 @@
         return url;
     };
     const effTier = (p) => (p && p.role === "owner" ? "gold" : (p && p.tier) || "free");
+    const isModerator = (p) => p && p.moderator === true;
     const accentList = (p) => (effTier(p) === "gold" ? GOLD_ACCENTS : effTier(p) === "basic" ? BASIC_ACCENTS : [DEFAULT_ACCENT]);
     const accentFor = (p) => (p && accentList(p).includes(String(p.accent).toLowerCase()) ? String(p.accent).toLowerCase() : DEFAULT_ACCENT);
     const borderFor = (p) => {
@@ -107,10 +108,12 @@
         }</span>`;
     }
     function badgesHTML(p) {
-        if (p.role === "owner") return '<span class="acc-badge acc-badge-owner" title="Site owner">♛ Owner</span>';
-        if (p.tier === "gold") return '<span class="acc-badge acc-badge-gold" title="Gold Supporter">★ Gold</span>';
-        if (p.tier === "basic") return '<span class="acc-badge acc-badge-basic" title="Basic Supporter">♥</span>';
-        return "";
+        let badges = '';
+        if (p.role === "owner") badges += '<span class="acc-badge acc-badge-owner" title="Site owner">♛ Owner</span>';
+        if (p.moderator) badges += '<span class="acc-badge acc-badge-moderator" title="Moderator">☐ Mod</span>';
+        if (p.tier === "gold") badges += '<span class="acc-badge acc-badge-gold" title="Gold Supporter">★ Gold</span>';
+        if (p.tier === "basic") badges += '<span class="acc-badge acc-badge-basic" title="Basic Supporter">♥</span>';
+        return badges;
     }
     function nameHTML(p) {
         const cls = p.role === "owner" ? " is-owner" : p.tier === "gold" ? " is-gold" : "";
@@ -385,6 +388,7 @@
         const banner = effTier(p) === "gold" ? safeUrl(p.banner_url, "banners") : "";
         const tabs = self ? [["profile", "Profile"], ["watchlist", "Watchlist"], ["customize", "Customize"], ["roadmap", "Roadmap"]] : [];
         if (self && p.role === "owner") tabs.push(["owner", "Owner"]);
+        if (self && isModerator(p)) tabs.push(["moderator", "Moderator"]);
         if (!tabs.some(([id]) => id === view.tab)) view.tab = "profile";
 
         profileDialog.innerHTML = `
@@ -410,6 +414,7 @@
         if (tab === "customize") return customizePanelHTML();
         if (tab === "roadmap") return `<div id="road-list" class="acc-muted">Loading…</div>`;
         if (tab === "owner") return ownerPanelHTML();
+        if (tab === "moderator") return moderatorPanelHTML();
         return `
             ${p.bio ? `<p class="acc-bio">${esc(p.bio)}</p>` : `<p class="acc-muted">${self ? "You haven’t written a bio yet. Add one in Customize." : "No bio yet."}</p>`}
             ${p.tier !== "free" && p.role !== "owner" ? `<p class="acc-muted">Thanks for helping keep the lights on.</p>` : ""}
@@ -419,6 +424,7 @@
     function afterPanelRender() {
         if (view.tab === "roadmap") loadRoadmap();
         if (view.tab === "owner") loadOwnerData();
+        if (view.tab === "moderator") loadModeratorData();
     }
 
     function setTab(tab) {
@@ -669,7 +675,10 @@
             loadRoadmap();
         });
 
-        if (view.p.role !== "owner") return;
+        if (view.p.role !== "owner" && !isModerator(view.p)) {
+            if (act === "owner-log-refresh") return loadModeratorData();
+            return;
+        }
         if (act === "owner-tier") return run(async () => {
             const { error } = await sb.rpc("set_tier", { target: $("#own-tier-user").value.trim(), new_tier: $("#own-tier-value").value });
             if (error) throw error;
@@ -898,7 +907,7 @@
                     <p class="acc-comment-body">${esc(c.body)}</p>
                     <div class="acc-comment-actions">
                         ${state.user && !mine ? `<button class="acc-link" type="button" data-cact="report" data-id="${c.id}">Report</button>` : ""}
-                        ${mine || owner ? `<button class="acc-link" type="button" data-cact="delete" data-id="${c.id}">Delete</button>` : ""}
+                        ${mine || owner || isModerator(state.profile) ? `<button class="acc-link" type="button" data-cact="delete" data-id="${c.id}">Delete</button>` : ""}
                     </div>
                 </div>
             </article>`;
@@ -988,7 +997,8 @@
         openAuth: (mode) => openAuth(mode || "signin"),
         isSignedIn: () => Boolean(state.user),
         getProfile: () => state.profile,
-        hasEarlyAccess: () => effTier(state.profile) === "gold"
+        hasEarlyAccess: () => effTier(state.profile) === "gold",
+        isModerator: () => isModerator(state.profile)
     };
     document.documentElement.dataset.accountsReady = "1";
 

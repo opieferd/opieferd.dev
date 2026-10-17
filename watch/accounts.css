@@ -53,6 +53,7 @@
 .acc-badge-basic { padding: 0 .2em; color: #ff7ab6; font-size: .85rem; }
 .acc-badge-gold  { border: 1px solid rgba(235, 175, 54, .5); background: var(--accent-soft); color: var(--accent); }
 .acc-badge-owner { background: var(--accent); color: var(--acc-ink); }
+.acc-badge-moderator { border: 1px solid rgba(96, 165, 250, .5); background: rgba(96, 165, 250, .12); color: #60a5fa; }
 
 .acc-name, .acc-name:hover, .acc-name:focus-visible {
     margin: 0; padding: 0; border: 0; border-radius: 0; background: none;

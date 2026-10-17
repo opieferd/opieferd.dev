@@ -1,0 +1,48 @@
+    /* ----- Moderator panel ----- */
+    function moderatorPanelHTML() {
+        return `
+            <p id="acc-panel-msg" class="form-message" role="status"></p>
+
+            <h3 class="acc-h3">Moderation log <button class="text-button" type="button" data-act="owner-log-refresh">Refresh</button></h3>
+            <div id="mod-log" class="acc-log acc-muted">Loading…</div>`;
+    }
+
+    async function loadModeratorData() {
+        const [log] = await Promise.all([
+            sb.from("moderation_log").select("id,created_at,action,actor_name,target_name,media_type,media_id,body,reason").order("created_at", { ascending: false }).limit(100)
+        ]);
+        const logNode = $("#mod-log");
+        if (logNode) {
+            const rows = log.data || [];
+            logNode.className = "acc-log";
+            logNode.innerHTML = rows.length ? `<table><thead><tr><th>When</th><th>Action</th><th>By</th><th>Target</th><th>Detail</th></tr></thead><tbody>${rows.map((r) => `
+                <tr><td>${esc(ago(r.created_at))}</td><td><span class="acc-act acc-act-${esc(r.action)}">${esc(r.action)}</span></td><td>${esc(r.actor_name || "")}</td><td>${esc(r.target_name || "")}</td>
+                <td>${esc(r.reason || "")}${r.body ? `<div class="acc-log-body">${esc(r.body)}</div>` : ""}${r.media_id ? `<small> ${esc(r.media_type)} #${r.media_id}</small>` : ""}</td></tr>`).join("")}</tbody></table>` : '<p class="acc-muted">Nothing logged yet.</p>';
+        }
+    }
+
+    /* ----- Moderator panel ----- */
+    function moderatorPanelHTML() {
+        return `
+            <p id="acc-panel-msg" class="form-message" role="status"></p>
+
+            <h3 class="acc-h3">Moderation log <button class="text-button" type="button" data-act="owner-log-refresh">Refresh</button></h3>
+            <div id="mod-log" class="acc-log acc-muted">Loading…</div>`;
+    }
+
+    async function loadModeratorData() {
+        const [log] = await Promise.all([
+            sb.from("moderation_log").select("id,created_at,action,actor_name,target_name,media_type,media_id,body,reason").order("created_at", { ascending: false }).limit(100)
+        ]);
+        const logNode = $("#mod-log");
+        if (logNode) {
+            const rows = log.data || [];
+            logNode.className = "acc-log";
+            logNode.innerHTML = rows.length ? `<table><thead><tr><th>When</th><th>Action</th><th>By</th><th>Target</th><th>Detail</th></tr></thead><tbody>${rows.map((r) => `
+                <tr><td>${esc(ago(r.created_at))}</td><td><span class="acc-act acc-act-${esc(r.action)}">${esc(r.action)}</span></td><td>${esc(r.actor_name || "")}</td><td>${esc(r.target_name || "")}</td>
+                <td>${esc(r.reason || "")}${r.body ? `<div class="acc-log-body">${esc(r.body)}</div>` : ""}${r.media_id ? `<small> ${esc(r.media_type)} #${r.media_id}</small>` : ""}</td></tr>`).join("")}</tbody></table>` : '<p class="acc-muted">Nothing logged yet.</p>';
+        }
+    }
+
+    /* ----- Profile click router ----- */
+    async function onProfileClick(event) {
