@@ -1345,14 +1345,9 @@
         const banner = document.getElementById("donation-banner");
         if (!banner) return;
 
-        const DISMISS_KEY = "watch-donation-dismissed";
         const now = new Date();
         const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const monthName = now.toLocaleString("en-US", { month: "long" });
-
-        try {
-            if (localStorage.getItem(DISMISS_KEY) === monthId) return;
-        } catch (error) {
             // storage unavailable: just show the banner
         }
 
@@ -1387,16 +1382,10 @@
                 requestAnimationFrame(() => requestAnimationFrame(() => {
                     if (fill) fill.style.width = `${percent}%`;
                 }));
-
                 const dismiss = document.getElementById("dismiss-donation");
                 if (dismiss) dismiss.addEventListener("click", () => {
-                    banner.hidden = true;
-                    try {
-                        localStorage.setItem(DISMISS_KEY, monthId);
-                    } catch (error) {
-                        console.error(error);
-                    }
-                });
+                banner.hidden = true; // only hidden until the next page load
+            });
             } catch (error) {
                 // If the JSON can't load, the banner just stays hidden
                 console.error(error);
