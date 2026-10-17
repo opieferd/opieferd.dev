@@ -4,22 +4,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Upgrade · Opie Watch</title>
-    <!-- Site stylesheet + accounts stylesheet (accounts.css loads second) -->
-    <link rel="stylesheet" href="/watch/watching.css">
-    <link rel="stylesheet" href="/watch/accounts.css">
+    <link rel="stylesheet" href="../watching.css">
+    <link rel="stylesheet" href="../accounts.css">
     <style>
-        /* This page has no sidebar until you paste yours in; don't reserve space for it */
+        /* Until you paste the sidebar in, don't reserve space for it */
         body:not(:has(.watch-sidebar)) .watch-main-content { margin-left: 0; }
     </style>
 </head>
-<body>
+<body data-page="upgrade">
 <div class="watch-app-layout">
 
-    <!-- PASTE YOUR SIDEBAR HERE: copy the <aside class="watch-sidebar"> ... </aside> block from index.html -->
+    <!-- PASTE YOUR SIDEBAR HERE: copy the whole <aside class="watch-sidebar" ...> ... </aside>
+         block from movies/index.html (same folder depth, so its ../ links already work). -->
 
     <div class="watch-main-content">
         <main class="watching-page">
-            <a class="back-link" href="/watch/">← Back to Opie Watch</a>
+            <a class="back-link" href="../">← Back to Opie Watch</a>
 
             <header class="page-header">
                 <p class="eyebrow">Support Opie Watch</p>
@@ -29,8 +29,8 @@
 
             <section class="card upgrade-progress" aria-labelledby="goal-title">
                 <p class="eyebrow" id="goal-title">This month’s goal</p>
-                <div class="donation-progress"><span class="donation-progress-fill"></span></div>
-                <p class="donation-progress-label"><span data-donation-raised>$0</span> of <span data-donation-goal>$100</span> raised this month</p>
+                <div class="donation-progress" role="progressbar" aria-labelledby="goal-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="donation-progress-fill"></span></div>
+                <p class="donation-progress-label"><span id="upgrade-raised">$0</span> of <span id="upgrade-goal">$100</span> raised this month</p>
             </section>
 
             <section class="tier-grid" aria-label="Membership tiers">
@@ -42,7 +42,7 @@
                         <li>Six profile accent colours</li>
                         <li>A spot on the supporter wall</li>
                     </ul>
-                    <a class="secondary-button" id="basic-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                    <a class="secondary-button" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
                 </article>
 
                 <article class="card tier-card is-gold">
@@ -54,7 +54,7 @@
                         <li>Vote on what gets built next</li>
                         <li>Early access to experimental features</li>
                     </ul>
-                    <a class="secondary-button" id="gold-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                    <a class="secondary-button" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
                 </article>
             </section>
 
@@ -86,12 +86,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/watch/accounts.js"></script>
-<script src="/watch/donations-live.js"></script>
+<script src="../watching.js"></script>
+<script src="../accounts.js"></script>
 <script>
 (function () {
     "use strict";
-    var box = document.getElementById("upgrade-account");
     var LABEL = { free: "Member", basic: "Basic Supporter", gold: "Gold Supporter" };
     var esc = function (v) {
         return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
@@ -99,7 +98,9 @@
         });
     };
 
-    function render() {
+    /* ---------- account box ---------- */
+    var box = document.getElementById("upgrade-account");
+    function renderAccount() {
         var acc = window.OpieAccount;
         if (!acc) {
             box.innerHTML = '<p class="acc-muted">Accounts aren’t available right now, so tiers can’t be applied automatically.</p>';
@@ -116,7 +117,7 @@
         }
         var tier = p.role === "owner" ? "Owner" : LABEL[p.tier] || "Member";
         box.innerHTML = '<p class="acc-muted">Signed in as <strong>' + esc(p.username) + '</strong> · ' + esc(tier) + '</p>' +
-            '<div class="upgrade-code"><code id="upg-code">@' + esc(p.username) + '</code>' +
+            '<div class="upgrade-code"><code>@' + esc(p.username) + '</code>' +
             '<button class="text-button" type="button" id="upg-copy">Copy</button></div>';
         document.getElementById("upg-copy").onclick = function () {
             var btn = this;
@@ -125,9 +126,37 @@
             else done();
         };
     }
+    window.addEventListener("account:changed", renderAccount);
+    renderAccount();
 
-    window.addEventListener("account:changed", render);
-    render();
+    /* ---------- goal bar: donations.json (goal) + live Ko-fi total ---------- */
+    (async function () {
+        var cfg = { goal: 0, currency: "$", raised: {} };
+        try {
+            var res = await fetch("../donations.json", { cache: "no-cache" });
+            if (res.ok) cfg = Object.assign(cfg, await res.json());
+        } catch (e) { return; }
+        var goal = Math.max(Number(cfg.goal) || 0, 0);
+        if (!goal) return;
+
+        var now = new Date();
+        var month = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+        var raised = Math.max(Number(cfg.raised && cfg.raised[month]) || 0, 0);
+        var acc = window.OpieAccount;
+        if (acc && acc.client) {
+            try {
+                var out = await acc.client.rpc("donation_progress");
+                if (out.data) raised = Math.max(raised, Number(out.data.raised) || 0);
+            } catch (e) { /* JSON value stays */ }
+        }
+        var pct = Math.min(100, Math.round((raised / goal) * 100));
+        document.getElementById("upgrade-raised").textContent = cfg.currency + raised;
+        document.getElementById("upgrade-goal").textContent = cfg.currency + goal;
+        document.querySelector(".upgrade-progress .donation-progress").setAttribute("aria-valuenow", String(pct));
+        requestAnimationFrame(function () {
+            document.querySelector(".upgrade-progress .donation-progress-fill").style.width = pct + "%";
+        });
+    })();
 })();
 </script>
 </body>
