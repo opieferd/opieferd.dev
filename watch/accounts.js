@@ -881,7 +881,7 @@
         if (!state.media || state.media.id !== media.id) return; // switched titles meanwhile
         const list = $("#acc-comment-list", commentsRoot);
         if (!list) return;
-        if (error) { console.error("[accounts] loadComments error:", error); list.innerHTML = '<p class="acc-muted">Couldn’t load comments right now.</p>'; return; }
+        if (error) { console.error("[accounts] loadComments error:", error, "status:", error?.status, "message:", error?.message, "details:", error?.details, "hint:", error?.hint, "code:", error?.code); list.innerHTML = '<p class="acc-muted">Couldn’t load comments right now.</p>'; return; }
         console.log("[accounts] loadComments loaded", { total: (data || []).length, shown: Math.min((data || []).length, limit) });
         const rows = data || [];
         const more = rows.length > limit;
