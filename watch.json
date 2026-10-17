@@ -1,0 +1,31 @@
+{
+  "name": "Opie Watch",
+  "description": "Stream TV, Movies, and Anime for free. Find exactly what you're looking for with advanced search and interact with the community.",
+  "url": "https://opieferd.dev/watch/",
+  "language": "en",
+  "content_types": ["TV Shows", "Movies", "Anime"],
+  "features": [
+    "Content Streaming",
+    "Real-time Discord Rich Presence Sync",
+    "Live Donation Progress Tracking",
+    "Community Interaction",
+    "Advanced Search & Categories"
+  ],
+  "integrations": {
+    "discord_rpc": true,
+    "donations_provider": "Ko-fi",
+    "database": "Supabase",
+    "cache": "Redis"
+  },
+  "developer": {
+    "name": "Opieferd",
+    "url": "https://opieferd.dev"
+  },
+  "api_endpoints": [
+    {
+      "path": "/api/meow",
+      "description": "Global Meow counter",
+      "methods": ["GET", "POST"]
+    }
+  ]
+}
