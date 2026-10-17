@@ -1337,27 +1337,26 @@
 
     // -------------------------------------------------------------
     // Donation banner (reads donations.json next to this script)
-    // The month is taken from the user's clock, so the banner resets itself
-    // on the 1st of every month: dismissal expires and the bar shows that
-    // month's total from donations.json (or $0 if the month isn't listed yet).
+    // Month comes from the visitor's clock. Dismissing only hides it
+    // until the next page load.
     // -------------------------------------------------------------
     (function setupDonationBanner() {
         const banner = document.getElementById("donation-banner");
         if (!banner) return;
 
-        const DISMISS_KEY = "watch-donation-dismissed";
         const now = new Date();
         const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const monthName = now.toLocaleString("en-US", { month: "long" });
 
-        try {
-            if (localStorage.getItem(DISMISS_KEY) === monthId) return;
-        } catch (error) {
-            // storage unavailable: just show the banner
-        }
-
         // Resolve relative to watching.js so it works from subpages (movies/, tv/, etc.)
         const dataUrl = new URL("donations.json", SCRIPT_SRC).href;
+
+        const dismiss = document.getElementById("dismiss-donation");
+        if (dismiss) {
+            dismiss.addEventListener("click", () => {
+                banner.hidden = true;
+            });
+        }
 
         async function init() {
             try {
@@ -1387,16 +1386,6 @@
                 requestAnimationFrame(() => requestAnimationFrame(() => {
                     if (fill) fill.style.width = `${percent}%`;
                 }));
-
-                const dismiss = document.getElementById("dismiss-donation");
-                if (dismiss) dismiss.addEventListener("click", () => {
-                    banner.hidden = true;
-                    try {
-                        localStorage.setItem(DISMISS_KEY, monthId);
-                    } catch (error) {
-                        console.error(error);
-                    }
-                });
             } catch (error) {
                 // If the JSON can't load, the banner just stays hidden
                 console.error(error);
