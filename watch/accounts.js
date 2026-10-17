@@ -10,15 +10,46 @@
     const SUPABASE_ANON_KEY = "sb_publishable_4_AkBab6OcvzLubqcONTvw_-LLsarF9";
     const KOFI_URL = "https://ko-fi.com/opieferd";
     const TMDB_POSTER = "https://image.tmdb.org/t/p/w342";
+    /* Production site root used for email confirm / password-reset links.
+       Never use location.origin here — local/dev hosts (localhost:3000) end up in emails. */
+    const SITE_URL = "https://opieferd.dev/watch/";
+    function authRedirectTo() {
+        const host = location.hostname;
+        if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return SITE_URL;
+        if (host.startsWith("watch.")) return `${location.origin}/`;
+        if (host === "opieferd.dev" || host === "www.opieferd.dev" || host.endsWith(".opieferd.dev")) {
+            return `${location.origin}/watch/`;
+        }
+        return SITE_URL;
+    }
 
     if (!window.supabase || SUPABASE_URL.includes("YOUR-PROJECT") || SUPABASE_ANON_KEY.includes("YOUR-ANON")) {
         console.info("[accounts] Not configured yet: set SUPABASE_URL and SUPABASE_ANON_KEY in accounts.js.");
         return;
     }
 
+    if (!document.body) {
+        console.error("[accounts] accounts.js must load after <body> (before </body>), not in <head>.");
+        return;
+    }
+
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        }
     });
+
+    /* Expose early so other scripts (and late init failures) can still use the client. */
+    window.OpieAccount = {
+        client: sb,
+        openAuth: () => {},
+        isSignedIn: () => false,
+        getProfile: () => null,
+        hasEarlyAccess: () => false
+    };
+    document.documentElement.dataset.accountsReady = "0";
 
     /* ---------- Perks (must match supabase-schema.sql) ---------- */
     const DEFAULT_ACCENT = "#ebaf36"; // Opie Orange
@@ -42,10 +73,15 @@
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
     }[c]));
-    const safeUrl = (url, bucket) =>
-        typeof url === "string"
-        && url.startsWith(`${SUPABASE_URL}/storage/v1/object/public/${bucket}/`)
-        && /^[A-Za-z0-9\-._~:/?#=&%+]+$/.test(url) ? url : "";
+    const safeUrl = (url, bucket) => {
+        if (typeof url !== "string" || !url) return "";
+        // Strip cache-buster for validation, keep original for <img src>
+        const bare = url.split("?")[0];
+        const prefix = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/`;
+        if (!bare.startsWith(prefix)) return "";
+        if (!/^[A-Za-z0-9\-._~:/?#=&%+]+$/.test(url)) return "";
+        return url;
+    };
     const effTier = (p) => (p && p.role === "owner" ? "gold" : (p && p.tier) || "free");
     const accentList = (p) => (effTier(p) === "gold" ? GOLD_ACCENTS : effTier(p) === "basic" ? BASIC_ACCENTS : [DEFAULT_ACCENT]);
     const accentFor = (p) => (p && accentList(p).includes(String(p.accent).toLowerCase()) ? String(p.accent).toLowerCase() : DEFAULT_ACCENT);
@@ -137,12 +173,22 @@
         if (p) {
             parts.push(`<div class="acc-menu-head">${avatarHTML(p, "sm")}<div><strong>${esc(p.username)}</strong><small>${esc(tierLabel(p))}</small></div></div>`);
             parts.push(item("profile", "Your profile"), item("watchlist", "Watchlist"), item("customize", "Customize"));
+            parts.push(item("upgrade", "Upgrade"));
         } else {
             parts.push(item("signin", "Sign in"), item("signup", "Create account"));
+            parts.push(item("upgrade", "Upgrade"));
         }
         if (settingsButton) parts.push('<div class="acc-menu-sep" role="separator"></div>', item("settings", "Settings"));
         if (p) parts.push(item("signout", "Sign out"));
         accountMenu.innerHTML = parts.join("");
+    }
+
+    function upgradeHref() {
+        const page = document.body.dataset.page;
+        if (page === "upgrade") return "./";
+        if (page === "home") return "upgrade/";
+        if (location.hostname.startsWith("watch.")) return "/upgrade/";
+        return "../upgrade/";
     }
 
     function setMenu(open) {
@@ -161,6 +207,7 @@
         const act = target.dataset.menu;
         setMenu(false);
         if (act === "signin" || act === "signup") openAuth(act);
+        else if (act === "upgrade") { location.href = upgradeHref(); }
         else if (act === "settings") { if (settingsButton) settingsButton.click(); }
         else if (act === "signout") await sb.auth.signOut();
         else if (state.profile) openProfile(state.profile.username, act);
@@ -248,13 +295,13 @@
             } else if (authMode === "signup") {
                 const { data, error } = await sb.auth.signUp({
                     email, password,
-                    options: { data: { username }, emailRedirectTo: location.origin + location.pathname }
+                    options: { data: { username }, emailRedirectTo: authRedirectTo() }
                 });
                 if (error) throw error;
                 if (data.session) authDialog.close();
                 else say("Almost there! Check your email to confirm your account, then sign in.", true);
             } else if (authMode === "reset") {
-                const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+                const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: authRedirectTo() });
                 if (error) throw error;
                 say("If that email has an account, a reset link is on its way.", true);
             } else if (authMode === "recover") {
@@ -910,6 +957,7 @@
         getProfile: () => state.profile,
         hasEarlyAccess: () => effTier(state.profile) === "gold"
     };
+    document.documentElement.dataset.accountsReady = "1";
 
     /* ---------- boot ---------- */
     renderAccountButtons();

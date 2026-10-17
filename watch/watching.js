@@ -1138,6 +1138,7 @@
             document.querySelectorAll(".sidebar-nav-item").forEach((item) => {
                 const nav = item.dataset.nav;
                 if (nav === "home") item.href = "/";
+                else if (nav === "upgrade") item.href = "/upgrade/";
                 else if (nav) item.href = `/${nav}/`;
             });
             const brandLink = document.querySelector(".brand-link");
