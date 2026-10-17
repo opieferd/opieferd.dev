@@ -375,7 +375,8 @@ a { color: var(--accent); }
 .sidebar-collapse-toggle:hover,
 .sidebar-collapse-toggle:focus-visible {
     border-color: var(--accent);
-    background: var(--accent-soft);
+    /* tint layered over the solid card color so the sidebar edge can't show through */
+    background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--card);
     color: var(--accent);
     box-shadow: 0 0 14px rgba(235, 175, 54, .45), 0 4px 10px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .25);
     transform: scale(1.1);
