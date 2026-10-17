@@ -867,7 +867,7 @@
         let data, error;
         try {
             const result = await sb.from("comments")
-                .select("id,body,created_at,hidden,user_id,profiles(username,role,tier,avatar_url,accent,border)")
+                .select("id,body,created_at,hidden,user_id,profiles!comments_user_id_fkey(username,role,tier,avatar_url,accent,border)")
                 .eq("media_type", media.type).eq("media_id", media.id)
                 .order("created_at", { ascending: false }).limit(limit + 1);
             data = result.data;
