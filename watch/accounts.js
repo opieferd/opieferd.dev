@@ -768,6 +768,24 @@ async function loadOwnerData() {
             if (error) throw error;
             loadOwnerData();
         }, "Done.");
+
+if (act === "owner-mod") return run(async () => {
+    const username = $("#own-mod-user").value.trim();
+
+    if (!username) {
+        throw new Error("Enter a username.");
+    }
+
+    const { error } = await sb.rpc("set_moderator", {
+        target: username,
+        flag: target.dataset.flag === "true"
+    });
+
+    if (error) throw error;
+
+    loadOwnerData();
+}, "Moderator status updated.");
+
         if (act === "owner-word-add") return run(async () => {
             const word = $("#own-word").value.trim();
             if (word.length < 2) throw new Error("Enter at least 2 characters.");
