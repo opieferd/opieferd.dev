@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upgrade · Opie Watch</title>
+    <!-- Site stylesheet + accounts stylesheet (accounts.css loads second) -->
+    <link rel="stylesheet" href="/watch/watching.css">
+    <link rel="stylesheet" href="/watch/accounts.css">
+    <style>
+        /* This page has no sidebar until you paste yours in; don't reserve space for it */
+        body:not(:has(.watch-sidebar)) .watch-main-content { margin-left: 0; }
+    </style>
+</head>
+<body>
+<div class="watch-app-layout">
+
+    <!-- PASTE YOUR SIDEBAR HERE: copy the <aside class="watch-sidebar"> ... </aside> block from index.html -->
+
+    <div class="watch-main-content">
+        <main class="watching-page">
+            <a class="back-link" href="/watch/">← Back to Opie Watch</a>
+
+            <header class="page-header">
+                <p class="eyebrow">Support Opie Watch</p>
+                <h1>Upgrade</h1>
+                <p class="intro">Opie Watch is free for everyone, and the watchlist always will be. Supporters keep it running and get a few extras.</p>
+            </header>
+
+            <section class="card upgrade-progress" aria-labelledby="goal-title">
+                <p class="eyebrow" id="goal-title">This month’s goal</p>
+                <div class="donation-progress"><span class="donation-progress-fill"></span></div>
+                <p class="donation-progress-label"><span data-donation-raised>$0</span> of <span data-donation-goal>$100</span> raised this month</p>
+            </section>
+
+            <section class="tier-grid" aria-label="Membership tiers">
+                <article class="card tier-card">
+                    <p class="eyebrow">Basic Supporter</p>
+                    <h2 class="tier-price">$5<small> / month</small></h2>
+                    <ul class="tier-perks">
+                        <li>Supporter badge next to your name</li>
+                        <li>Six profile accent colours</li>
+                        <li>A spot on the supporter wall</li>
+                    </ul>
+                    <a class="secondary-button" id="basic-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                </article>
+
+                <article class="card tier-card is-gold">
+                    <p class="eyebrow">Gold Supporter</p>
+                    <h2 class="tier-price">$10<small> / month</small></h2>
+                    <ul class="tier-perks">
+                        <li>Everything in Basic, with a Gold badge</li>
+                        <li>Twelve accent colours, profile borders and a banner</li>
+                        <li>Vote on what gets built next</li>
+                        <li>Early access to experimental features</li>
+                    </ul>
+                    <a class="secondary-button" id="gold-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                </article>
+            </section>
+
+            <section class="card upgrade-steps upgrade-section" aria-labelledby="steps-title">
+                <h2 id="steps-title">How your tier gets applied</h2>
+                <ol>
+                    <li>
+                        <strong>Have an Opie Watch account.</strong>
+                        <div id="upgrade-account"><p class="acc-muted">Loading…</p></div>
+                    </li>
+                    <li>
+                        <strong>Join a tier on Ko-fi.</strong>
+                        <p class="acc-muted">Payment happens on Ko-fi, so your card details never touch this site.</p>
+                    </li>
+                    <li>
+                        <strong>Let us match the payment to you.</strong>
+                        <p class="acc-muted">Use the same email on Ko-fi as on your Opie Watch account. If they differ, write your @username in the Ko-fi message. Your tier usually appears within a minute or two.</p>
+                    </li>
+                </ol>
+            </section>
+
+            <section class="card upgrade-section">
+                <h2>Just want to chip in?</h2>
+                <p class="intro">A one-time tip on Ko-fi counts toward the monthly goal but doesn’t unlock supporter perks.</p>
+                <p><a class="secondary-button" href="https://ko-fi.com/opieferd" target="_blank" rel="noopener noreferrer">One-time tip on Ko-fi ♥</a></p>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/watch/accounts.js"></script>
+<script src="/watch/donations-live.js"></script>
+<script>
+(function () {
+    "use strict";
+    var box = document.getElementById("upgrade-account");
+    var LABEL = { free: "Member", basic: "Basic Supporter", gold: "Gold Supporter" };
+    var esc = function (v) {
+        return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c];
+        });
+    };
+
+    function render() {
+        var acc = window.OpieAccount;
+        if (!acc) {
+            box.innerHTML = '<p class="acc-muted">Accounts aren’t available right now, so tiers can’t be applied automatically.</p>';
+            return;
+        }
+        var p = acc.getProfile();
+        if (!p) {
+            box.innerHTML = '<p class="acc-muted">Create a free account or sign in first.</p>' +
+                '<div class="confirm-actions"><button class="primary-button" type="button" id="upg-signup">Create account</button>' +
+                '<button class="grey-button" type="button" id="upg-signin">Sign in</button></div>';
+            document.getElementById("upg-signup").onclick = function () { acc.openAuth("signup"); };
+            document.getElementById("upg-signin").onclick = function () { acc.openAuth("signin"); };
+            return;
+        }
+        var tier = p.role === "owner" ? "Owner" : LABEL[p.tier] || "Member";
+        box.innerHTML = '<p class="acc-muted">Signed in as <strong>' + esc(p.username) + '</strong> · ' + esc(tier) + '</p>' +
+            '<div class="upgrade-code"><code id="upg-code">@' + esc(p.username) + '</code>' +
+            '<button class="text-button" type="button" id="upg-copy">Copy</button></div>';
+        document.getElementById("upg-copy").onclick = function () {
+            var btn = this;
+            var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
+            if (navigator.clipboard) navigator.clipboard.writeText("@" + p.username).then(done);
+            else done();
+        };
+    }
+
+    window.addEventListener("account:changed", render);
+    render();
+})();
+</script>
+</body>
+</html>
