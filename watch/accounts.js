@@ -851,6 +851,12 @@
         if (input) input.addEventListener("input", () => { $("#acc-comment-count", commentsRoot).textContent = `${input.value.length} / 500`; });
         const post = $("#acc-comment-post", commentsRoot);
         if (post) post.addEventListener("click", postComment);
+        console.log("[accounts] renderCommentsShell: elements found", {
+            signIn: !!signIn,
+            input: !!input,
+            post: !!post,
+            list: !!$("#acc-comment-list", commentsRoot)
+        });
     }
 
     async function loadComments() {
@@ -858,10 +864,20 @@
         if (!state.media) return;
         const media = state.media;
         const limit = state.commentPages * COMMENTS_PER_PAGE;
-        const { data, error } = await sb.from("comments")
-            .select("id,body,created_at,hidden,user_id,profiles(username,role,tier,avatar_url,accent,border)")
-            .eq("media_type", media.type).eq("media_id", media.id)
-            .order("created_at", { ascending: false }).limit(limit + 1);
+        let data, error;
+        try {
+            const result = await sb.from("comments")
+                .select("id,body,created_at,hidden,user_id,profiles(username,role,tier,avatar_url,accent,border)")
+                .eq("media_type", media.type).eq("media_id", media.id)
+                .order("created_at", { ascending: false }).limit(limit + 1);
+            data = result.data;
+            error = result.error;
+        } catch (err) {
+            console.error("[accounts] loadComments exception:", err);
+            const list = $("#acc-comment-list", commentsRoot);
+            if (list) list.innerHTML = '<p class="acc-muted">Couldn’t load comments right now.</p>';
+            return;
+        }
         if (!state.media || state.media.id !== media.id) return; // switched titles meanwhile
         const list = $("#acc-comment-list", commentsRoot);
         if (!list) return;

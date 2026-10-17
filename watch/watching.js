@@ -510,13 +510,16 @@
     }
 
     async function filterByCertification(items) {
-        if (!maxRating || !items.length) return items;
+        console.log("[watch] filterByCertification called", { itemCount: items.length, maxRating, includeUnrated });
+        if (!maxRating || !items.length) { console.log("[watch] filterByCertification: returning all items (no limit or empty)"); return items; }
         const ranks = [];
         for (let index = 0; index < items.length; index += 10) {
             const chunk = items.slice(index, index + 10);
             ranks.push(...await Promise.all(chunk.map((item) => getCertificationRank(item, mediaType(item)))));
         }
-        return items.filter((item, index) => ranks[index] === null ? includeUnrated : ranks[index] <= maxRating);
+        const filtered = items.filter((item, index) => ranks[index] === null ? includeUnrated : ranks[index] <= maxRating);
+        console.log("[watch] filterByCertification: filtered", items.length, "->", filtered.length, "items");
+        return filtered;
     }
 
     async function search() {
@@ -588,17 +591,21 @@
     }
 
     async function renderRecommendationCards(container, items, emptyMessage) {
+        console.log("[watch] renderRecommendationCards called", { containerId: container.id, inputCount: items.length, emptyMessage });
         if (!container) return;
         const token = (container._renderToken = (container._renderToken || 0) + 1);
         const hadItems = items.length > 0;
         items = await filterByCertification(items);
+        console.log("[watch] renderRecommendationCards: after filterByCertification", { hadItems, afterFilterCount: items.length, token });
         if (token !== container._renderToken) return;
         if (!items.length) {
             container.innerHTML = `<p class="recommendation-message">${hadItems ? "Nothing here matches your rating setting." : emptyMessage}</p>`;
+            console.log("[watch] renderRecommendationCards: showing empty message");
             return;
         }
         const uniqueItems = [...new Map(items.map((item) => [`${mediaType(item)}:${item.id}`, item])).values()];
         container.innerHTML = uniqueItems.map((item) => mediaCardMarkup(item)).join("");
+        console.log("[watch] renderRecommendationCards: rendered", uniqueItems.length, "cards");
         container.onclick = (event) => {
             const card = event.target.closest(".recommendation-card");
             if (!card || card.getAttribute("aria-hidden") === "true") return;
@@ -647,40 +654,48 @@
     }
 
     async function loadPopularShows() {
-        if (!popularShowsResults) return;
+        console.log("[watch] loadPopularShows called");
+        if (!popularShowsResults) { console.log("[watch] loadPopularShows: popularShowsResults element missing"); return; }
         try {
+            console.log("[watch] loadPopularShows: fetching from TMDB");
             const responses = await Promise.all([1, 2, 3].map((page) =>
                 fetch(`${TMDB_API}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&page=${page}`)
             ));
+            console.log("[watch] loadPopularShows: responses", responses.map(r => r.ok));
             if (responses.some((response) => !response.ok)) throw new Error("Popular shows request failed");
             const pages = await Promise.all(responses.map((response) => response.json()));
             const shows = pages.flatMap((data) => data.results || [])
                 .filter((item) => item.name || item.first_air_date)
                 .map((item) => ({ ...item, media_type: "tv" }))
                 .slice(0, 30);
+            console.log("[watch] loadPopularShows: rendering", shows.length, "shows");
             renderRecommendationCards(popularShowsResults, shows, "Popular shows are taking a break. Try searching instead.");
             await loadPopularMovies();
         } catch (error) {
-            console.error(error);
+            console.error("[watch] loadPopularShows error:", error);
             renderRecommendationCards(popularShowsResults, [], "Popular shows are unavailable right now.");
         }
     }
 
     async function loadPopularMovies() {
-        if (!popularMoviesResults) return;
+        console.log("[watch] loadPopularMovies called");
+        if (!popularMoviesResults) { console.log("[watch] loadPopularMovies: popularMoviesResults element missing"); return; }
         try {
+            console.log("[watch] loadPopularMovies: fetching from TMDB");
             const responses = await Promise.all([1, 2, 3].map((page) =>
                 fetch(`${TMDB_API}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&page=${page}`)
             ));
+            console.log("[watch] loadPopularMovies: responses", responses.map(r => r.ok));
             if (responses.some((response) => !response.ok)) throw new Error("Popular movies request failed");
             const pages = await Promise.all(responses.map((response) => response.json()));
             const movies = pages.flatMap((data) => data.results || [])
                 .filter((item) => item.title || item.release_date)
                 .map((item) => ({ ...item, media_type: "movie" }))
                 .slice(0, 30);
+            console.log("[watch] loadPopularMovies: rendering", movies.length, "movies");
             renderRecommendationCards(popularMoviesResults, movies, "Popular movies are taking a break. Try searching instead.");
         } catch (error) {
-            console.error(error);
+            console.error("[watch] loadPopularMovies error:", error);
             renderRecommendationCards(popularMoviesResults, [], "Popular movies are unavailable right now.");
         }
     }
@@ -751,12 +766,16 @@
     }
 
     async function openMedia(id, type, preferredSeason, preferredEpisode) {
+        console.log("[watch] openMedia called", { id, type, preferredSeason, preferredEpisode });
         if (searchMessage) searchMessage.textContent = "Getting the details…";
         try {
+            console.log("[watch] openMedia: fetching details from TMDB");
             const response = await fetch(`${TMDB_API}/${type}/${id}?api_key=${TMDB_KEY}&language=en-US`);
+            console.log("[watch] openMedia: TMDB response", response.ok, response.status);
             if (!response.ok) throw new Error(`Details failed (${response.status})`);
             activeMedia = await response.json();
             activeMediaType = type;
+            console.log("[watch] openMedia: media loaded", { title: mediaTitle(activeMedia), id: activeMedia.id, poster_path: activeMedia.poster_path });
             window.dispatchEvent(new CustomEvent("watch:media-opened", { detail: { type, id: activeMedia.id, title: mediaTitle(activeMedia), poster_path: activeMedia.poster_path || "" } }));
             malOverride = null;
             if (malSelect) malSelect.hidden = true;
@@ -778,8 +797,9 @@
             }
             if (playerSection) playerSection.scrollIntoView({ behavior: "smooth", block: "start" });
             if (searchMessage) searchMessage.textContent = "";
+            console.log("[watch] openMedia: complete, playerSection.hidden =", playerSection ? playerSection.hidden : "N/A");
         } catch (error) {
-            console.error(error);
+            console.error("[watch] openMedia error:", error);
             if (searchMessage) searchMessage.textContent = "I couldn’t load that one. Want to try another?";
         }
     }
