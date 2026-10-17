@@ -62,7 +62,7 @@
         { id: "ember", label: "Ember" }
     ];
     const TIER_LABEL = { free: "Member", basic: "Basic Supporter", gold: "Gold Supporter" };
-    const PROFILE_COLS = "id,username,role,tier,moderator,avatar_url,banner_url,bio,accent,border,show_on_wall,banned,created_at";
+    const PROFILE_COLS = "id,username,role,tier,moderator,avatar_url,banner_url,bio,accent,border,profile_color,show_on_wall,banned,created_at";
     const COMMENTS_PER_PAGE = 25;
 
     const state = { user: null, profile: null, watchlist: [], media: null, commentPages: 1 };
@@ -86,6 +86,8 @@
     const isModerator = (p) => p && p.moderator === true;
     const accentList = (p) => (effTier(p) === "gold" ? GOLD_ACCENTS : effTier(p) === "basic" ? BASIC_ACCENTS : [DEFAULT_ACCENT]);
     const accentFor = (p) => (p && accentList(p).includes(String(p.accent).toLowerCase()) ? String(p.accent).toLowerCase() : DEFAULT_ACCENT);
+    const DEFAULT_PROFILE_COLOR = "#171411";
+    const profileColorFor = (p) => (p && /^#[0-9a-f]{6}$/i.test(String(p.profile_color || "")) ? String(p.profile_color).toLowerCase() : DEFAULT_PROFILE_COLOR);
     const borderFor = (p) => {
         if (!p) return "none";
         if (p.role === "owner") return "owner";
@@ -392,7 +394,7 @@
         if (!tabs.some(([id]) => id === view.tab)) view.tab = "profile";
 
         profileDialog.innerHTML = `
-            <div class="acc-profile" style="--u-accent:${accent}">
+            <div class="acc-profile" style="--u-accent:${accent};--u-profile-color:${profileColorFor(p)}">
                 <div class="acc-banner"${banner ? ` style="background-image:url('${esc(banner)}')"` : ""}></div>
                 <button class="icon-button acc-close" type="button" data-act="close-profile" aria-label="Close">×</button>
                 <div class="acc-head">
@@ -487,6 +489,9 @@
                 ${p.banner_url ? '<button class="text-button" type="button" data-act="remove-banner">Remove</button>' : ""}
                 <input id="acc-banner-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
             </div>
+
+            <h3 class="acc-h3">Profile background ${gold ? "" : '<small class="acc-lock">Gold perk</small>'}</h3>
+            ${gold ? `<div class="acc-profile-color-row"><label for="acc-profile-color">Card color</label><input id="acc-profile-color" type="color" value="${profileColorFor(p)}" aria-label="Choose profile card background color"><button class="text-button" type="button" data-act="save-profile-color">Save color</button></div><p class="acc-muted">Choose a custom background color for your profile card.</p>` : '<p class="acc-muted">Custom profile backgrounds are available to Gold supporters.</p>'}
 
             <h3 class="acc-h3">Bio</h3>
             <textarea id="acc-bio" class="acc-textarea" maxlength="200" rows="3" placeholder="Say something about yourself">${esc(p.bio)}</textarea>
@@ -744,6 +749,13 @@ async function loadOwnerData() {
         if (act === "remove-avatar") return run(async () => { await updateProfile({ avatar_url: null }); renderProfile(); }, "Removed.");
         if (act === "remove-banner") return run(async () => { await updateProfile({ banner_url: null }); renderProfile(); }, "Removed.");
         if (act === "accent") return run(async () => { await updateProfile({ accent: target.dataset.color }); renderProfile(); }, "Saved.");
+        if (act === "save-profile-color") return run(async () => {
+            if (effTier(view.p) !== "gold") throw new Error("Custom profile backgrounds require Gold.");
+            const input = $("#acc-profile-color");
+            if (!input || !/^#[0-9a-f]{6}$/i.test(input.value)) throw new Error("Choose a valid color.");
+            await updateProfile({ profile_color: input.value.toLowerCase() });
+            renderProfile();
+        }, "Profile color saved.");
         if (act === "border") return run(async () => { await updateProfile({ border: target.dataset.border }); renderProfile(); }, "Saved.");
         if (act === "save-bio") return run(() => updateProfile({ bio: $("#acc-bio").value.trim().slice(0, 200) }), "Bio saved.");
         if (act === "vote") return run(async () => {
