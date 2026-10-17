@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /discord-rpc-helper/
+
+Sitemap: https://opieferd.dev/sitemap.xml
