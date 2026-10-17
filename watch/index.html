@@ -1,306 +1,134 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch · opieferd</title>
-    <meta name="description" content="Opie's streaming site. Stream almost any movie or tv show for free with no ads!">
-    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
-    <link rel="icon" type="image/png" href="../favicon.png">
-    <link rel="stylesheet" href="watching.css">
-    <link rel="stylesheet" href="../subpage-enhancements.css">
-    <!-- in <head>, after watching.css -->
-<link rel="stylesheet" href="/watch/accounts.css">
-
-<!-- before </body> -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/watch/watching.js"></script>
-<script src="/watch/accounts.js"></script>
-<script src="/watch/donations-live.js"></script>   <!-- only where a donation bar appears -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upgrade · Opie Watch</title>
+    <!-- Site stylesheet + accounts stylesheet (accounts.css loads second) -->
+    <link rel="stylesheet" href="/watch/watching.css">
+    <link rel="stylesheet" href="/watch/accounts.css">
+    <style>
+        /* This page has no sidebar until you paste yours in; don't reserve space for it */
+        body:not(:has(.watch-sidebar)) .watch-main-content { margin-left: 0; }
+    </style>
 </head>
-<body data-page="home">
-    <noscript>
-        <div class="noscript-disclaimer" role="alert">
-            <p class="eyebrow">Heads up</p>
-            <h2>You must enable scripts to use Opie Watch</h2>
-        </div>
-    </noscript>
+<body>
+<div class="watch-app-layout">
 
-    <div class="watch-app-layout">
-        <aside class="watch-sidebar" id="watch-sidebar" aria-label="Watch navigation">
-            <button id="sidebar-toggle-btn" class="sidebar-collapse-toggle" type="button" aria-label="Collapse sidebar" title="Toggle sidebar">
-                <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-                    <path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-            </button>
-            <div class="sidebar-brand">
-                <a href="./" class="brand-link" title="Opie Watch Home">
-                    <span class="brand-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    </span>
-                    <div class="brand-text">
-                        <span class="brand-title">Opie Watch</span>
-                        <span class="brand-badge">Stream</span>
-                    </div>
-                </a>
-                <a href="../" class="sidebar-back-link" title="Return to opieferd.dev">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    <span>opieferd.dev</span>
-                </a>
-            </div>
+    <!-- PASTE YOUR SIDEBAR HERE: copy the <aside class="watch-sidebar"> ... </aside> block from index.html -->
 
-            <nav class="sidebar-nav" aria-label="Main menu">
-                <span class="sidebar-section-label">Browse</span>
+    <div class="watch-main-content">
+        <main class="watching-page">
+            <a class="back-link" href="/watch/">← Back to Opie Watch</a>
 
-                <a href="./" class="sidebar-nav-item active" data-nav="home" aria-current="page">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
-                    <span class="sidebar-label">Home</span>
-                </a>
+            <header class="page-header">
+                <p class="eyebrow">Support Opie Watch</p>
+                <h1>Upgrade</h1>
+                <p class="intro">Opie Watch is free for everyone, and the watchlist always will be. Supporters keep it running and get a few extras.</p>
+            </header>
 
-                <a href="search/" class="sidebar-nav-item" data-nav="search">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <span class="sidebar-label">Search</span>
-                </a>
+            <section class="card upgrade-progress" aria-labelledby="goal-title">
+                <p class="eyebrow" id="goal-title">This month’s goal</p>
+                <div class="donation-progress"><span class="donation-progress-fill"></span></div>
+                <p class="donation-progress-label"><span data-donation-raised>$0</span> of <span data-donation-goal>$100</span> raised this month</p>
+            </section>
 
-                <a href="movies/" class="sidebar-nav-item" data-nav="movies">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                        <line x1="7" y1="2" x2="7" y2="22"></line>
-                        <line x1="17" y1="2" x2="17" y2="22"></line>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <line x1="2" y1="7" x2="7" y2="7"></line>
-                        <line x1="2" y1="17" x2="7" y2="17"></line>
-                        <line x1="17" y1="17" x2="22" y2="17"></line>
-                        <line x1="17" y1="7" x2="22" y2="7"></line>
-                    </svg>
-                    <span class="sidebar-label">Movies</span>
-                </a>
+            <section class="tier-grid" aria-label="Membership tiers">
+                <article class="card tier-card">
+                    <p class="eyebrow">Basic Supporter</p>
+                    <h2 class="tier-price">$5<small> / month</small></h2>
+                    <ul class="tier-perks">
+                        <li>Supporter badge next to your name</li>
+                        <li>Six profile accent colours</li>
+                        <li>A spot on the supporter wall</li>
+                    </ul>
+                    <a class="secondary-button" id="basic-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                </article>
 
-                <a href="tv/" class="sidebar-nav-item" data-nav="tv">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-                        <polyline points="17 2 12 7 7 2"></polyline>
-                    </svg>
-                    <span class="sidebar-label">TV Shows</span>
-                </a>
+                <article class="card tier-card is-gold">
+                    <p class="eyebrow">Gold Supporter</p>
+                    <h2 class="tier-price">$10<small> / month</small></h2>
+                    <ul class="tier-perks">
+                        <li>Everything in Basic, with a Gold badge</li>
+                        <li>Twelve accent colours, profile borders and a banner</li>
+                        <li>Vote on what gets built next</li>
+                        <li>Early access to experimental features</li>
+                    </ul>
+                    <a class="secondary-button" id="gold-link" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
+                </article>
+            </section>
 
-                <a href="trending/" class="sidebar-nav-item" data-nav="trending">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                        <polyline points="17 6 23 6 23 12"></polyline>
-                    </svg>
-                    <span class="sidebar-label">Trending</span>
-                </a>
+            <section class="card upgrade-steps upgrade-section" aria-labelledby="steps-title">
+                <h2 id="steps-title">How your tier gets applied</h2>
+                <ol>
+                    <li>
+                        <strong>Have an Opie Watch account.</strong>
+                        <div id="upgrade-account"><p class="acc-muted">Loading…</p></div>
+                    </li>
+                    <li>
+                        <strong>Join a tier on Ko-fi.</strong>
+                        <p class="acc-muted">Payment happens on Ko-fi, so your card details never touch this site.</p>
+                    </li>
+                    <li>
+                        <strong>Let us match the payment to you.</strong>
+                        <p class="acc-muted">Use the same email on Ko-fi as on your Opie Watch account. If they differ, write your @username in the Ko-fi message. Your tier usually appears within a minute or two.</p>
+                    </li>
+                </ol>
+            </section>
 
-                <a href="categories/" class="sidebar-nav-item" data-nav="categories">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span class="sidebar-label">By Category</span>
-                </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <button id="sidebar-settings-btn" class="sidebar-footer-btn" type="button" title="Content rating settings">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                    <span>Settings</span>
-                </button>
-            </div>
-        </aside>
-
-        <div class="watch-main-content">
-            <main class="watching-page">
-                <dialog id="vidrock-disclaimer" class="disclaimer" aria-labelledby="disclaimer-heading">
-                    <div class="disclaimer-content">
-                        <p class="eyebrow">Read this!</p>
-                        <h2 id="disclaimer-heading">Update Version 1.3</h2>
-                        <p>Hai to the 30 people who actually use this site! Version 1.3 Includes a huge update. New: added sidebar navigation for search, movies, tv, trending, and categories! Plus anime sub/dub, content visibility settings, and smooth playback. Have fun neets!</p>
-                        <button id="close-disclaimer" class="primary-button" type="button">Got it</button>
-                    </div>
-                </dialog>
-
-                <aside id="donation-banner" class="donation-banner" aria-labelledby="donation-title" hidden>
-                    <div class="donation-copy">
-                        <p class="eyebrow">Support Opie Watch</p>
-                        <p id="donation-title" class="donation-title">Servers are expensive. Donate if you can to keep Opie Watch running and ad free.</p>
-                        <div class="donation-progress" role="progressbar" aria-label="Monthly server fund" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                            <span class="donation-progress-fill"></span>
-                        </div>
-                        <p class="donation-progress-label"><span id="donation-raised">$0</span> of <span id="donation-goal">$0</span> raised in <span id="donation-month">this month</span></p>
-                    </div>
-                    <div class="donation-actions">
-                        <a id="donation-link" class="secondary-button" href="https://ko-fi.com/opieferd" target="_blank" rel="noopener noreferrer">Donate <span aria-hidden="true">♥</span></a>
-                        <button id="dismiss-donation" class="icon-button" type="button" aria-label="Dismiss donation banner" title="Dismiss">×</button>
-                    </div>
-                </aside>
-
-                <header class="page-header">
-                    <p class="eyebrow">opieferd.dev / watch</p>
-                    <div class="home-brand-hero">
-                        <div class="home-brand-badge">
-                            <span class="home-brand-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                </svg>
-                            </span>
-                            <div class="home-brand-meta">
-                                <span class="home-brand-name">Opie Watch</span>
-                                <span class="brand-badge">Stream</span>
-                            </div>
-                        </div>
-                        <h1 class="home-heading">Home<span class="title-mark"></span></h1>
-                    </div>
-                    <p class="intro">Find something to watch</p>
-                </header>
-
-                <section class="search-card card" aria-labelledby="search-heading">
-                    <div class="section-label"><span class="status-dot" aria-hidden="true"></span><span id="search-heading">Find something to watch</span></div>
-                    <form id="search-form" class="search-form" role="search">
-                        <label class="sr-only" for="search-input">Search for a movie or show</label>
-                        <input id="search-input" type="search" placeholder="Try “The Bear” or “Interstellar”" autocomplete="off" required>
-                        <button class="primary-button" type="submit"><span>Look it up</span><span aria-hidden="true">⌕</span></button>
-                    </form>
-                    <div class="search-options" role="group" aria-label="What to search">
-                        <button class="type-button active" type="button" data-type="multi">All</button>
-                        <button class="type-button" type="button" data-type="movie">Movies</button>
-                        <button class="type-button" type="button" data-type="tv">TV shows</button>
-                    </div>
-                    <p id="search-message" class="form-message" role="status"></p>
-                </section>
-
-                <section id="results-section" class="results-section" aria-labelledby="results-heading" hidden>
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Here’s what I found</p>
-                            <h2 id="results-heading">What sounds good?</h2>
-                        </div>
-                        <span id="result-count" class="result-count"></span>
-                    </div>
-                    <div id="results" class="results-grid"></div>
-                </section>
-
-                <section id="history-section" class="history-section" aria-labelledby="history-heading" hidden>
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Your picks</p>
-                            <h2 id="history-heading">Pick up where you left off</h2>
-                        </div>
-                        <button id="clear-history" class="text-button" type="button">Clear these</button>
-                    </div>
-                    <div id="history" class="history-grid"></div>
-                </section>
-
-                <section id="popular-shows-section" class="recommendation-section" aria-labelledby="popular-shows-heading">
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Trending on TMDB</p>
-                            <h2 id="popular-shows-heading">Popular shows right now</h2>
-                        </div>
-                        <a href="tv/" class="text-button">View all TV shows →</a>
-                    </div>
-                    <div id="popular-shows-results" class="recommendation-grid" aria-live="polite">
-                        <p class="recommendation-message">Finding what people are watching…</p>
-                    </div>
-                </section>
-
-                <section id="popular-movies-section" class="recommendation-section" aria-labelledby="popular-movies-heading">
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Trending on TMDB</p>
-                            <h2 id="popular-movies-heading">Popular movies right now</h2>
-                        </div>
-                        <a href="movies/" class="text-button">View all movies →</a>
-                    </div>
-                    <div id="popular-movies-results" class="recommendation-grid" aria-live="polite">
-                        <p class="recommendation-message">Finding what people are watching…</p>
-                    </div>
-                </section>
-
-                <section id="recommended-section" class="recommendation-section" aria-labelledby="recommended-heading" hidden>
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Based on your picks</p>
-                            <h2 id="recommended-heading">You might like</h2>
-                        </div>
-                    </div>
-                    <div id="recommended-results" class="recommendation-grid" aria-live="polite"></div>
-                </section>
-
-                <section id="player-section" class="player-section card" aria-labelledby="player-heading" hidden>
-                    <div class="section-heading player-heading">
-                        <div>
-                            <p class="eyebrow">You’re watching</p>
-                            <h2 id="player-heading">Choose something to play</h2>
-                            <p id="player-meta" class="player-meta"></p>
-                        </div>
-                        <button id="close-player" class="icon-button" type="button" aria-label="Close player">×</button>
-                    </div>
-                    <div id="episode-controls" class="episode-controls" hidden>
-                        <label for="season-select">Season</label>
-                        <select id="season-select"></select>
-                        <label for="episode-select">Episode</label>
-                        <select id="episode-select"></select>
-                    </div>
-                    <div id="audio-controls" class="audio-controls" hidden>
-                        <div class="server-heading"><span id="audio-heading">Audio</span></div>
-                        <div class="audio-row">
-                            <div id="audio-list" class="server-list" role="group" aria-labelledby="audio-heading">
-                                <button class="server-button active" type="button" data-audio="default" aria-pressed="true">Server default</button>
-                                <button class="server-button" type="button" data-audio="sub" aria-pressed="false">Sub</button>
-                                <button class="server-button" type="button" data-audio="dub" aria-pressed="false">Dub</button>
-                            </div>
-                            <select id="mal-select" aria-label="Which MyAnimeList entry to play" hidden></select>
-                        </div>
-                        <p id="audio-status" class="audio-status" role="status"></p>
-                    </div>
-                    <div class="server-controls" aria-labelledby="server-heading">
-                        <div class="server-heading">
-                            <span id="server-heading">Streaming server</span>
-                            <span id="server-status" class="server-status" role="status"></span>
-                        </div>
-                        <div id="server-list" class="server-list" role="group" aria-label="Streaming servers"></div>
-                    </div>
-                    <div class="player-frame">
-                        <iframe id="player" title="Video player" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="no-referrer" allowfullscreen></iframe>
-                    </div>
-                    <div class="download-actions">
-                        <div id="download-actions-content" class="download-actions-content">
-                            <a id="vidvault-link" class="secondary-button" href="https://vidvault.to" target="_blank" rel="noopener noreferrer">
-                                Open download options in VidVault <span aria-hidden="true">↗</span>
-                            </a>
-                            <p class="download-note">Downloads are handled by VidVault in a separate tab.</p>
-                        </div>
-                        <button id="hide-download-actions" class="text-button download-dismiss" type="button">Hide</button>
-                    </div>
-                    <button id="show-download-actions" class="text-button download-restore" type="button" hidden>Show download options</button>
-                    <p class="player-note">Playback is provided by the selected third-party server. Only configured provider domains can load in the player. If it doesn’t load, try another server or episode.</p>
-                </section>
-
-                <section id="save-history-prompt" class="save-history-prompt card" aria-labelledby="save-history-heading">
-                    <p class="eyebrow">Up to you</p>
-                    <h2 id="save-history-heading">Want me to remember what you’re watching?</h2>
-                    <p>Watch history is saved in your browser and will be lost if you clear site data.</p>
-                    <button id="save-history-button" class="primary-button" type="button"><span>Sure, save it</span><span aria-hidden="true">→</span></button>
-                </section>
-
-                <p class="attribution">Search powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>. This site is not affiliated with TMDB or third-party providers. DMCA Disclaimer: The third-party providers are content aggregators that scrape publicly available sources. They don't host or store copyrighted content. All content is gathered automatically from third-party websites. Copyright infringement claims should be directed to the respective third-party sites. For DMCA requests, please contact the original content provider.</p>
-            </main>
-        </div>
+            <section class="card upgrade-section">
+                <h2>Just want to chip in?</h2>
+                <p class="intro">A one-time tip on Ko-fi counts toward the monthly goal but doesn’t unlock supporter perks.</p>
+                <p><a class="secondary-button" href="https://ko-fi.com/opieferd" target="_blank" rel="noopener noreferrer">One-time tip on Ko-fi ♥</a></p>
+            </section>
+        </main>
     </div>
-    <script src="watching.js?v=11"></script>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/watch/accounts.js"></script>
+<script src="/watch/donations-live.js"></script>
+<script>
+(function () {
+    "use strict";
+    var box = document.getElementById("upgrade-account");
+    var LABEL = { free: "Member", basic: "Basic Supporter", gold: "Gold Supporter" };
+    var esc = function (v) {
+        return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c];
+        });
+    };
+
+    function render() {
+        var acc = window.OpieAccount;
+        if (!acc) {
+            box.innerHTML = '<p class="acc-muted">Accounts aren’t available right now, so tiers can’t be applied automatically.</p>';
+            return;
+        }
+        var p = acc.getProfile();
+        if (!p) {
+            box.innerHTML = '<p class="acc-muted">Create a free account or sign in first.</p>' +
+                '<div class="confirm-actions"><button class="primary-button" type="button" id="upg-signup">Create account</button>' +
+                '<button class="grey-button" type="button" id="upg-signin">Sign in</button></div>';
+            document.getElementById("upg-signup").onclick = function () { acc.openAuth("signup"); };
+            document.getElementById("upg-signin").onclick = function () { acc.openAuth("signin"); };
+            return;
+        }
+        var tier = p.role === "owner" ? "Owner" : LABEL[p.tier] || "Member";
+        box.innerHTML = '<p class="acc-muted">Signed in as <strong>' + esc(p.username) + '</strong> · ' + esc(tier) + '</p>' +
+            '<div class="upgrade-code"><code id="upg-code">@' + esc(p.username) + '</code>' +
+            '<button class="text-button" type="button" id="upg-copy">Copy</button></div>';
+        document.getElementById("upg-copy").onclick = function () {
+            var btn = this;
+            var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1500); };
+            if (navigator.clipboard) navigator.clipboard.writeText("@" + p.username).then(done);
+            else done();
+        };
+    }
+
+    window.addEventListener("account:changed", render);
+    render();
+})();
+</script>
 </body>
 </html>
