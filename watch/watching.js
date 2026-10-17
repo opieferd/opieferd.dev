@@ -611,7 +611,11 @@
             if (!card || card.getAttribute("aria-hidden") === "true") return;
             openMedia(Number(card.dataset.id), card.dataset.type);
         };
-        setupInfiniteRail(container);
+        try {
+            setupInfiniteRail(container);
+        } catch (error) {
+            console.error("[watch] setupInfiniteRail error:", error);
+        }
     }
 
     function setupInfiniteRail(container) {
@@ -669,7 +673,7 @@
                 .map((item) => ({ ...item, media_type: "tv" }))
                 .slice(0, 30);
             console.log("[watch] loadPopularShows: rendering", shows.length, "shows");
-            renderRecommendationCards(popularShowsResults, shows, "Popular shows are taking a break. Try searching instead.");
+            await renderRecommendationCards(popularShowsResults, shows, "Popular shows are taking a break. Try searching instead.");
             await loadPopularMovies();
         } catch (error) {
             console.error("[watch] loadPopularShows error:", error);
@@ -693,7 +697,7 @@
                 .map((item) => ({ ...item, media_type: "movie" }))
                 .slice(0, 30);
             console.log("[watch] loadPopularMovies: rendering", movies.length, "movies");
-            renderRecommendationCards(popularMoviesResults, movies, "Popular movies are taking a break. Try searching instead.");
+            await renderRecommendationCards(popularMoviesResults, movies, "Popular movies are taking a break. Try searching instead.");
         } catch (error) {
             console.error("[watch] loadPopularMovies error:", error);
             renderRecommendationCards(popularMoviesResults, [], "Popular movies are unavailable right now.");
@@ -1648,8 +1652,14 @@ async function getLiveRaised()
     const pageType = document.body.dataset.page || "home";
 
     if (pageType === "home") {
-        updateSessionView();
-        loadPopularShows();
+        try {
+            updateSessionView();
+            loadPopularShows().catch((error) => {
+                console.error("[watch] loadPopularShows unhandled error:", error);
+            });
+        } catch (error) {
+            console.error("[watch] home page init error:", error);
+        }
     } else if (pageType === "search") {
         updateSessionView();
         const urlParams = new URLSearchParams(window.location.search);
@@ -1761,7 +1771,17 @@ async function getLiveRaised()
             [wType, wId] = watchParam.split(":");
         }
         if (wId && (wType === "movie" || wType === "tv")) {
-            openMedia(Number(wId), wType);
+            openMedia(Number(wId), wType).catch((error) => {
+                console.error("[watch] auto-play openMedia error:", error);
+            });
         }
     }
+
+    // Global error capture so nothing fails silently
+    window.addEventListener("error", (event) => {
+        console.error("[watch] uncaught error:", event.error || event.message, "at", event.filename, event.lineno);
+    });
+    window.addEventListener("unhandledrejection", (event) => {
+        console.error("[watch] unhandled promise rejection:", event.reason);
+    });
 })();
