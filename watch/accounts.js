@@ -87,7 +87,7 @@
     const accentList = (p) => (effTier(p) === "gold" ? GOLD_ACCENTS : effTier(p) === "basic" ? BASIC_ACCENTS : [DEFAULT_ACCENT]);
     const accentFor = (p) => (p && accentList(p).includes(String(p.accent).toLowerCase()) ? String(p.accent).toLowerCase() : DEFAULT_ACCENT);
     const DEFAULT_PROFILE_COLOR = "#171411";
-    const profileColorFor = (p) => (p && /^#[0-9a-f]{6}$/i.test(String(p.profile_color || "")) ? String(p.profile_color).toLowerCase() : DEFAULT_PROFILE_COLOR);
+    const profileColorFor = (p) => (p && effTier(p) === "gold" && /^#[0-9a-f]{6}$/i.test(String(p.profile_color || "")) ? String(p.profile_color).toLowerCase() : DEFAULT_PROFILE_COLOR);
     const borderFor = (p) => {
         if (!p) return "none";
         if (p.role === "owner") return "owner";
