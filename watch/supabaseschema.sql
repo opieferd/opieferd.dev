@@ -21,6 +21,9 @@ values ('owner_email', 'nakwolek@gmail.com')          -- <<< EDIT
 on conflict (key) do update set value = excluded.value;
 
 -- ---------- profiles ----------
+-- Add moderator column if it doesn't exist (run this migration if upgrading):
+alter table public.profiles add column if not exists moderator boolean not null default false;
+
 create table if not exists public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   username      text not null check (username ~ '^[A-Za-z0-9_]{3,20}$'),

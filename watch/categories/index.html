@@ -118,6 +118,20 @@
 
         <div class="watch-main-content">
             <main class="watching-page">
+                <aside id="donation-banner" class="donation-banner" aria-labelledby="donation-title" hidden>
+                    <div class="donation-copy">
+                        <p class="eyebrow">Support Opie Watch</p>
+                        <p id="donation-title" class="donation-title">Servers are expensive. Donate if you can to keep Opie Watch running and ad free.</p>
+                        <div class="donation-progress" role="progressbar" aria-label="Monthly server fund" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                            <span class="donation-progress-fill"></span>
+                        </div>
+                        <p class="donation-progress-label"><span id="donation-raised">$0</span> of <span id="donation-goal">$0</span> raised in <span id="donation-month">this month</span></p>
+                    </div>
+                    <div class="donation-actions">
+                        <a id="donation-link" class="secondary-button" href="https://ko-fi.com/opieferd" target="_blank" rel="noopener noreferrer">Donate <span aria-hidden="true">♥</span></a>
+                        <button id="dismiss-donation" class="icon-button" type="button" aria-label="Dismiss donation banner" title="Dismiss">×</button>
+                    </div>
+                </aside>
                 <header class="page-header">
                     <p class="eyebrow">opieferd.dev / watch / categories</p>
                     <h1>By Category<span class="title-mark"></span></h1>
