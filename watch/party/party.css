@@ -92,3 +92,22 @@
 /* Room poster */
 .room-media-poster { margin-top: .6rem; text-align: center; }
 .room-media-poster img { width: 110px; height: 165px; object-fit: cover; border-radius: .6rem; border: 1px solid var(--border); background: #0d0b09; }
+
+/* ---------- signed-out disclaimer + lobby notices ---------- */
+.auth-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding: .9rem 1.1rem; border: 1px solid rgba(229, 72, 77, .4); border-radius: .9rem; background: rgba(229, 72, 77, .08); }
+.auth-notice p { margin: 0; font-size: .9rem; color: var(--muted); }
+.auth-notice strong { color: #e5484d; }
+.auth-notice[hidden] { display: none; }
+#lobby-notice { margin: 0 0 1rem; }
+
+/* ---------- room header actions ---------- */
+.party-room-header { flex-wrap: wrap; }
+.room-header-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.room-header-actions .secondary-button { padding: .45rem .7rem; font-size: .8rem; }
+.room-code { font-size: .75rem; font-weight: 700; letter-spacing: .08em; color: var(--accent); border: 1px dashed var(--border); border-radius: .5rem; padding: .3rem .55rem; }
+.danger-button { color: #e5484d; }
+.danger-button:hover, .danger-button:focus-visible { border-color: #e5484d; background: rgba(229, 72, 77, .12); }
+.room-notice { margin: 0 0 .9rem; }
+
+/* ---------- presence host badge ---------- */
+.presence-host-badge { font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(235, 175, 54, .4); border-radius: 999px; padding: .05em .5em; }

@@ -220,7 +220,7 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
 .acc-log th { color: var(--muted); font-weight: 700; }
 .acc-log-body { margin-top: .2rem; color: var(--muted); overflow-wrap: anywhere; }
 .acc-act { padding: .1em .5em; border-radius: .3rem; background: var(--acc-raise); }
-.acc-act-blocked, .acc-act-ban, .acc-act-auto_hidden { color: var(--acc-danger); }
+.acc-act-blocked, .acc-act-ban, .acc-act-auto_hidden, .acc-act-chat_blocked { color: var(--acc-danger); }
 .acc-act-tier_change { color: var(--accent); }
 
 /* ---------- player: watchlist toggle ---------- */

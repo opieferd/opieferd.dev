@@ -17,7 +17,7 @@
     <meta name="twitter:title" content="Watch Parties · Opie Watch">
     <meta name="twitter:description" content="Create or join a watch party and sync playback with friends.">
     <meta name="twitter:image" content="https://opieferd.dev/images/watch-og-banner.png">
-    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; connect-src 'self' https://api.themoviedb.org https://image.tmdb.org https://ykipenudpfnzbgmxrepi.supabase.co; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; connect-src 'self' https://api.themoviedb.org https://api.jikan.moe https://image.tmdb.org https://ykipenudpfnzbgmxrepi.supabase.co; object-src 'none'; base-uri 'self';">
     <link rel="icon" type="image/png" href="../../favicon.png">
     <link rel="manifest" href="../../manifest.webmanifest">
     <link rel="stylesheet" href="../watching.css">
@@ -72,12 +72,18 @@
 
                 <section id="party-lobby" class="card">
                     <div class="lobby-header"><h2>Lobby</h2><p class="lobby-subtitle">Public parties are open to everyone. Private parties need a code.</p></div>
+                    <div id="party-auth-notice" class="auth-notice" hidden>
+                        <p><strong>You must be signed in to use this feature.</strong> Sign in to create or join watch parties.</p>
+                        <button id="party-signin-btn" class="primary-button" type="button">Sign in</button>
+                    </div>
+                    <p id="lobby-notice" class="form-message" role="status"></p>
                     <div class="lobby-grid">
                         <div class="panel create-party">
                             <h3>Start a party</h3>
                             <form id="create-party-form">
                                 <div class="form-row"><label for="party-title">Party title</label><input type="text" id="party-title" placeholder="Movie night with friends" maxlength="120" required></div>
                                 <div class="form-row"><label for="party-kind">Party type</label><select id="party-kind"><option value="public">Public (listed in lobby)</option><option value="private">Private (join by code)</option></select></div>
+                                <div class="form-row"><label for="party-max-members">Max members (2–12)</label><input type="number" id="party-max-members" min="2" max="12" step="1" value="12" required><p class="form-hint">How many people can be in the party at once. You count toward the limit.</p></div>
                                 <div class="form-row">
                                     <label for="party-media-search">Search movies / TV shows (IMDb via TMDB)</label>
                                     <div class="media-search-wrap">
@@ -111,11 +117,35 @@
                     <div class="party-room-header">
                         <button id="leave-party-btn" class="text-button" type="button">← Back to lobby</button>
                         <h2 id="room-title">Party</h2>
-                        <div id="room-kind-badge" class="kind-badge">public</div>
+                        <div class="room-header-actions">
+                            <span id="room-code" class="room-code" hidden></span>
+                            <button id="copy-invite-btn" class="secondary-button" type="button">Copy invite link</button>
+                            <button id="close-party-btn" class="secondary-button danger-button" type="button" hidden>Close party</button>
+                            <div id="room-kind-badge" class="kind-badge">public</div>
+                        </div>
                     </div>
+                    <p id="room-notice" class="form-message room-notice" role="status"></p>
                     <div class="party-room-body">
                         <div class="player-column">
                             <div class="player-wrap card">
+                                <div id="server-controls" class="server-controls" aria-labelledby="server-heading">
+                                    <div class="server-heading"><span id="server-heading">Streaming server</span><span id="server-status" class="server-status" role="status"></span></div>
+                                    <div id="server-list" class="server-list" role="group" aria-label="Streaming servers"></div>
+                                    <p class="form-hint">The server is set by the party host and applies to everyone.</p>
+                                </div>
+                                <div id="audio-controls" class="audio-controls" hidden>
+                                    <div class="server-heading"><span id="audio-heading">Audio</span></div>
+                                    <div class="audio-row">
+                                        <div id="audio-list" class="server-list" role="group" aria-labelledby="audio-heading">
+                                            <button class="server-button active" type="button" data-audio="default" aria-pressed="true">Server default</button>
+                                            <button class="server-button" type="button" data-audio="sub" aria-pressed="false">Sub</button>
+                                            <button class="server-button" type="button" data-audio="dub" aria-pressed="false">Dub</button>
+                                        </div>
+                                        <select id="mal-select" aria-label="Which MyAnimeList entry to play" hidden></select>
+                                    </div>
+                                    <p id="audio-status" class="audio-status" role="status"></p>
+                                    <p class="form-hint">Sub/Dub is set by the party host and applies to everyone.</p>
+                                </div>
                                 <div class="player-frame"><iframe id="party-player" title="Video player" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="no-referrer" allowfullscreen></iframe></div>
                                 <div class="player-controls">
                                     <button id="party-play-pause" class="icon-button" type="button" aria-label="Play / Pause" disabled>▶</button>
