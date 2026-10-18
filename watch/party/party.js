@@ -18,6 +18,7 @@
     channel: null,
     isHost: false,
     me: null,
+    chat: [],
     selectedMedia: null,
     playback: { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null },
   };
@@ -68,6 +69,8 @@
   const mediaSearchInput = $("#party-media-search");
   const mediaSearchBtn = $("#party-media-search-btn");
   const mediaResults = $("#party-media-results");
+  /* The current form only surfaces the party title; these optional fields are
+     auto-filled internally when present (and are read defensively when not). */
   const tmdbIdInput = $("#party-tmdb-id");
   const posterPreview = $("#party-media-poster-preview");
   const mediaUrlInput = $("#party-media-url");
@@ -141,22 +144,29 @@
   async function handleCreateParty(event) {
     event.preventDefault();
     if (!isSignedIn()) { showMessage(createMessage, "Sign in to host a party."); return; }
+    const media = state.selectedMedia;
+    if (!media) {
+      showMessage(createMessage, "Pick a movie or TV show from the search results so the party knows what to play.");
+      return;
+    }
     const client = sb();
     const profile = getProfile();
     const kind = $("#party-kind").value;
     const code = kind === "private" ? generateCode() : null;
+    const titleInput = $("#party-title");
+    const partyTitle = (titleInput && titleInput.value.trim()) || media.title;
     const { data, error } = await client
       .from("watch_parties")
       .insert({
         host_id: profile.id,
-        title: state.selectedMedia ? state.selectedMedia.title : $("#party-title").value.trim(),
-        media_type: state.selectedMedia ? (state.selectedMedia.media_type === "tv" ? "tv" : "movie") : $("#party-media-type").value,
-        media_id: state.selectedMedia ? state.selectedMedia.id : Number($("#party-tmdb-id").value) || null,
-        media_title: state.selectedMedia ? state.selectedMedia.title : $("#party-media-search").value.trim(),
-        media_poster: state.selectedMedia && state.selectedMedia.poster_path ? state.selectedMedia.poster_path : null,
+        title: partyTitle,
+        media_type: media.media_type,
+        media_id: media.id,
+        media_title: media.title,
+        media_poster: media.poster_path || null,
         kind,
         code,
-        media_url: $("#party-media-url").value.trim(),
+        media_url: embedUrlFor(media),
       })
       .select()
       .single();
@@ -164,6 +174,7 @@
     await client.from("watch_party_members").insert({ party_id: data.id, user_id: profile.id });
     showMessage(createMessage, "Party created.", true);
     createForm.reset();
+    state.selectedMedia = null;
     enterParty(data);
   }
 
@@ -418,29 +429,63 @@
     }
   }
 
-  function selectMedia(media) {
-    state.selectedMedia = media;
-    const type = media.media_type === "tv" ? "tv" : "movie";
-    mediaTypeSelect.value = type;
-    tmdbIdInput.value = media.id;
-    const title = media.title || media.name;
-    const year = (media.release_date || media.first_air_date || "").slice(0, 4);
-    posterPreview.innerHTML = media.poster_path
-      ? `<img src="${TMDB_IMAGE}${media.poster_path}" alt="${esc(title)}">`
-      : `<div style="color:var(--muted);font-size:.8rem;">No poster available</div>`;
+  /* Media handed over from a player page ("Start Watch Party") or picked from
+     the TMDB search results. Both funnel through normalizeMedia + selectMedia. */
+  function normalizeMedia(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const id = Number(raw.id);
+    const title = String(raw.title || raw.name || "").trim();
+    if (!Number.isFinite(id) || id <= 0 || !title) return null;
+    const type = raw.media_type === "tv" || raw.type === "tv" ? "tv" : "movie";
+    const poster = String(raw.poster_path || "");
+    const mediaUrl = typeof raw.media_url === "string" && /^https:\/\//i.test(raw.media_url) ? raw.media_url : "";
+    return {
+      ...raw,
+      id,
+      media_type: type,
+      type,
+      title,
+      media_url: mediaUrl,
+      // Matches the media_poster check constraint in supabase-schema.sql.
+      poster_path: /^\/[A-Za-z0-9_.-]{1,80}$/.test(poster) ? poster : "",
+    };
+  }
 
-    // Auto-generate embed URL using default provider (vidsrc.sh)
-    const base = type === "tv"
-      ? `https://vidsrc.sh/embed/tv/${media.id}?season=1&episode=1`
-      : `https://vidsrc.sh/embed/movie/${media.id}`;
-    mediaUrlInput.value = base;
+  function embedUrlFor(media) {
+    if (media.media_url) return media.media_url;
+    // Auto-generate an embed URL using the default provider (vidsrc.sh).
+    if (media.media_type === "tv") {
+      const season = Number(media.season) || 1;
+      const episode = Number(media.episode) || 1;
+      return `https://vidsrc.sh/embed/tv/${media.id}?season=${season}&episode=${episode}`;
+    }
+    return `https://vidsrc.sh/embed/movie/${media.id}`;
+  }
+
+  function selectMedia(rawMedia) {
+    const media = normalizeMedia(rawMedia);
+    if (!media) return;
+    state.selectedMedia = media;
+    const type = media.media_type;
+    if (mediaTypeSelect) mediaTypeSelect.value = type;
+    if (tmdbIdInput) tmdbIdInput.value = media.id;
+    const title = media.title;
+    const year = (media.release_date || media.first_air_date || "").slice(0, 4);
+    if (posterPreview) {
+      posterPreview.innerHTML = media.poster_path
+        ? `<img src="${TMDB_IMAGE}${media.poster_path}" alt="${esc(title)}">`
+        : `<div style="color:var(--muted);font-size:.8rem;">No poster available</div>`;
+    }
+    media.media_url = embedUrlFor(media);
+    if (mediaUrlInput) mediaUrlInput.value = media.media_url;
 
     // Auto-fill party title
-    $("#party-title").value = title;
+    const titleInput = $("#party-title");
+    if (titleInput) titleInput.value = title;
 
     mediaResults.hidden = true;
     mediaSearchInput.value = `${title}${year ? ` (${year})` : ""}`;
-    showMessage(createMessage, `Selected: ${esc(title)} · ${type.toUpperCase()} — all fields auto-filled`, true);
+    showMessage(createMessage, `Selected: ${title} · ${type.toUpperCase()} — party title filled in`, true);
   }
 
   mediaSearchInput.addEventListener("input", () => {
@@ -450,17 +495,20 @@
   mediaSearchBtn.addEventListener("click", () => searchTMDB(mediaSearchInput.value.trim()));
 
   /* ---------- boot ---------- */
+  // Prefill first: the title handoff from a player page must not depend on
+  // Supabase/accounts being available.
+  try {
+    const pending = sessionStorage.getItem("opie:pendingPartyMedia");
+    if (pending) {
+      sessionStorage.removeItem("opie:pendingPartyMedia");
+      selectMedia(JSON.parse(pending));
+    }
+  } catch (error) {
+    console.warn("[party] Couldn't read pending media:", error);
+  }
+
   waitForAccounts(() => {
     loadPublicParties();
-    // Check for pending media sent from "Start Party" on another watch page
-    try {
-      const pending = sessionStorage.getItem("opie:pendingPartyMedia");
-      if (pending) {
-        const media = JSON.parse(pending);
-        sessionStorage.removeItem("opie:pendingPartyMedia");
-        selectMedia(media);
-      }
-    } catch (e) {}
   });
 
 })();
