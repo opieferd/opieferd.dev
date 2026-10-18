@@ -35,7 +35,7 @@ create table if not exists public.profiles (
   bio           text not null default '' check (char_length(bio) <= 200),
   accent        text not null default '#ebaf36' check (accent ~ '^#[0-9a-fA-F]{6}$'),
   border        text not null default 'none' check (border in ('none','gold','neon','ember')),
-  profile_color text not null default '#171411' check (profile_color ~ '^#[0-9a-fA-F]{6}  boolean not null default false,
+  profile_color text not null default '#171411' check (profile_color ~ '^#[0-9a-fA-F]{6}$'),
   banned        boolean not null default false,
   moderator     boolean not null default false,
   created_at    timestamptz not null default now()
@@ -196,6 +196,7 @@ create table if not exists public.moderation_log (
 );
 alter table public.moderation_log enable row level security;
 drop policy if exists "log owner read" on public.moderation_log;
+drop policy if exists "log owner or moderator read" on public.moderation_log;
 create policy "log owner or moderator read" on public.moderation_log for select
   using (public.is_owner() or public.is_moderator());
 revoke insert, update, delete on public.moderation_log from anon, authenticated;
@@ -500,12 +501,6 @@ create policy "banner update gold" on storage.objects for update to authenticate
   using (bucket_id = 'banners' and (storage.foldername(name))[1] = auth.uid()::text and public.is_gold());
 create policy "banner delete own" on storage.objects for delete to authenticated
   using (bucket_id = 'banners' and (storage.foldername(name))[1] = auth.uid()::text);
-),
-  show_on_wall  boolean not null default false,
-  banned        boolean not null default false,
-  moderator     boolean not null default false,
-  created_at    timestamptz not null default now()
-);
 
 -- ---------- helper functions ----------
 create or replace function public.is_owner() returns boolean
@@ -925,6 +920,81 @@ create policy "votes read"     on public.feature_votes for select using (true);
 create policy "votes insert"   on public.feature_votes for insert with check (user_id = auth.uid() and public.is_gold());
 create policy "votes delete"   on public.feature_votes for delete using (user_id = auth.uid());
 revoke update on public.feature_votes from anon, authenticated;
+
+
+-- ---------- watch parties ----------
+
+create table if not exists public.watch_parties (
+  id            uuid primary key default gen_random_uuid(),
+  host_id       uuid not null references public.profiles(id) on delete cascade,
+  title         text not null check (char_length(title) between 1 and 120),
+  media_type    text not null check (media_type in ('movie','tv')),
+  media_id      integer not null check (media_id > 0),
+  media_title   text not null check (char_length(media_title) between 1 and 200),
+  media_poster  text check (media_poster is null or media_poster = '' or media_poster ~ '^/[A-Za-z0-9_.-]{1,80}$'),
+  kind          text not null default 'public' check (kind in ('public','private')),
+  code          text check (char_length(code) = 6 and code ~ '^[A-Z0-9]{6}$'),
+  current_position  integer not null default 0 check (current_position >= 0),
+  is_playing    boolean not null default false,
+  media_url     text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+alter table public.watch_parties enable row level security;
+
+drop policy if exists "watch_parties read" on public.watch_parties;
+drop policy if exists "watch_parties insert" on public.watch_parties;
+drop policy if exists "watch_parties update host" on public.watch_parties;
+drop policy if exists "watch_parties delete host" on public.watch_parties;
+
+-- Anyone can see public parties; hosts can see their own private parties.
+create policy "watch_parties read"
+  on public.watch_parties for select
+  using (kind = 'public' or host_id = auth.uid());
+
+-- Signed-in users can create parties.
+create policy "watch_parties insert"
+  on public.watch_parties for insert
+  with check (auth.uid() = host_id);
+
+-- Hosts can update their own party.
+create policy "watch_parties update host"
+  on watch_parties for update
+  using (auth.uid() = host_id);
+
+-- Hosts can delete their own party.
+create policy "watch_parties delete host"
+  on watch_parties for delete
+  using (auth.uid() = host_id);
+
+create table if not exists public.watch_party_members (
+  party_id    uuid not null references public.watch_parties(id) on delete cascade,
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  joined_at   timestamptz not null default now(),
+  primary key (party_id, user_id)
+);
+
+alter table public.watch_party_members enable row level security;
+
+drop policy if exists "watch_party_members read" on public.watch_party_members;
+drop policy if exists "watch_party_members insert" on public.watch_party_members;
+drop policy if exists "watch_party_members delete" on public.watch_party_members;
+
+-- Members can see the roster of parties they belong to (and public party rosters).
+create policy "watch_party_members read"
+  on public.watch_party_members for select
+  using (true);
+
+-- Signed-in users can join a party (membership row).
+create policy "watch_party_members insert"
+  on public.watch_party_members for insert
+  with check (auth.uid() = user_id);
+
+-- Users can leave (delete their own membership).
+create policy "watch_party_members delete"
+  on public.watch_party_members for delete
+  using (auth.uid() = user_id);
 
 -- ---------- image storage (avatars for everyone, banners for Gold) ----------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values

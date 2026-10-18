@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Parties · Opie Watch</title>
+    <meta name="description" content="Create or join a watch party with friends. Sync playback in real time with Supabase Realtime.">
+    <meta name="author" content="Opieferd">
+    <link rel="canonical" href="https://opieferd.dev/watch/party/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://opieferd.dev/watch/party/">
+    <meta property="og:title" content="Watch Parties · Opie Watch">
+    <meta property="og:description" content="Create or join a watch party and sync playback with friends.">
+    <meta property="og:image" content="https://opieferd.dev/images/watch-og-banner.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://opieferd.dev/watch/party/">
+    <meta name="twitter:title" content="Watch Parties · Opie Watch">
+    <meta name="twitter:description" content="Create or join a watch party and sync playback with friends.">
+    <meta name="twitter:image" content="https://opieferd.dev/images/watch-og-banner.png">
+    <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; connect-src 'self' https://api.themoviedb.org https://image.tmdb.org https://ykipenudpfnzbgmxrepi.supabase.co; object-src 'none'; base-uri 'self';">
+    <link rel="icon" type="image/png" href="../../favicon.png">
+    <link rel="manifest" href="../../manifest.webmanifest">
+    <link rel="stylesheet" href="../watching.css">
+    <link rel="stylesheet" href="../accounts.css">
+    <link rel="stylesheet" href="../subpage-enhancements.css">
+    <link rel="stylesheet" href="party.css">
+</head>
+<body data-page="party">
+    <noscript>
+        <div class="noscript-disclaimer" role="alert">
+            <p class="eyebrow">Heads up</p>
+            <h2>You must enable scripts to use Watch Parties</h2>
+        </div>
+    </noscript>
+
+    <div class="watch-app-layout">
+        <aside class="watch-sidebar" id="watch-sidebar" aria-label="Watch navigation">
+            <button id="sidebar-toggle-btn" class="sidebar-collapse-toggle" type="button" aria-label="Collapse sidebar" title="Toggle sidebar">
+                <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+            <div class="sidebar-brand">
+                <a href="../" class="brand-link" title="Opie Watch Home">
+                    <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></span>
+                    <div class="brand-text"><span class="brand-title">Opie Watch</span><span class="brand-badge">Stream</span></div>
+                </a>
+                <a href="../../" class="sidebar-back-link" title="Return to opieferd.dev"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg><span>opieferd.dev</span></a>
+            </div>
+            <nav class="sidebar-nav" aria-label="Main menu"><span class="sidebar-section-label">Browse</span>
+                <a href="../" class="sidebar-nav-item" data-nav="home"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><span class="sidebar-label">Home</span></a>
+                <a href="../search/" class="sidebar-nav-item" data-nav="search"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span class="sidebar-label">Search</span></a>
+                <a href="../movies/" class="sidebar-nav-item" data-nav="movies"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg><span class="sidebar-label">Movies</span></a>
+                <a href="../tv/" class="sidebar-nav-item" data-nav="tv"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg><span class="sidebar-label">TV Shows</span></a>
+                <a href="../trending/" class="sidebar-nav-item" data-nav="trending"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="sidebar-label">Trending</span></a>
+                <a href="../categories/" class="sidebar-nav-item" data-nav="categories"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg><span class="sidebar-label">By Category</span></a>
+                <a href="." class="sidebar-nav-item active" data-nav="party" aria-current="page"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span class="sidebar-label">Watch Parties</span></a>
+                <a href="../upgrade/" class="sidebar-nav-item" data-nav="upgrade"><svg class="sidebar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><span class="sidebar-label">Upgrade</span></a>
+            </nav>
+            <div class="sidebar-footer"><button id="sidebar-settings-btn" class="sidebar-footer-btn" type="button" title="Content rating settings">Settings</button></div>
+        </aside>
+        <div class="watch-main-content">
+            <main class="watching-page party-page">
+                <header class="page-header">
+                    <p class="eyebrow">opieferd.dev / watch / party</p>
+                    <div class="home-brand-hero">
+                        <div class="home-brand-badge">
+                            <span class="home-brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+                            <div class="home-brand-meta"><span class="home-brand-name">Watch Parties</span><span class="brand-badge">Sync playback together</span></div>
+                        </div>
+                    </div>
+                    <p class="intro">Host a public party anyone can join, or start a private party and share a 6‑character code. Playback stays in sync across every viewer.</p>
+                </header>
+
+                <section id="party-lobby" class="card">
+                    <div class="lobby-header"><h2>Lobby</h2><p class="lobby-subtitle">Public parties are open to everyone. Private parties need a code.</p></div>
+                    <div class="lobby-grid">
+                        <div class="panel create-party">
+                            <h3>Start a party</h3>
+                            <form id="create-party-form">
+                                <div class="form-row"><label for="party-title">Party title</label><input type="text" id="party-title" placeholder="Movie night with friends" maxlength="120" required></div>
+                                <div class="form-row"><label for="party-kind">Party type</label><select id="party-kind"><option value="public">Public (listed in lobby)</option><option value="private">Private (join by code)</option></select></div>
+                                <div class="form-row"><label for="party-media-title">Media title</label><input type="text" id="party-media-title" placeholder="e.g. The Matrix" required></div>
+                                <div class="form-row"><label for="party-media-type">Media type</label><select id="party-media-type"><option value="movie">Movie</option><option value="tv">TV Show</option></select></div>
+                                <div class="form-row"><label for="party-tmdb-id">TMDB ID (optional)</label><input type="number" id="party-tmdb-id" placeholder="TMDB id for poster lookup"><p class="form-hint">Leave blank to skip the poster.</p></div>
+                                <div class="form-row"><label for="party-media-url">Media URL (embed)</label><input type="url" id="party-media-url" placeholder="https://vidsrc.sh/embed/movie/…" required><p class="form-hint">The embed URL everyone's player will load. Configured providers only.</p></div>
+                                <button type="submit" class="primary-button" id="create-party-btn">Create Party</button>
+                            </form>
+                            <p id="create-message" class="form-message"></p>
+                        </div>
+                        <div class="panel join-private">
+                            <h3>Join a private party</h3>
+                            <form id="join-private-form">
+                                <div class="form-row"><label for="party-code">Party code</label><input type="text" id="party-code" placeholder="ABC123" maxlength="6" inputmode="uppercase" required></div>
+                                <button type="submit" class="primary-button" id="join-private-btn">Join Party</button>
+                            </form>
+                            <p id="join-message" class="form-message"></p>
+                        </div>
+                        <div class="panel public-parties">
+                            <h3>Public parties <span id="public-count" class="badge">0</span></h3>
+                            <div id="public-parties-list" class="party-list"></div>
+                            <p id="public-empty" class="empty-msg" hidden>No public parties right now. Be the first to host one!</p>
+                        </div>
+                    </div>
+                </section>
+                <section id="party-room" class="card party-room" hidden>
+                    <div class="party-room-header">
+                        <button id="leave-party-btn" class="text-button" type="button">← Back to lobby</button>
+                        <h2 id="room-title">Party</h2>
+                        <div id="room-kind-badge" class="kind-badge">public</div>
+                    </div>
+                    <div class="party-room-body">
+                        <div class="player-column">
+                            <div class="player-wrap card">
+                                <div class="player-frame"><iframe id="party-player" title="Video player" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="no-referrer" allowfullscreen></iframe></div>
+                                <div class="player-controls">
+                                    <button id="party-play-pause" class="icon-button" type="button" aria-label="Play / Pause" disabled>▶</button>
+                                    <button id="party-seek-back" class="icon-button" type="button" aria-label="Seek back 10s" disabled>⏮</button>
+                                    <button id="party-seek-forward" class="icon-button" type="button" aria-label="Seek forward 10s" disabled>⏭</button>
+                                    <span class="player-time" id="party-time">0:00 / 0:00</span>
+                                    <span class="sync-status" id="sync-status">Synced</span>
+                                </div>
+                                <p id="room-media-title" class="room-media-title"></p>
+                                <p id="room-media-meta" class="room-media-meta"></p>
+                                <div id="room-download" class="download-actions" hidden><a id="room-vidvault-link" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer">Open download options in VidVault <span aria-hidden="true">↗</span></a></div>
+                            </div>
+                        </div>
+                        <div class="party-sidebar-column">
+                            <div class="presence-card card"><h3>Watching <span class="presence-count" id="presence-count">0</span></h3><ul id="presence-list" class="presence-list"></ul></div>
+                            <div class="chat-card card"><h3>Chat</h3><div id="chat-messages" class="chat-messages"></div>
+                                <form id="chat-form" class="chat-compose"><input type="text" id="chat-input" placeholder="Say something…" maxlength="200" required><button type="submit" class="primary-button">Send</button></form><p id="chat-message" class="form-message"></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../accounts.js"></script>
+    <script src="party.js"></script>
+</body>
+</html>
