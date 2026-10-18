@@ -791,6 +791,28 @@
                 if (playerMeta) playerMeta.textContent = `${type === "tv" ? "Show" : "Movie"} · ${year(activeMedia.release_date || activeMedia.first_air_date)} · ${activeMedia.overview || "Ready when you are"}`;
             }
             updateVidVaultLink();
+            // Start Watch Party button — pre-fills the party page with current media
+            if (closePlayer && closePlayer.parentNode) {
+                const existing = document.getElementById("start-party-btn");
+                if (!existing) {
+                    const startPartyBtn = document.createElement("button");
+                    startPartyBtn.id = "start-party-btn";
+                    startPartyBtn.type = "button";
+                    startPartyBtn.className = "secondary-button";
+                    startPartyBtn.textContent = "Start Watch Party";
+                    startPartyBtn.addEventListener("click", () => {
+                        if (!activeMedia) return;
+                        sessionStorage.setItem("opie:pendingPartyMedia", JSON.stringify({
+                            id: activeMedia.id,
+                            type: activeMediaType,
+                            title: mediaTitle(activeMedia),
+                            poster_path: activeMedia.poster_path || ""
+                        }));
+                        window.location.href = "../party/";
+                    });
+                    closePlayer.parentNode.insertBefore(startPartyBtn, closePlayer);
+                }
+            }
             if (type === "tv") {
                 setupEpisodes(activeMedia, preferredSeason, preferredEpisode);
             } else {

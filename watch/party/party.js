@@ -18,12 +18,18 @@
     channel: null,
     isHost: false,
     me: null,
+    selectedMedia: null,
     playback: { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null },
   };
 
   function sb() { return window.OpieAccount && window.OpieAccount.client; }
   function isSignedIn() { return window.OpieAccount && window.OpieAccount.isSignedIn(); }
   function getProfile() { return window.OpieAccount && window.OpieAccount.getProfile(); }
+
+  /* TMDB (same key used by watching.js) */
+  const TMDB_API = "https://api.themoviedb.org/3";
+  const TMDB_KEY = "54e00466a09676df57ba51c4ca30b1a6";
+  const TMDB_IMAGE = "https://image.tmdb.org/t/p/w342";
 
   function waitForAccounts(ready) {
     if (document.documentElement.dataset.accountsReady === "1") return ready();
@@ -44,6 +50,7 @@
   const roomKindBadge = $("#room-kind-badge");
   const roomMediaTitle = $("#room-media-title");
   const roomMediaMeta = $("#room-media-meta");
+  const roomMediaPoster = $("#room-media-poster");
   const partyPlayer = $("#party-player");
   const playPauseBtn = $("#party-play-pause");
   const seekBackBtn = $("#party-seek-back");
@@ -58,6 +65,13 @@
   const chatMessage = $("#chat-message");
   const roomDownload = $("#room-download");
   const roomVidVault = $("#room-vidvault-link");
+  const mediaSearchInput = $("#party-media-search");
+  const mediaSearchBtn = $("#party-media-search-btn");
+  const mediaResults = $("#party-media-results");
+  const tmdbIdInput = $("#party-tmdb-id");
+  const posterPreview = $("#party-media-poster-preview");
+  const mediaUrlInput = $("#party-media-url");
+  const mediaTypeSelect = $("#party-media-type");
 
   function showMessage(el, text, ok) {
     el.textContent = text;
@@ -135,11 +149,11 @@
       .from("watch_parties")
       .insert({
         host_id: profile.id,
-        title: $("#party-title").value.trim(),
-        media_type: $("#party-media-type").value,
-        media_id: Number($("#party-tmdb-id").value) || null,
-        media_title: $("#party-media-title").value.trim(),
-        media_poster: null,
+        title: state.selectedMedia ? state.selectedMedia.title : $("#party-title").value.trim(),
+        media_type: state.selectedMedia ? (state.selectedMedia.media_type === "tv" ? "tv" : "movie") : $("#party-media-type").value,
+        media_id: state.selectedMedia ? state.selectedMedia.id : Number($("#party-tmdb-id").value) || null,
+        media_title: state.selectedMedia ? state.selectedMedia.title : $("#party-media-search").value.trim(),
+        media_poster: state.selectedMedia && state.selectedMedia.poster_path ? state.selectedMedia.poster_path : null,
         kind,
         code,
         media_url: $("#party-media-url").value.trim(),
@@ -184,6 +198,12 @@
     roomKindBadge.className = `kind-badge ${party.kind}`;
     roomMediaTitle.textContent = party.media_title;
     roomMediaMeta.textContent = `${party.media_type}${state.isHost ? " · your party" : ""}`;
+    if (party.media_poster) {
+      roomMediaPoster.hidden = false;
+      roomMediaPoster.innerHTML = `<img src="${TMDB_IMAGE}${party.media_poster}" alt="${esc(party.media_title)}">`;
+    } else {
+      roomMediaPoster.hidden = true;
+    }
     partyPlayer.src = party.media_url || "about:blank";
     roomVidVault.href = "https://vidvault.to";
     roomDownload.hidden = !party.media_url;
@@ -354,9 +374,93 @@
 
   chatForm.addEventListener("submit", handleChatSubmit);
 
+  /* ---------- TMDB media search ---------- */
+  let searchDebounce = null;
+  async function searchTMDB(query) {
+    if (!query || query.length < 2) { mediaResults.hidden = true; return; }
+    try {
+      const res = await fetch(`${TMDB_API}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`);
+      if (!res.ok) throw new Error(`TMDB search failed (${res.status})`);
+      const data = await res.json();
+      const results = (data.results || []).filter(item =>
+        item.media_type === "movie" || item.media_type === "tv"
+      ).slice(0, 20);
+      renderMediaResults(results);
+    } catch (e) {
+      console.error("[party] TMDB search error", e);
+      mediaResults.hidden = true;
+    }
+  }
+
+  function renderMediaResults(results) {
+    mediaResults.innerHTML = "";
+    if (!results || results.length === 0) {
+      mediaResults.hidden = true;
+      return;
+    }
+    mediaResults.hidden = false;
+    for (const item of results) {
+      const el = document.createElement("div");
+      el.className = "media-card";
+      el.dataset.type = item.media_type;
+      el.dataset.id = item.id;
+      el.dataset.title = item.title || item.name || "";
+      const year = (item.release_date || item.first_air_date || "").slice(0, 4);
+      const poster = item.poster_path ? `${TMDB_IMAGE}${item.poster_path}` : "";
+      el.innerHTML = `
+        ${poster ? `<img class="media-poster" src="${poster}" alt="${esc(item.title || item.name)}">` : `<div class="media-poster" style="display:flex;align-items:center;justify-content:center;color:#666;font-size:.7rem;">No poster</div>`}
+        <div class="media-title">${esc(item.title || item.name)}</div>
+        <div class="media-year">${year}</div>
+        <div class="media-type">${item.media_type === "tv" ? "TV" : "Movie"}</div>
+      `;
+      el.addEventListener("click", () => selectMedia(item));
+      mediaResults.appendChild(el);
+    }
+  }
+
+  function selectMedia(media) {
+    state.selectedMedia = media;
+    const type = media.media_type === "tv" ? "tv" : "movie";
+    mediaTypeSelect.value = type;
+    tmdbIdInput.value = media.id;
+    const title = media.title || media.name;
+    const year = (media.release_date || media.first_air_date || "").slice(0, 4);
+    posterPreview.innerHTML = media.poster_path
+      ? `<img src="${TMDB_IMAGE}${media.poster_path}" alt="${esc(title)}">`
+      : `<div style="color:var(--muted);font-size:.8rem;">No poster available</div>`;
+
+    // Auto-generate embed URL using default provider (vidsrc.sh)
+    const base = type === "tv"
+      ? `https://vidsrc.sh/embed/tv/${media.id}?season=1&episode=1`
+      : `https://vidsrc.sh/embed/movie/${media.id}`;
+    mediaUrlInput.value = base;
+
+    // Auto-fill party title
+    $("#party-title").value = title;
+
+    mediaResults.hidden = true;
+    mediaSearchInput.value = `${title}${year ? ` (${year})` : ""}`;
+    showMessage(createMessage, `Selected: ${esc(title)} · ${type.toUpperCase()} — all fields auto-filled`, true);
+  }
+
+  mediaSearchInput.addEventListener("input", () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => searchTMDB(mediaSearchInput.value.trim()), 300);
+  });
+  mediaSearchBtn.addEventListener("click", () => searchTMDB(mediaSearchInput.value.trim()));
+
   /* ---------- boot ---------- */
   waitForAccounts(() => {
     loadPublicParties();
+    // Check for pending media sent from "Start Party" on another watch page
+    try {
+      const pending = sessionStorage.getItem("opie:pendingPartyMedia");
+      if (pending) {
+        const media = JSON.parse(pending);
+        sessionStorage.removeItem("opie:pendingPartyMedia");
+        selectMedia(media);
+      }
+    } catch (e) {}
   });
 
 })();
