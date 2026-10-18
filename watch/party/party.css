@@ -48,6 +48,8 @@
 .player-time { font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--muted); margin-left: .3rem; }
 .sync-status { margin-left: auto; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #30c48d; }
 .sync-status.unsynced { color: #e5484d; }
+.sync-status.warn { color: #e5484d; }
+#snap-btn { font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: #e5484d; border-color: #e5484d; }
 .room-media-title { margin: .15rem 0 0; font-size: 1.1rem; font-weight: 600; }
 .room-media-meta { margin: .2rem 0 0; color: var(--muted); font-size: .9rem; }
 .download-actions { margin-top: .6rem; display: flex; gap: .5rem; }

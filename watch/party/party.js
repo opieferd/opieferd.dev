@@ -141,6 +141,7 @@
   const playPauseBtn = $("#party-play-pause");
   const seekBackBtn = $("#party-seek-back");
   const seekForwardBtn = $("#party-seek-forward");
+  const snapBtn = $("#snap-btn");
   const timeDisplay = $("#party-time");
   const syncStatus = $("#sync-status");
   const presenceCount = $("#presence-count");
@@ -184,9 +185,11 @@
 
   function formatTime(sec) {
     if (!sec && sec !== 0) return "0:00";
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
+    const total = Math.max(0, Math.floor(Number(sec) || 0));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = (total % 60).toString().padStart(2, "0");
+    return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${s}` : `${m}:${s}`;
   }
 
   function generateCode() {
@@ -408,8 +411,13 @@
       currentTime: Number(party.current_position) || 0,
       isPlaying: Boolean(party.is_playing),
       mediaUrl: party.media_url || null,
+      localReal: null,   // real position reported by the embedded player (VidLink)
+      duration: 0,
     };
+    state.connStatus = "connecting";
+    state.chatKeys = new Set();
     renderRoom(party);
+    setupVidlinkListener();
     const entered = await joinPartyChannel(party.id);
     if (!entered) return;
     setView("room");
@@ -440,7 +448,7 @@
       roomCode.hidden = !hasCode;
       roomCode.textContent = hasCode ? `Code ${party.code}` : "";
     }
-    partyPlayer.src = party.media_url || "about:blank";
+    partyPlayer.src = partySourceUrl(party, party.media_url);
     roomVidVault.href = "https://vidvault.to";
     roomDownload.hidden = !party.media_url;
     renderServerList();
@@ -458,6 +466,7 @@
     if (state.claimTimer) { clearTimeout(state.claimTimer); state.claimTimer = null; }
     if (state.reloadTimer) { clearInterval(state.reloadTimer); state.reloadTimer = null; }
     if (state.channel) { try { state.channel.unsubscribe(); } catch (e) {} state.channel = null; }
+    if (state.vidlinkListener) { window.removeEventListener("message", state.vidlinkListener); state.vidlinkListener = null; }
     state.party = null;
     state.isHost = false;
     state.me = null;
@@ -470,7 +479,9 @@
     state.malEntries = [];
     state.mediaInfo = null;
     state.chat = [];
-    state.playback = { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null };
+    state.playback = { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null, localReal: null, duration: 0 };
+    state.connStatus = "idle";
+    if (snapBtn) snapBtn.hidden = true;
     if (partyPlayer) partyPlayer.src = "about:blank";
     if (serverStatus) serverStatus.textContent = "";
     if (audioStatus) audioStatus.textContent = "";
@@ -579,6 +590,8 @@
     // local-first UI would silently do nothing until someone else acted).
     const channel = client.channel(`party:${partyId}`, { config: { broadcast: { self: true } } });
     state.channel = channel;
+    state.connStatus = "connecting";
+    renderSyncStatus();
     let resolveFirstSync = null;
     const firstSync = new Promise((resolve) => { resolveFirstSync = resolve; });
     let trackedOnce = false;
@@ -616,6 +629,15 @@
 
     try {
       await channel.subscribe((status) => {
+        // Reflect the realtime connection so problems are visible in the UI.
+        if (status === "SUBSCRIBED") {
+          state.connStatus = "connected";
+          renderSyncStatus();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          state.connStatus = "reconnecting";
+          renderSyncStatus();
+          console.warn("[party] Realtime channel status:", status);
+        }
         // Re-track after reconnects so presence stays accurate.
         if (status === "SUBSCRIBED" && trackedOnce) channel.track(trackPayload()).catch(() => {});
       });
@@ -875,6 +897,34 @@
   }
 
   /* ---------- playback ---------- */
+  function renderSyncStatus() {
+    if (!syncStatus) return;
+    const conn = state.connStatus || "connecting";
+    let text;
+    if (conn === "connecting") text = "Connecting…";
+    else if (conn !== "connected") text = "Reconnecting…";
+    else text = state.isHost ? "Host · synced" : "Synced";
+    syncStatus.textContent = text;
+    syncStatus.className = conn === "connected" ? "sync-status" : "sync-status warn";
+  }
+
+  // True drift UI: compares the party timeline to the viewer's own VidLink
+  // player. Other providers report nothing, so we can only show it there.
+  function renderSyncMeta() {
+    if (snapBtn) {
+      const mine = state.playback.localReal;
+      const hostTime = state.playback.currentTime;
+      const drift = state.isHost || mine == null ? 0 : Math.abs(mine - hostTime);
+      const show = !state.isHost && mine != null && drift > 20;
+      snapBtn.hidden = !show;
+      if (show) snapBtn.textContent = `Video out of sync — jump to ${formatTime(hostTime)}`;
+    }
+    if (timeDisplay) {
+      const dur = state.playback.duration;
+      timeDisplay.textContent = `${formatTime(state.playback.currentTime)} / ${dur ? formatTime(dur) : "--:--"}`;
+    }
+  }
+
   function updatePlaybackUI() {
     const host = state.isHost;
     playPauseBtn.disabled = !host;
@@ -885,16 +935,19 @@
     playPauseBtn.title = title;
     seekBackBtn.title = host ? "Seek back 10s" : "Host controls playback";
     seekForwardBtn.title = host ? "Seek forward 10s" : "Host controls playback";
-    timeDisplay.textContent = `${formatTime(state.playback.currentTime)} / --:--`;
-    syncStatus.textContent = host ? "Host · synced" : "Synced";
-    syncStatus.className = "sync-status";
+    renderSyncMeta();
+    renderSyncStatus();
   }
 
   function handlePlaybackBroadcast(payload) {
-    const { type, currentTime } = payload || {};
+    const { type, currentTime, isPlaying } = payload || {};
     if (type === "play") { state.playback.isPlaying = true; state.playback.type = "playing"; }
     else if (type === "pause") { state.playback.isPlaying = false; state.playback.type = "paused"; }
     else if (type === "seek") { state.playback.currentTime = Number(currentTime) || 0; }
+    else if (type === "tick") {
+      state.playback.currentTime = Number(currentTime) || 0;
+      if (typeof isPlaying === "boolean") state.playback.isPlaying = isPlaying;
+    }
     updatePlaybackUI();
   }
 
@@ -903,6 +956,23 @@
     const payload = { type, ...extra, at: Date.now() };
     state.channel.send({ type: "broadcast", event: "playback", payload });
     handlePlaybackBroadcast(payload);
+    // Providers like VidLink may accept commands via postMessage. This is
+    // best effort — unsupported providers simply ignore these messages and
+    // members realign with the Sync button instead.
+    if (type === "play") tryPlayerCommand({ type: "play" });
+    else if (type === "pause") tryPlayerCommand({ type: "pause" });
+    else if (type === "seek") tryPlayerCommand({ type: "seekTo", currentTime: extra.currentTime });
+  }
+
+  function broadcastTick() {
+    if (!state.channel || !state.party) return;
+    try {
+      state.channel.send({
+        type: "broadcast",
+        event: "playback",
+        payload: { type: "tick", currentTime: state.playback.currentTime, isPlaying: state.playback.isPlaying, at: Date.now() },
+      });
+    } catch (error) {}
   }
 
   async function updatePartyRow() {
@@ -922,10 +992,78 @@
     if (state.reloadTimer) clearInterval(state.reloadTimer);
     state.reloadTimer = setInterval(async () => {
       if (!state.isHost || !state.channel) return;
-      if (state.playback.isPlaying) state.playback.currentTime += 1;
+      // Advance the timeline every second. When the provider reports real
+      // positions (VidLink PLAYER_EVENTs) that timestamp is authoritative;
+      // otherwise we estimate by ticking the clock forward.
+      if (state.playback.isPlaying && state.playback.localReal == null) {
+        state.playback.currentTime += 1;
+      }
+      broadcastTick();
       updatePlaybackUI();
       await updatePartyRow();
     }, 1000);
+  }
+
+  /* ---------- embedded player sync (VidLink only) ---------- */
+  function tryPlayerCommand(payload) {
+    const provider = providerForUrl(state.playback.mediaUrl || "");
+    if (!partyPlayer || !partyPlayer.contentWindow || !provider || provider.id !== "vidlink") return;
+    try {
+      partyPlayer.contentWindow.postMessage(payload, "https://vidlink.pro");
+    } catch (error) {}
+  }
+
+  function onVidlinkEvent(data) {
+    if (!state.party || !data || typeof data !== "object") return;
+    if (data.currentTime == null) return;
+    const provider = providerForUrl(state.playback.mediaUrl || "");
+    if (!provider || provider.id !== "vidlink") return;
+    if (Number(data.duration)) state.playback.duration = Number(data.duration);
+    state.playback.localReal = Number(data.currentTime) || 0;
+    if (data.event === "play") state.playback.isPlaying = true;
+    else if (data.event === "pause") state.playback.isPlaying = false;
+    if (state.isHost) state.playback.currentTime = state.playback.localReal;
+    updatePlaybackUI();
+  }
+
+  function setupVidlinkListener() {
+    if (state.vidlinkListener) window.removeEventListener("message", state.vidlinkListener);
+    state.vidlinkListener = (event) => {
+      // Only accept player events from VidLink's own origin.
+      if (!event || event.origin !== "https://vidlink.pro") return;
+      const payload = event.data;
+      if (!payload || payload.type !== "PLAYER_EVENT" || !payload.data) return;
+      onVidlinkEvent(payload.data);
+    };
+    window.addEventListener("message", state.vidlinkListener);
+  }
+
+  function withStartAt(url, seconds) {
+    const cleaned = String(url || "").replace(/startAt=\d+(&|$)/, "").replace(/[?&]$/, "");
+    if (!cleaned) return cleaned;
+    const join = cleaned.includes("?") ? "&" : "?";
+    return `${cleaned}${join}startAt=${Math.max(0, Math.floor(seconds))}`;
+  }
+
+  // The stored/embedded URL for a party entry — catch the viewer up to the
+  // host's position when VidLink is the source.
+  function partySourceUrl(party, url) {
+    if (!url) return "about:blank";
+    const provider = providerForUrl(url);
+    const position = Number(state.playback.currentTime) || 0;
+    if (provider && provider.id === "vidlink" && position > 10) {
+      return `${withStartAt(url, position)}${url.includes("autoplay") ? "" : "&autoplay=true"}`;
+    }
+    return url;
+  }
+
+  function reloadAtPartyTime() {
+    if (state.isHost || !partyPlayer || !state.party) return;
+    const url = state.playback.mediaUrl || partyPlayer.src;
+    if (!url || url === "about:blank") return;
+    state.playback.localReal = null;
+    partyPlayer.src = `${partySourceUrl(state.party, url)}${url.includes("autoplay") ? "" : "&autoplay=true"}`;
+    showRoomNotice("Realigning your player to the party's position… If it doesn't resume, press play on the video.");
   }
 
   /* ---------- streaming servers (per viewer) + Sub/Dub (host) ---------- */
@@ -1083,6 +1221,11 @@
     }
 
     if (!state.party || state.party.id !== partyId || !state.isHost) return;
+    // Continue the party timeline on the new server: VidLink can resume at
+    // the host's position with startAt; other providers start from zero.
+    if (provider.id === "vidlink" && state.playback.currentTime > 10) {
+      url = withStartAt(url, state.playback.currentTime);
+    }
     applySourceUrl(url, provider, status);
     broadcastSource(status);
     savePartySource();
@@ -1090,6 +1233,8 @@
 
   function applySourceUrl(url, provider, status) {
     state.playback.mediaUrl = url;
+    state.playback.localReal = null;
+    state.playback.duration = 0;
     if (provider) state.providerId = provider.id;
     partyPlayer.src = url;
     if (serverStatus) serverStatus.textContent = status || `Using ${provider ? provider.name : "server"}`;
@@ -1115,6 +1260,9 @@
     const changedServer = Boolean(provider && provider.id !== state.providerId);
     if (provider) state.providerId = provider.id;
     state.playback.mediaUrl = url;
+    // A new player instance resets what we know about the viewer's local time.
+    state.playback.localReal = null;
+    state.playback.duration = 0;
     if (partyPlayer.src !== url) partyPlayer.src = url;
     if (serverStatus) serverStatus.textContent = (payload && payload.status) || `Using ${provider ? provider.name : "server"}`;
     renderServerList();
@@ -1175,7 +1323,7 @@
   async function handleChatSubmit(event) {
     event.preventDefault();
     const body = chatInput.value.trim();
-    if (!body || !state.channel || !state.me) return;
+    if (!body || !state.me) return;
     const client = sb();
     if (client) {
       try {
@@ -1191,14 +1339,23 @@
     }
     chatInput.value = "";
     showMessage(chatMessage, "");
-    await state.channel.send({
-      type: "broadcast",
-      event: "chat",
-      payload: { body, user_id: state.me.user_id, username: state.me.username, at: Date.now() },
-    });
+    // Render your own message immediately, before the network round trip.
+    // The echo of self:true is deduped by the user_id:at key, so it appears once.
+    const payload = { body, user_id: state.me.user_id, username: state.me.username, at: Date.now() };
+    handleChatBroadcast(payload);
+    if (!state.channel) return;
+    try {
+      await state.channel.send({ type: "broadcast", event: "chat", payload });
+    } catch (error) {
+      console.warn("[party] Chat send failed:", error);
+      showMessage(chatMessage, "Couldn't reach the party — your message may not have been delivered.");
+    }
   }
 
   function handleChatBroadcast(payload) {
+    const key = `${(payload && payload.user_id) || "?"}:${payload && payload.at}`;
+    if (state.chatKeys && state.chatKeys.has(key)) return;
+    if (state.chatKeys) state.chatKeys.add(key);
     const msg = {
       sender: payload.username || "?",
       body: String(payload.body || ""),
@@ -1372,6 +1529,7 @@
   seekForwardBtn.addEventListener("click", () => {
     broadcastPlayback("seek", { currentTime: state.playback.currentTime + 10 });
   });
+  if (snapBtn) snapBtn.addEventListener("click", reloadAtPartyTime);
   chatForm.addEventListener("submit", handleChatSubmit);
   mediaSearchInput.addEventListener("input", () => {
     clearTimeout(searchDebounce);
