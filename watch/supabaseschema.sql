@@ -3,6 +3,10 @@
 -- Run the whole file once: Supabase dashboard -> SQL Editor -> New query.
 -- Safe to re-run.
 --
+-- Already had an older version set up and only need the watch party update?
+-- Run watch/supabase-party-upgrade.sql instead — it contains just that part
+-- (new columns + watch party helper functions) and is also safe to re-run.
+--
 -- BEFORE RUNNING: change the owner email below (marked <<< EDIT).
 -- Only someone who signs up with that exact (confirmed) email can ever
 -- get the username "opieferd" and the owner role.

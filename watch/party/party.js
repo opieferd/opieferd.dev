@@ -574,7 +574,10 @@
   /* ---------- Supabase Realtime: channel + presence + broadcast ---------- */
   async function joinPartyChannel(partyId) {
     const client = sb();
-    const channel = client.channel(`party:${partyId}`);
+    // self: true means the sender also receives their own broadcasts. Without
+    // it, chat messages never appear in the sender's own list (and other
+    // local-first UI would silently do nothing until someone else acted).
+    const channel = client.channel(`party:${partyId}`, { config: { broadcast: { self: true } } });
     state.channel = channel;
     let resolveFirstSync = null;
     const firstSync = new Promise((resolve) => { resolveFirstSync = resolve; });
@@ -588,8 +591,6 @@
 
     channel.on("broadcast", { event: "playback" }, (event) => {
       handlePlaybackBroadcast(event.payload);
-      syncStatus.textContent = "Synced";
-      syncStatus.className = "sync-status";
     });
 
     channel.on("broadcast", { event: "chat" }, (event) => {
