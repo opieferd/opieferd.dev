@@ -585,11 +585,16 @@
             const preview = dialog.querySelector(".acc-crop-preview");
             img.src = url;
             const updatePreview = () => {
-                img.style.width = `${Number(zoom.value)}%`;
-                img.style.height = `${Number(zoom.value)}%`;
-                img.style.left = `${x.value}%`;
-                img.style.top = `${y.value}%`;
-                img.style.transform = "translate(-50%, -50%)";
+                if (!img.naturalWidth || !preview.clientWidth) return;
+                const ratio = img.naturalHeight / img.naturalWidth;
+                const baseWidth = Math.max(preview.clientWidth, preview.clientHeight / ratio);
+                const width = baseWidth * Number(zoom.value) / 100;
+                const height = width * ratio;
+                img.style.width = `${width}px`;
+                img.style.height = `${height}px`;
+                img.style.left = `${(preview.clientWidth - width) * Number(x.value) / 100}px`;
+                img.style.top = `${(preview.clientHeight - height) * Number(y.value) / 100}px`;
+                img.style.transform = "none";
             };
             [zoom,x,y].forEach(input => input.addEventListener("input", updatePreview));
             const cleanup = () => { URL.revokeObjectURL(url); dialog.remove(); };
