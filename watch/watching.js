@@ -1391,29 +1391,62 @@
 
     renderServerList();
 
-    // Disclaimer Announcement Modal
+    // Dynamic announcement modal. The database controls title, text, audience and enabled state.
     if (disclaimer && closeDisclaimer) {
-        // Update 1.7 is an early-access announcement for Gold supporters only.
-        // accounts.js dispatches this event after the authenticated profile loads.
-        let experimentalAnnouncementShown = false;
+        const disclaimerHeading = document.getElementById("disclaimer-heading");
+        const disclaimerBody = document.getElementById("disclaimer-body");
+        let announcementQueue = [];
+        let announcementIndex = 0;
+        let announcementsStarted = false;
 
-        closeDisclaimer.addEventListener("click", () => disclaimer.close());
-
-        function maybeShowGoldAnnouncement() {
-            if (experimentalAnnouncementShown || disclaimer.open) return;
-            const account = window.OpieAccount;
-            if (!account || !account.isSignedIn || !account.hasEarlyAccess) return;
-
-            // hasEarlyAccess() checks the loaded profile tier (and owner status).
-            if (account.isSignedIn() && account.hasEarlyAccess()) {
-                experimentalAnnouncementShown = true;
-                disclaimer.showModal();
-            }
+        function fallbackAnnouncements(isGold) {
+            return isGold
+                ? [{ title: "Update Version 1.7 — EXPERIMENTAL", body: "Hai Gold members! Thank you for your support! Try the experimental watch-party feature at /watch/party/. This is incomplete, so expect bugs." }]
+                : [{ title: "Update Version 1.6", body: "Hai everyone! Huge update! I added accounts and profile editing, as well as commenting. Have fun neets!" }];
         }
 
-        window.addEventListener("opie:account-ready", maybeShowGoldAnnouncement);
-        // Also handle the unlikely case that account initialization completed first.
-        maybeShowGoldAnnouncement();
+        function showNextAnnouncement() {
+            if (announcementIndex >= announcementQueue.length) return;
+            const item = announcementQueue[announcementIndex];
+            if (disclaimerHeading) disclaimerHeading.textContent = item.title;
+            if (disclaimerBody) disclaimerBody.textContent = item.body;
+            if (!disclaimer.open) disclaimer.showModal();
+        }
+
+        closeDisclaimer.addEventListener("click", () => {
+            disclaimer.close();
+            announcementIndex += 1;
+            window.setTimeout(showNextAnnouncement, 0);
+        });
+
+        async function loadAndShowAnnouncements() {
+            if (announcementsStarted) return;
+            announcementsStarted = true;
+            const account = window.OpieAccount;
+            const isGold = Boolean(account && account.isSignedIn && account.isSignedIn()
+                && account.hasEarlyAccess && account.hasEarlyAccess());
+            try {
+                const client = account && account.client;
+                if (!client) throw new Error("Account client is not ready");
+                const { data, error } = await client.from("announcements")
+                    .select("id,title,body,show_normal,show_gold")
+                    .eq("enabled", true)
+                    .order("updated_at", { ascending: false });
+                if (error) throw error;
+                announcementQueue = (data || []).filter((item) => isGold ? item.show_gold : item.show_normal);
+            } catch (error) {
+                console.info("[announcements] Using built-in fallback notice until announcements are configured.", error);
+                announcementQueue = fallbackAnnouncements(isGold);
+            }
+            announcementIndex = 0;
+            showNextAnnouncement();
+        }
+
+        window.addEventListener("opie:account-ready", loadAndShowAnnouncements);
+        if (document.documentElement.dataset.accountsReady === "1") loadAndShowAnnouncements();
+        window.setTimeout(() => {
+            if (!announcementsStarted) loadAndShowAnnouncements();
+        }, 1800);
     }
 
     // -------------------------------------------------------------
