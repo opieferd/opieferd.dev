@@ -389,7 +389,14 @@
     function renderProfile() {
         const { p, self } = view;
         const accent = accentFor(p);
-        const banner = effTier(p) === "gold" ? safeUrl(p.banner_url, "banners") : "";
+        const canBanner = effTier(p) === "gold";
+        const banner = canBanner ? safeUrl(p.banner_url, "banners") : "";
+        const avatar = self
+            ? `<button class="acc-avatar-trigger" type="button" data-act="pick-avatar" aria-label="Change profile picture">${avatarHTML(p, "xl")}<span class="acc-image-hint">Change</span></button>`
+            : avatarHTML(p, "xl");
+        const bannerMarkup = self && canBanner
+            ? `<button class="acc-banner acc-banner-trigger" type="button" data-act="pick-banner" aria-label="Change profile banner"${banner ? ` style="background-image:url('${esc(banner)}')"` : ""}><span class="acc-image-hint">Change banner</span></button>`
+            : `<div class="acc-banner"${banner ? ` style="background-image:url('${esc(banner)}')"` : ""}></div>`;
         const tabs = self ? [["profile", "Profile"], ["watchlist", "Watchlist"], ["customize", "Customize"], ["roadmap", "Roadmap"]] : [];
         if (self && p.role === "owner") tabs.push(["owner", "Owner"]);
         if (self && isModerator(p)) tabs.push(["moderator", "Moderator"]);
@@ -397,10 +404,10 @@
 
         profileDialog.innerHTML = `
             <div class="acc-profile" style="--u-accent:${accent};--u-profile-color:${profileColorFor(p)}">
-                <div class="acc-banner"${banner ? ` style="background-image:url('${esc(banner)}')"` : ""}></div>
+                ${bannerMarkup}
                 <button class="icon-button acc-close" type="button" data-act="close-profile" aria-label="Close">×</button>
                 <div class="acc-head">
-                    ${avatarHTML(p, "xl")}
+                    ${avatar}
                     <div class="acc-head-copy">
                         <h2 class="acc-username${p.role === "owner" ? " is-owner" : p.tier === "gold" ? " is-gold" : ""}">${esc(p.username)} ${badgesHTML(p)}</h2>
                         <p class="acc-muted">${esc(tierLabel(p))} · Joined ${esc(joined(p.created_at))}</p>
@@ -408,6 +415,7 @@
                 </div>
                 ${tabs.length ? `<div class="acc-tabs acc-tabs-scroll" role="group" aria-label="Profile sections">${tabs.map(([id, label]) => `<button type="button" class="acc-tab${view.tab === id ? " active" : ""}" data-act="tab" data-tab="${id}">${label}</button>`).join("")}</div>` : ""}
                 <div class="acc-panel" id="acc-panel">${panelHTML()}</div>
+                ${self ? '<input id="acc-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><input id="acc-banner-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>' : ""}
             </div>`;
         afterPanelRender();
     }
@@ -472,7 +480,6 @@
                 <div class="acc-row-actions">
                     <button class="text-button" type="button" data-act="pick-avatar">Upload avatar</button>
                     ${p.avatar_url ? '<button class="text-button" type="button" data-act="remove-avatar">Remove</button>' : ""}
-                    <input id="acc-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
                 </div>
             </div>
 
@@ -489,7 +496,6 @@
             <div class="acc-row-actions">
                 <button class="text-button" type="button" data-act="pick-banner" ${gold ? "" : "disabled"}>Upload banner</button>
                 ${p.banner_url ? '<button class="text-button" type="button" data-act="remove-banner">Remove</button>' : ""}
-                <input id="acc-banner-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
             </div>
 
             <h3 class="acc-h3">Profile background ${gold ? "" : '<small class="acc-lock">Gold perk</small>'}</h3>
@@ -544,6 +550,8 @@
 
     async function uploadImage(kind, file) {
         if (!file || !file.type.startsWith("image/")) throw new Error("Please choose an image.");
+        if (!view || !view.self || !state.user) throw new Error("You can only change your own profile images.");
+        if (kind === "banner" && effTier(view.p) !== "gold") throw new Error("Custom banners require Gold.");
         if (file.size > 8 * 1024 * 1024) throw new Error("Image is too large (max 8 MB).");
         const bucket = kind === "avatar" ? "avatars" : "banners";
         const blob = await resizeImage(file, kind === "avatar" ? 256 : 1200, kind === "avatar" ? 256 : 400);
