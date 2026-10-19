@@ -1423,7 +1423,7 @@
                     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
                         html += escapeHtml(match[0]);
                     } else {
-                        html += \`<a href="\${escapeHtml(href)}" rel="noopener noreferrer">\${escapeHtml(label)}</a>\`;
+                        html += '<a href="' + escapeHtml(href) + '" rel="noopener noreferrer">' + escapeHtml(label) + '</a>';
                     }
                 } catch {
                     html += escapeHtml(match[0]);
