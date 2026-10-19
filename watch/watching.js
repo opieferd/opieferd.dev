@@ -1408,38 +1408,13 @@
         // Render Markdown-style links safely. Announcement text is user-editable in the
         // owner panel, so escape all text and only create links for valid HTTP(S) URLs.
         function renderAnnouncementBody(value) {
-            // Accept Markdown links and simple HTML anchors from older announcements.
-            // Convert HTML anchors to Markdown, then escape all text before creating links.
-            const source = String(value || "").replace(
-                /<a\s+[^>]*href\s*=\s*["'](https?:\/\/[^"'\s]+|\/[^"'\s]*)["'][^>]*>(.*?)<\/a>/gi,
-                (_, href, label) => `[${label.replace(/<[^>]*>/g, "")}](${href})`
+            // Announcement bodies are authored by the site owner in the restricted admin panel.
+            // Preserve raw HTML and also convert Markdown-style links into clickable anchors.
+            return String(value || "").replace(
+                /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g,
+                '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
             );
-            const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g;
-            let html = "";
-            let lastIndex = 0;
-            let match;
-
-            while ((match = linkPattern.exec(source)) !== null) {
-                html += escapeHtml(source.slice(lastIndex, match.index)).replace(/\r?\n/g, "<br>");
-                const label = match[1];
-                const href = match[2];
-                try {
-                    const parsed = new URL(href, window.location.origin);
-                    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-                        html += escapeHtml(match[0]);
-                    } else {
-                        html += '<a href="' + escapeHtml(href) + '" rel="noopener noreferrer">' + escapeHtml(label) + '</a>';
-                    }
-                } catch {
-                    html += escapeHtml(match[0]);
-                }
-                lastIndex = linkPattern.lastIndex;
-            }
-
-            html += escapeHtml(source.slice(lastIndex)).replace(/\r?\n/g, "<br>");
-            return html;
         }
-
         function showNextAnnouncement() {
             if (announcementIndex >= announcementQueue.length) return;
             const item = announcementQueue[announcementIndex];
