@@ -415,7 +415,7 @@
                 </div>
                 ${tabs.length ? `<div class="acc-tabs acc-tabs-scroll" role="group" aria-label="Profile sections">${tabs.map(([id, label]) => `<button type="button" class="acc-tab${view.tab === id ? " active" : ""}" data-act="tab" data-tab="${id}">${label}</button>`).join("")}</div>` : ""}
                 <div class="acc-panel" id="acc-panel">${panelHTML()}</div>
-                ${self ? '<input id="acc-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><input id="acc-banner-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>' : ""}
+                ${self ? '<input id="acc-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><input id="acc-banner-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>' : ""}
             </div>`;
         afterPanelRender();
     }
@@ -562,18 +562,79 @@
         return data;
     }
 
-    async function uploadImage(kind, file) {
+    function openBannerCrop(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const dialog = document.createElement("dialog");
+            dialog.className = "disclaimer acc-dialog acc-crop-dialog";
+            dialog.innerHTML = `
+                <div class="disclaimer-content acc-crop-content">
+                    <p class="eyebrow">Profile banner</p><h2>Crop your banner</h2>
+                    <p class="acc-muted">Drag the zoom and position sliders until it looks right.</p>
+                    <div class="acc-crop-preview"><img alt="Banner crop preview"></div>
+                    <label class="acc-crop-control">Zoom <input type="range" min="100" max="300" value="100" step="1" id="acc-crop-zoom"></label>
+                    <label class="acc-crop-control">Horizontal <input type="range" min="0" max="100" value="50" step="1" id="acc-crop-x"></label>
+                    <label class="acc-crop-control">Vertical <input type="range" min="0" max="100" value="50" step="1" id="acc-crop-y"></label>
+                    <div class="confirm-actions"><button class="primary-button" type="button" data-crop-save>Use crop</button><button class="grey-button" type="button" data-crop-cancel>Cancel</button></div>
+                </div>`;
+            document.body.appendChild(dialog);
+            const img = dialog.querySelector("img");
+            const zoom = dialog.querySelector("#acc-crop-zoom");
+            const x = dialog.querySelector("#acc-crop-x");
+            const y = dialog.querySelector("#acc-crop-y");
+            const preview = dialog.querySelector(".acc-crop-preview");
+            img.src = url;
+            const updatePreview = () => {
+                img.style.width = `${Number(zoom.value)}%`;
+                img.style.height = `${Number(zoom.value)}%`;
+                img.style.left = `${x.value}%`;
+                img.style.top = `${y.value}%`;
+                img.style.transform = "translate(-50%, -50%)";
+            };
+            [zoom,x,y].forEach(input => input.addEventListener("input", updatePreview));
+            const cleanup = () => { URL.revokeObjectURL(url); dialog.remove(); };
+            dialog.querySelector("[data-crop-cancel]").addEventListener("click", () => { cleanup(); resolve(null); });
+            dialog.addEventListener("cancel", event => { event.preventDefault(); cleanup(); resolve(null); }, { once:true });
+            dialog.querySelector("[data-crop-save]").addEventListener("click", () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = 1200; canvas.height = 400;
+                const ctx = canvas.getContext("2d");
+                const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * (Number(zoom.value) / 100);
+                const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+                const dx = (canvas.width - w) * (Number(x.value) / 100);
+                const dy = (canvas.height - h) * (Number(y.value) / 100);
+                ctx.drawImage(img, dx, dy, w, h);
+                canvas.toBlob(blob => { cleanup(); blob ? resolve(blob) : reject(new Error("Couldn’t crop that image.")); }, "image/jpeg", .92);
+            });
+            img.addEventListener("load", updatePreview, { once:true });
+            dialog.showModal();
+        });
+    }
+
+    async function uploadImage(kind, file, croppedBanner = null) {
         if (!file || !file.type.startsWith("image/")) throw new Error("Please choose an image.");
         if (!view || !view.self || !state.user) throw new Error("You can only change your own profile images.");
         if (kind === "banner" && effTier(view.p) !== "gold") throw new Error("Custom banners require Gold.");
         if (file.size > 8 * 1024 * 1024) throw new Error("Image is too large (max 8 MB).");
         const bucket = kind === "avatar" ? "avatars" : "banners";
-        const blob = await resizeImage(file, kind === "avatar" ? 256 : 1200, kind === "avatar" ? 256 : 400, kind === "banner");
-        const path = `${state.user.id}/${kind}.jpg`;
-        const { error } = await sb.storage.from(bucket).upload(path, blob, { upsert: true, contentType: "image/jpeg", cacheControl: "3600" });
+        let blob, extension, contentType;
+        if (kind === "banner" && file.type === "image/gif") {
+            // Keep the original GIF bytes so the animation survives the upload.
+            blob = file; extension = "gif"; contentType = "image/gif";
+        } else if (kind === "banner") {
+            blob = croppedBanner || await openBannerCrop(file);
+            if (!blob) return false;
+            extension = "jpg"; contentType = "image/jpeg";
+        } else {
+            blob = await resizeImage(file, 256, 256);
+            extension = "jpg"; contentType = "image/jpeg";
+        }
+        const path = `${state.user.id}/${kind}.${extension}`;
+        const { error } = await sb.storage.from(bucket).upload(path, blob, { upsert: true, contentType, cacheControl: "3600" });
         if (error) throw error;
         const url = `${sb.storage.from(bucket).getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
         await updateProfile(kind === "avatar" ? { avatar_url: url } : { banner_url: url });
+        return true;
     }
 
     async function onProfileChange(event) {
@@ -581,10 +642,21 @@
         if (!view || !view.self) return;
         try {
             if (target.id === "acc-avatar-file" || target.id === "acc-banner-file") {
-                panelMessage("Uploading…", true);
-                await uploadImage(target.id === "acc-avatar-file" ? "avatar" : "banner", target.files[0]);
+                const kind = target.id === "acc-avatar-file" ? "avatar" : "banner";
+                const file = target.files[0];
+                if (!file) return;
+                if (kind === "banner" && file.type !== "image/gif") {
+                    const cropped = await openBannerCrop(file);
+                    if (!cropped) { target.value = ""; return; }
+                    panelMessage("Uploading…", true);
+                    await uploadImage(kind, file, cropped);
+                } else {
+                    panelMessage("Uploading…", true);
+                    await uploadImage(kind, file);
+                }
                 renderProfile();
                 panelMessage("Saved.", true);
+                target.value = "";
             } else if (target.id === "acc-wall") {
                 await updateProfile({ show_on_wall: target.checked });
                 panelMessage(target.checked ? "You’re on the supporter wall." : "Removed from the supporter wall.", true);
