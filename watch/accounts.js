@@ -601,6 +601,24 @@ function ownerPanelHTML() {
     return `
         <p id="acc-panel-msg" class="form-message" role="status"></p>
 
+        <h3 class="acc-h3">Announcements</h3>
+        <p class="acc-muted">Create notices for regular members, Gold supporters, or both. Enabled notices appear on the Watch page.</p>
+        <input id="own-announcement-id" type="hidden" value="">
+        <label class="acc-field-label" for="own-announcement-title">Title</label>
+        <input id="own-announcement-title" type="text" maxlength="120" placeholder="Update Version 1.6">
+        <label class="acc-field-label" for="own-announcement-body">Message</label>
+        <textarea id="own-announcement-body" rows="4" maxlength="2000" placeholder="Write your announcement here…"></textarea>
+        <div class="acc-announcement-options">
+            <label><input id="own-announcement-normal" type="checkbox" checked> Normal members</label>
+            <label><input id="own-announcement-gold" type="checkbox"> Gold members</label>
+            <label><input id="own-announcement-enabled" type="checkbox" checked> Enabled</label>
+        </div>
+        <div class="acc-inline">
+            <button class="text-button" type="button" data-act="owner-announcement-save">Save announcement</button>
+            <button class="text-button" type="button" data-act="owner-announcement-cancel">Clear form</button>
+        </div>
+        <div id="own-announcements" class="acc-announcements"><p class="acc-muted">Loading announcements…</p></div>
+
         <h3 class="acc-h3">Set supporter tier</h3>
         <div class="acc-inline">
             <input id="own-tier-user" type="text" placeholder="username" maxlength="20">
@@ -655,6 +673,50 @@ function ownerPanelHTML() {
     `;
 }
 
+function resetAnnouncementForm() {
+    const id = $("#own-announcement-id");
+    const title = $("#own-announcement-title");
+    const body = $("#own-announcement-body");
+    if (id) id.value = "";
+    if (title) title.value = "";
+    if (body) body.value = "";
+    if ($("#own-announcement-normal")) $("#own-announcement-normal").checked = true;
+    if ($("#own-announcement-gold")) $("#own-announcement-gold").checked = false;
+    if ($("#own-announcement-enabled")) $("#own-announcement-enabled").checked = true;
+    const save = document.querySelector('[data-act="owner-announcement-save"]');
+    if (save) save.textContent = "Save announcement";
+}
+
+async function loadOwnerAnnouncements() {
+    const node = $("#own-announcements");
+    if (!node) return;
+    const { data, error } = await sb.from("announcements")
+        .select("id,title,body,show_normal,show_gold,enabled,updated_at")
+        .order("updated_at", { ascending: false });
+    if (error) {
+        node.innerHTML = '<p class="acc-muted">Announcements are unavailable. Run watch/announcements-upgrade.sql in Supabase first.</p>';
+        return;
+    }
+    const rows = (data || []).map((a) => ({
+        id: a.id, title: a.title, body: a.body, show_normal: a.show_normal,
+        show_gold: a.show_gold, enabled: a.enabled
+    }));
+    node.dataset.rows = JSON.stringify(rows);
+    node.innerHTML = rows.map((a) => `
+        <article class="acc-announcement-row">
+            <div class="acc-announcement-copy">
+                <strong>${esc(a.title)}</strong>
+                <p>${esc(a.body)}</p>
+                <small>${a.enabled ? "Enabled" : "Disabled"} · ${[a.show_normal ? "Normal" : "", a.show_gold ? "Gold" : ""].filter(Boolean).join(" + ") || "No audience"}</small>
+            </div>
+            <div class="acc-announcement-actions">
+                <button class="text-button" type="button" data-act="owner-announcement-edit" data-id="${a.id}">Edit</button>
+                <button class="text-button" type="button" data-act="owner-announcement-delete" data-id="${a.id}">Delete</button>
+            </div>
+        </article>
+    `).join("") || '<p class="acc-muted">No announcements yet.</p>';
+}
+
 async function loadOwnerData() {
     const [words, log] = await Promise.all([
         sb.from("banned_words")
@@ -666,6 +728,8 @@ async function loadOwnerData() {
             .order("created_at", { ascending: false })
             .limit(100)
     ]);
+
+    await loadOwnerAnnouncements();
 
     const wordsNode = $("#own-words");
 
@@ -771,6 +835,47 @@ async function loadOwnerData() {
             if (act === "owner-log-refresh") return loadModeratorData();
             return;
         }
+        if (act === "owner-announcement-cancel") return resetAnnouncementForm();
+        if (act === "owner-announcement-edit") {
+            const rows = JSON.parse(($("#own-announcements") || {}).dataset?.rows || "[]");
+            const item = rows.find((row) => String(row.id) === String(target.dataset.id));
+            if (!item) return;
+            $("#own-announcement-id").value = item.id;
+            $("#own-announcement-title").value = item.title;
+            $("#own-announcement-body").value = item.body;
+            $("#own-announcement-normal").checked = item.show_normal;
+            $("#own-announcement-gold").checked = item.show_gold;
+            $("#own-announcement-enabled").checked = item.enabled;
+            const save = document.querySelector('[data-act="owner-announcement-save"]');
+            if (save) save.textContent = "Update announcement";
+            $("#own-announcement-title").focus();
+            return;
+        }
+        if (act === "owner-announcement-save") return run(async () => {
+            const id = $("#own-announcement-id").value;
+            const title = $("#own-announcement-title").value.trim();
+            const body = $("#own-announcement-body").value.trim();
+            const show_normal = $("#own-announcement-normal").checked;
+            const show_gold = $("#own-announcement-gold").checked;
+            const enabled = $("#own-announcement-enabled").checked;
+            if (!title) throw new Error("Enter an announcement title.");
+            if (!body) throw new Error("Enter an announcement message.");
+            if (!show_normal && !show_gold) throw new Error("Select Normal members, Gold members, or both.");
+            const row = { title, body, show_normal, show_gold, enabled, updated_at: new Date().toISOString() };
+            const query = id
+                ? sb.from("announcements").update(row).eq("id", Number(id))
+                : sb.from("announcements").insert(row);
+            const { error } = await query;
+            if (error) throw error;
+            resetAnnouncementForm();
+            await loadOwnerAnnouncements();
+        }, "Announcement saved.");
+        if (act === "owner-announcement-delete") return run(async () => {
+            if (!window.confirm("Delete this announcement?")) return;
+            const { error } = await sb.from("announcements").delete().eq("id", Number(target.dataset.id));
+            if (error) throw error;
+            await loadOwnerAnnouncements();
+        }, "Announcement deleted.");
         if (act === "owner-tier") return run(async () => {
             const { error } = await sb.rpc("set_tier", { target: $("#own-tier-user").value.trim(), new_tier: $("#own-tier-value").value });
             if (error) throw error;
