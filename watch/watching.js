@@ -791,7 +791,7 @@
                 if (playerMeta) playerMeta.textContent = `${type === "tv" ? "Show" : "Movie"} · ${year(activeMedia.release_date || activeMedia.first_air_date)} · ${activeMedia.overview || "Ready when you are"}`;
             }
             updateVidVaultLink();
-            setupWatchPartyButton();
+            // setupWatchPartyButton(); // watch-party button temporarily disabled
             if (type === "tv") {
                 setupEpisodes(activeMedia, preferredSeason, preferredEpisode);
             } else {
@@ -849,62 +849,62 @@
         vidvaultLink.href = `https://vidvault.to${path}`;
     }
 
-    /* ---------- watch parties ----------
-       Shared by every player page. "Start Watch Party" stashes the media the
-       player already knows about in sessionStorage (the mechanism party.js
-       reads on load), then sends the visitor to the party creation page. */
-    const PARTY_PENDING_KEY = "opie:pendingPartyMedia";
-    // Resolve relative to watching.js so the link works from the home page,
-    // subpages, and the watch.* subdomain alike.
-    const PARTY_PAGE_URL = (() => {
-        try { return new URL("party/", SCRIPT_SRC).href; }
-        catch (error) { return "../party/"; }
-    })();
+    // /* ---------- watch parties ----------
+    //    Shared by every player page. "Start Watch Party" stashes the media the
+    //    player already knows about in sessionStorage (the mechanism party.js
+    //    reads on load), then sends the visitor to the party creation page. */
+    // const PARTY_PENDING_KEY = "opie:pendingPartyMedia";
+    // // Resolve relative to watching.js so the link works from the home page,
+    // // subpages, and the watch.* subdomain alike.
+    // const PARTY_PAGE_URL = (() => {
+    //     try { return new URL("party/", SCRIPT_SRC).href; }
+    //     catch (error) { return "../party/"; }
+    // })();
 
-    function watchPartyPayload() {
-        if (!activeMedia || !activeMediaType) return null;
-        const season = activeMediaType === "tv" ? Number(seasonSelect && seasonSelect.value) || 1 : 0;
-        const episode = activeMediaType === "tv" ? Number(episodeSelect && episodeSelect.value) || 1 : 0;
-        return {
-            id: activeMedia.id,
-            media_type: activeMediaType,
-            type: activeMediaType, // kept for older consumers/stored payloads
-            title: mediaTitle(activeMedia),
-            poster_path: activeMedia.poster_path || "",
-            overview: activeMedia.overview || "",
-            release_date: activeMedia.release_date || activeMedia.first_air_date || "",
-            season,
-            episode,
-            // The URL the player currently has loaded (falls back to the active
-            // provider) so the party room can play the exact same source.
-            media_url: (player && player.src) || activeProvider().buildUrl(activeMediaType, activeMedia.id, season, episode)
-        };
-    }
+    // function watchPartyPayload() {
+    //     if (!activeMedia || !activeMediaType) return null;
+    //     const season = activeMediaType === "tv" ? Number(seasonSelect && seasonSelect.value) || 1 : 0;
+    //     const episode = activeMediaType === "tv" ? Number(episodeSelect && episodeSelect.value) || 1 : 0;
+    //     return {
+    //         id: activeMedia.id,
+    //         media_type: activeMediaType,
+    //         type: activeMediaType, // kept for older consumers/stored payloads
+    //         title: mediaTitle(activeMedia),
+    //         poster_path: activeMedia.poster_path || "",
+    //         overview: activeMedia.overview || "",
+    //         release_date: activeMedia.release_date || activeMedia.first_air_date || "",
+    //         season,
+    //         episode,
+    //         // The URL the player currently has loaded (falls back to the active
+    //         // provider) so the party room can play the exact same source.
+    //         media_url: (player && player.src) || activeProvider().buildUrl(activeMediaType, activeMedia.id, season, episode)
+    //     };
+    // }
 
-    function openWatchParty() {
-        const payload = watchPartyPayload();
-        if (payload) {
-            try {
-                sessionStorage.setItem(PARTY_PENDING_KEY, JSON.stringify(payload));
-            } catch (error) {
-                console.warn("[watch] Couldn't stash party media:", error);
-            }
-        }
-        window.location.href = PARTY_PAGE_URL;
-    }
+    // function openWatchParty() {
+    //     const payload = watchPartyPayload();
+    //     if (payload) {
+    //         try {
+    //             sessionStorage.setItem(PARTY_PENDING_KEY, JSON.stringify(payload));
+    //         } catch (error) {
+    //             console.warn("[watch] Couldn't stash party media:", error);
+    //         }
+    //     }
+    //     window.location.href = PARTY_PAGE_URL;
+    // }
 
-    function setupWatchPartyButton() {
-        if (!playerSection || document.getElementById("start-party-btn")) return;
-        const button = document.createElement("button");
-        button.id = "start-party-btn";
-        button.type = "button";
-        button.className = "secondary-button watch-party-btn";
-        button.textContent = "Start Watch Party";
-        button.addEventListener("click", openWatchParty);
-        const actionsRow = playerSection.querySelector(".download-actions");
-        if (actionsRow) actionsRow.insertBefore(button, actionsRow.firstChild);
-        else playerSection.appendChild(button);
-    }
+    // function setupWatchPartyButton() {
+    //     if (!playerSection || document.getElementById("start-party-btn")) return;
+    //     const button = document.createElement("button");
+    //     button.id = "start-party-btn";
+    //     button.type = "button";
+    //     button.className = "secondary-button watch-party-btn";
+    //     button.textContent = "Start Watch Party";
+    //     button.addEventListener("click", openWatchParty);
+    //     const actionsRow = playerSection.querySelector(".download-actions");
+    //     if (actionsRow) actionsRow.insertBefore(button, actionsRow.firstChild);
+    //     else playerSection.appendChild(button);
+    // }
 
     // Genre catalog
     const ANIME_GENRE = { label: "Anime", params: "with_genres=16&with_original_language=ja" };
