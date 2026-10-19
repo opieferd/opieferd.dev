@@ -695,6 +695,66 @@
     }
 
   
+/* ----- Moderator panel ----- */
+function moderatorPanelHTML() {
+    return `
+        <p id="acc-panel-msg" class="form-message" role="status"></p>
+        <h3 class="acc-h3">
+            Moderation log
+            <button class="text-button" type="button" data-act="owner-log-refresh">Refresh</button>
+        </h3>
+        <div id="mod-log" class="acc-log acc-muted">Loading…</div>
+    `;
+}
+
+async function loadModeratorData() {
+    const node = $("#mod-log");
+    if (!node) return;
+
+    node.className = "acc-log acc-muted";
+    node.textContent = "Loading moderation log…";
+
+    try {
+        const { data, error } = await sb.from("moderation_log")
+            .select("id,created_at,action,actor_name,target_name,media_type,media_id,body,reason")
+            .order("created_at", { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        const rows = data || [];
+        node.className = "acc-log";
+        node.innerHTML = rows.length
+            ? `
+                <table>
+                    <thead><tr><th>When</th><th>Action</th><th>By</th><th>Target</th><th>Detail</th></tr></thead>
+                    <tbody>
+                        ${rows.map((r) => `
+                            <tr>
+                                <td>${esc(ago(r.created_at))}</td>
+                                <td><span class="acc-act acc-act-${esc(r.action)}">${esc(r.action)}</span></td>
+                                <td>${esc(r.actor_name || "")}</td>
+                                <td>${esc(r.target_name || "")}</td>
+                                <td>
+                                    ${esc(r.reason || "")}
+                                    ${r.body ? `<div class="acc-log-body">${esc(r.body)}</div>` : ""}
+                                    ${r.media_id ? `<small>${esc(r.media_type || "")} #${esc(r.media_id)}</small>` : ""}
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `
+            : '<p class="acc-muted">Nothing logged yet.</p>';
+    } catch (error) {
+        console.error("[accounts] Could not load moderator log:", error);
+        node.className = "acc-log acc-muted";
+        node.textContent = error.message
+            ? `Couldn’t load moderation logs: ${error.message}`
+            : "Couldn’t load moderation logs. Check the moderation_log table’s SELECT policy.";
+    }
+}
+
 /* ----- Owner panel ----- */
 function ownerPanelHTML() {
     return `
@@ -1020,7 +1080,7 @@ if (act === "owner-mod") return run(async () => {
             if (error) throw error;
             $("#own-feature").value = "";
         }, "Roadmap item added.");
-        if (act === "owner-log-refresh") return loadOwnerData();
+        if (act === "owner-log-refresh") return view.p.role === "owner" ? loadOwnerData() : loadModeratorData();
     }
 
     /* =====================================================================
