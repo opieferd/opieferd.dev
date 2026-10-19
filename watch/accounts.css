@@ -141,12 +141,13 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
 .acc-forgot { display: block; margin: 1rem auto 0; }
 
 /* ---------- profile ---------- */
-.acc-profile { position: relative; padding-bottom: 1.5rem; background: var(--u-profile-color, #171411); }
+.acc-profile { position: relative; isolation: isolate; padding-bottom: 1.5rem; background: var(--u-profile-color, #171411); }
 .acc-profile-color-row { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
 .acc-profile-color-row label { color: var(--muted); font-size: .85rem; font-weight: 700; }
 .acc-profile-color-row input[type="color"] { width: 3rem; height: 2.5rem; padding: .2rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--acc-field); cursor: pointer; }
 .acc-profile-color-row input[type="color"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .acc-banner {
+    position: relative; z-index: 0;
     height: 120px;
     background: linear-gradient(135deg, var(--u-accent, var(--accent)), #1d1812 85%) center / cover no-repeat;
 }
@@ -162,7 +163,8 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
     background: rgba(8, 7, 6, .7); color: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer;
 }
 .acc-close:hover, .acc-close:focus-visible { border-color: var(--accent); color: var(--accent); }
-.acc-head { display: flex; align-items: flex-end; gap: 1rem; margin-top: -46px; padding: 0 1.5rem; }
+.acc-head { position: relative; z-index: 2; display: flex; align-items: flex-end; gap: 1rem; margin-top: -46px; padding: 0 1.5rem; }
+.acc-profile .acc-username, .acc-profile .acc-username .acc-badge { position: relative; z-index: 3; }
 .acc-head .acc-avatar { background: var(--card); }
 .acc-head-copy { min-width: 0; padding-bottom: .3rem; }
 .acc-head-copy .acc-muted { margin: .2rem 0 0; }
@@ -375,3 +377,12 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
     animation: none !important;
     pointer-events: none;
 }
+
+
+/* Banner cropper */
+.acc-crop-dialog[open] { width: min(92vw, 38rem); max-width: 38rem; padding: 0; }
+.acc-crop-content { padding: 1.4rem; }
+.acc-crop-preview { position: relative; width: 100%; aspect-ratio: 3 / 1; overflow: hidden; border: 1px solid var(--border); border-radius: .65rem; background: #171411; }
+.acc-crop-preview img { position: absolute; max-width: none; object-fit: fill; user-select: none; pointer-events: none; }
+.acc-crop-control { display: grid; gap: .35rem; margin-top: .9rem; color: var(--muted); font-size: .85rem; font-weight: 700; }
+.acc-crop-control input { width: 100%; accent-color: var(--accent); }
