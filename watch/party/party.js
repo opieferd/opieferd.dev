@@ -1563,7 +1563,11 @@
   window.addEventListener("pagehide", handlePageHide);
   window.addEventListener("account:changed", () => {
     updateAuthGate();
-    if (!isSignedIn() || !hasGoldAccess() || state.party) return;
+    if (!isSignedIn() || !hasGoldAccess()) {
+      if (state.party) leaveParty();
+      return;
+    }
+    if (state.party) return;
     loadPublicParties();
     if (!inviteJoinInFlight) {
       const stashed = readStashedInvite();
