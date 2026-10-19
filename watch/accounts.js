@@ -354,6 +354,8 @@
             if (state.profile) openProfile(view && view.p ? view.p.username : state.profile.username, view ? view.tab : "profile");
             else profileDialog.close();
         }
+        // Notify other watch-page scripts only after the signed-in profile has loaded.
+        window.dispatchEvent(new CustomEvent("opie:account-ready"));
     }
 
     sb.auth.onAuthStateChange((event, session) => {
