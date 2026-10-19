@@ -1405,11 +1405,41 @@
                 : [{ title: "Update Version 1.6", body: "Hai everyone! Huge update! I added accounts and profile editing, as well as commenting. Have fun neets!" }];
         }
 
+        // Render Markdown-style links safely. Announcement text is user-editable in the
+        // owner panel, so escape all text and only create links for valid HTTP(S) URLs.
+        function renderAnnouncementBody(value) {
+            const source = String(value || "");
+            const linkPattern = /\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+|\\/[^\\s)]*)\\)/g;
+            let html = "";
+            let lastIndex = 0;
+            let match;
+
+            while ((match = linkPattern.exec(source)) !== null) {
+                html += escapeHtml(source.slice(lastIndex, match.index)).replace(/\\r?\\n/g, "<br>");
+                const label = match[1];
+                const href = match[2];
+                try {
+                    const parsed = new URL(href, window.location.origin);
+                    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+                        html += escapeHtml(match[0]);
+                    } else {
+                        html += `<a href="${escapeHtml(href)}" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+                    }
+                } catch {
+                    html += escapeHtml(match[0]);
+                }
+                lastIndex = linkPattern.lastIndex;
+            }
+
+            html += escapeHtml(source.slice(lastIndex)).replace(/\\r?\\n/g, "<br>");
+            return html;
+        }
+
         function showNextAnnouncement() {
             if (announcementIndex >= announcementQueue.length) return;
             const item = announcementQueue[announcementIndex];
             if (disclaimerHeading) disclaimerHeading.textContent = item.title;
-            if (disclaimerBody) disclaimerBody.textContent = item.body;
+            if (disclaimerBody) disclaimerBody.innerHTML = renderAnnouncementBody(item.body);
             if (!disclaimer.open) disclaimer.showModal();
         }
 
