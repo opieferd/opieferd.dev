@@ -1378,47 +1378,27 @@
 
     // Disclaimer Announcement Modal
     if (disclaimer && closeDisclaimer) {
-        const DISCLAIMER_HIDDEN_KEY = "watch-disclaimer-hidden";
-        const ANNOUNCEMENT_MODE = true;
-
-        const dismissDisclaimerForever = document.createElement("button");
-        dismissDisclaimerForever.type = "button";
-        dismissDisclaimerForever.className = "grey-button";
-        dismissDisclaimerForever.textContent = "Don't show again";
-        dismissDisclaimerForever.hidden = ANNOUNCEMENT_MODE;
-
-        let disclaimerActions = closeDisclaimer.parentElement;
-        if (!disclaimerActions.classList.contains("confirm-actions")) {
-            disclaimerActions = document.createElement("div");
-            disclaimerActions.className = "confirm-actions";
-            closeDisclaimer.parentNode.insertBefore(disclaimerActions, closeDisclaimer);
-            disclaimerActions.appendChild(closeDisclaimer);
-        }
-        if (!disclaimerActions.contains(dismissDisclaimerForever)) {
-            disclaimerActions.appendChild(dismissDisclaimerForever);
-        }
+        // Update 1.7 is an early-access announcement for Gold supporters only.
+        // accounts.js dispatches this event after the authenticated profile loads.
+        let experimentalAnnouncementShown = false;
 
         closeDisclaimer.addEventListener("click", () => disclaimer.close());
-        dismissDisclaimerForever.addEventListener("click", () => {
-            try {
-                localStorage.setItem(DISCLAIMER_HIDDEN_KEY, "true");
-            } catch (error) {
-                console.error("Couldn't save disclaimer preference:", error);
-            }
-            disclaimer.close();
-        });
 
-        let disclaimerHidden = false;
-        if (!ANNOUNCEMENT_MODE) {
-            try {
-                disclaimerHidden = localStorage.getItem(DISCLAIMER_HIDDEN_KEY) === "true";
-            } catch (error) {
-                console.error(error);
+        function maybeShowGoldAnnouncement() {
+            if (experimentalAnnouncementShown || disclaimer.open) return;
+            const account = window.OpieAccount;
+            if (!account || !account.isSignedIn || !account.hasEarlyAccess) return;
+
+            // hasEarlyAccess() checks the loaded profile tier (and owner status).
+            if (account.isSignedIn() && account.hasEarlyAccess()) {
+                experimentalAnnouncementShown = true;
+                disclaimer.showModal();
             }
         }
-        if (ANNOUNCEMENT_MODE || !disclaimerHidden) {
-            if (!disclaimer.open) disclaimer.showModal();
-        }
+
+        window.addEventListener("opie:account-ready", maybeShowGoldAnnouncement);
+        // Also handle the unlikely case that account initialization completed first.
+        maybeShowGoldAnnouncement();
     }
 
     // -------------------------------------------------------------
