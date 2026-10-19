@@ -166,7 +166,18 @@
             </button>
         `).join("");
         serverList.querySelectorAll(".server-button").forEach((button) => button.addEventListener("click", () => {
-            activeProviderId = button.dataset.server;
+            const nextProviderId = button.dataset.server;
+
+            // Kira (Vixsrc) may show more ads than the other providers.
+            // Ask before switching so users are warned at the point of choice.
+            if (nextProviderId === "vixsrc" && activeProviderId !== "vixsrc") {
+                const proceed = window.confirm(
+                    "Kira may show ads more frequently than the other players. Ads and pop-ups may be outside our control. Do you want to switch to Kira?"
+                );
+                if (!proceed) return;
+            }
+
+            activeProviderId = nextProviderId;
             renderServerList();
             updatePlayer();
         }));
@@ -280,6 +291,10 @@
         }
 
         if (requestId !== playerRequestId) return;
+
+        // Vixsrc/Kira rejects referrerpolicy="no-referrer"; use origin only for Kira.
+        // Preserve the no-referrer policy for every other provider.
+        player.referrerPolicy = provider.id === "vixsrc" ? "origin" : "no-referrer";
         player.src = url;
         if (serverStatus) serverStatus.textContent = status;
         player.addEventListener("load", () => sendResumePosition(), { once: true });
