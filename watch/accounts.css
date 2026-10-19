@@ -165,6 +165,29 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
 .acc-profile .acc-tabs { margin: 1.2rem 1.5rem 0; }
 .acc-panel { padding: 1.1rem 1.5rem 0; }
 
+
+/* Discord-style click-to-change profile images */
+.acc-avatar-trigger, .acc-avatar-trigger:hover, .acc-avatar-trigger:focus-visible {
+    position: relative; display: inline-grid; place-items: center; flex: none;
+    padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+}
+.acc-avatar-trigger .acc-avatar { transition: filter .16s ease; }
+.acc-avatar-trigger:hover .acc-avatar, .acc-avatar-trigger:focus-visible .acc-avatar { filter: brightness(.62); }
+.acc-image-hint {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    border-radius: inherit; background: rgba(0, 0, 0, .5); color: #fff;
+    font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    opacity: 0; transition: opacity .16s ease; pointer-events: none;
+}
+.acc-avatar-trigger .acc-image-hint { border-radius: 50%; }
+.acc-avatar-trigger:hover .acc-image-hint, .acc-avatar-trigger:focus-visible .acc-image-hint,
+.acc-banner-trigger:hover .acc-image-hint, .acc-banner-trigger:focus-visible .acc-image-hint { opacity: 1; }
+.acc-banner-trigger, .acc-banner-trigger:hover, .acc-banner-trigger:focus-visible {
+    position: relative; display: block; width: 100%; margin: 0; padding: 0;
+    border: 0; border-radius: 0; text-align: center; cursor: pointer;
+}
+.acc-banner-trigger .acc-image-hint { border-radius: 0; font-size: .85rem; }
+
 /* watchlist panel */
 .acc-wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .9rem; }
 .acc-wl-item { display: grid; gap: .35rem; min-width: 0; }
