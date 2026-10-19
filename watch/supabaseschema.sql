@@ -1124,3 +1124,9 @@ create policy "banner update gold" on storage.objects for update to authenticate
   using (bucket_id = 'banners' and (storage.foldername(name))[1] = auth.uid()::text and public.is_gold());
 create policy "banner delete own" on storage.objects for delete to authenticated
   using (bucket_id = 'banners' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- Public accent palette helper is called by the profiles validation trigger.
+-- Explicit grants avoid "permission denied for function allowed_accents" on profile edits.
+grant execute on function public.allowed_accents(text) to authenticated;
+grant execute on function public.allowed_accents(text) to anon;
