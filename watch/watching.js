@@ -1409,13 +1409,13 @@
         // owner panel, so escape all text and only create links for valid HTTP(S) URLs.
         function renderAnnouncementBody(value) {
             const source = String(value || "");
-            const linkPattern = /\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+|\\/[^\\s)]*)\\)/g;
+            const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g;
             let html = "";
             let lastIndex = 0;
             let match;
 
             while ((match = linkPattern.exec(source)) !== null) {
-                html += escapeHtml(source.slice(lastIndex, match.index)).replace(/\\r?\\n/g, "<br>");
+                html += escapeHtml(source.slice(lastIndex, match.index)).replace(/\r?\n/g, "<br>");
                 const label = match[1];
                 const href = match[2];
                 try {
@@ -1423,7 +1423,7 @@
                     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
                         html += escapeHtml(match[0]);
                     } else {
-                        html += `<a href="${escapeHtml(href)}" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+                        html += \`<a href="\${escapeHtml(href)}" rel="noopener noreferrer">\${escapeHtml(label)}</a>\`;
                     }
                 } catch {
                     html += escapeHtml(match[0]);
@@ -1431,7 +1431,7 @@
                 lastIndex = linkPattern.lastIndex;
             }
 
-            html += escapeHtml(source.slice(lastIndex)).replace(/\\r?\\n/g, "<br>");
+            html += escapeHtml(source.slice(lastIndex)).replace(/\r?\n/g, "<br>");
             return html;
         }
 
