@@ -337,3 +337,35 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
 .acc-announcement-actions { display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
 .disclaimer-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 520px) { .acc-announcement-row { flex-direction: column; } }
+
+
+/* Keep the banner upload target visually stationary; global button hover effects
+   should never make the profile banner jump or animate like a launcher. */
+.acc-profile .acc-banner-trigger,
+.acc-profile .acc-banner-trigger:hover,
+.acc-profile .acc-banner-trigger:focus,
+.acc-profile .acc-banner-trigger:focus-visible,
+.acc-profile .acc-banner-trigger:active {
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    outline-offset: -2px;
+}
+.acc-profile .acc-banner-trigger {
+    appearance: none;
+    -webkit-appearance: none;
+    overflow: hidden;
+    background-color: transparent;
+}
+.acc-profile .acc-banner-trigger:hover,
+.acc-profile .acc-banner-trigger:focus-visible {
+    border: 0;
+    background-color: transparent;
+}
+.acc-profile .acc-banner-trigger .acc-image-hint {
+    transform: none !important;
+    animation: none !important;
+    pointer-events: none;
+}
