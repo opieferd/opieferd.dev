@@ -515,12 +515,26 @@
             </div>`;
     }
 
-    function resizeImage(file, width, height) {
+    function resizeImage(file, width, height, preserveWholeImage = false) {
         return new Promise((resolve, reject) => {
             const image = new Image();
             const url = URL.createObjectURL(file);
             image.onload = () => {
                 URL.revokeObjectURL(url);
+                // Banners should fit inside the target bounds without cutting off the
+                // edges of the user's image. Avatars retain their square center crop.
+                if (preserveWholeImage) {
+                    const scale = Math.min(width / image.width, height / image.height);
+                    const outWidth = Math.max(1, Math.round(image.width * scale));
+                    const outHeight = Math.max(1, Math.round(image.height * scale));
+                    const canvas = document.createElement("canvas");
+                    canvas.width = outWidth;
+                    canvas.height = outHeight;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(image, 0, 0, outWidth, outHeight);
+                    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn’t process that image."))), "image/jpeg", 0.9);
+                    return;
+                }
                 const canvas = document.createElement("canvas");
                 canvas.width = width;
                 canvas.height = height;
@@ -554,7 +568,7 @@
         if (kind === "banner" && effTier(view.p) !== "gold") throw new Error("Custom banners require Gold.");
         if (file.size > 8 * 1024 * 1024) throw new Error("Image is too large (max 8 MB).");
         const bucket = kind === "avatar" ? "avatars" : "banners";
-        const blob = await resizeImage(file, kind === "avatar" ? 256 : 1200, kind === "avatar" ? 256 : 400);
+        const blob = await resizeImage(file, kind === "avatar" ? 256 : 1200, kind === "avatar" ? 256 : 400, kind === "banner");
         const path = `${state.user.id}/${kind}.jpg`;
         const { error } = await sb.storage.from(bucket).upload(path, blob, { upsert: true, contentType: "image/jpeg", cacheControl: "3600" });
         if (error) throw error;
