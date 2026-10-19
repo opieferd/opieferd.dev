@@ -150,6 +150,12 @@ dialog.disclaimer.acc-dialog[open] { max-width: 34rem; padding: 0; }
     height: 120px;
     background: linear-gradient(135deg, var(--u-accent, var(--accent)), #1d1812 85%) center / cover no-repeat;
 }
+.acc-banner[style*="background-image"] {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #171411;
+}
 .acc-close, .acc-close:hover, .acc-close:focus-visible {
     position: absolute; top: .7rem; right: .7rem; display: grid; place-items: center;
     width: 2.2rem; height: 2.2rem; padding: 0; border: 1px solid var(--border); border-radius: 50%;
