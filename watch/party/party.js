@@ -34,7 +34,9 @@
     me: null,
     chat: [],
     selectedMedia: null,
-    playback: { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null },
+    playback: { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null, localReal: null, duration: 0 },
+    vidlinkWatchdog: null,
+    vidlinkOk: null,
     joinedAt: 0,
     presence: [],
     presenceSeen: false,
@@ -56,53 +58,19 @@
   const TMDB_IMAGE = "https://image.tmdb.org/t/p/w342";
   const JIKAN_API = "https://api.jikan.moe/v4";
 
-  /* Same provider list as watching.js, so a party can start on whatever
-     server the host was using and viewers can switch freely afterwards. */
+  /* VidLink (Maze) is the only provider: it's the one that reports real
+     playback positions (PLAYER_EVENT) and can resume the party timeline with
+     startAt, which the host-side sync depends on. */
   const PROVIDERS = [
-    {
-      id: "vidrock",
-      name: "Xero",
-      quality: "HD",
-      origin: "https://vidrock.to",
-      buildUrl: (type, id, season, episode) => `https://vidrock.to/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true&theme=ebaf36&autonext=true`
-    },
-    {
-      id: "vidsrc",
-      name: "Nova",
-      quality: "HD",
-      origin: "https://vidsrc.sh",
-      buildUrl: (type, id, season, episode) => `https://vidsrc.sh/embed/${type}/${id}${type === "tv" ? `?season=${season}&episode=${episode}` : ""}`
-    },
     {
       id: "vidlink",
       name: "Maze",
       quality: "HD",
       origin: "https://vidlink.pro",
-      buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`,
+      buildUrl: (type, id, season, episode) => `https://vidlink.pro/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}?autoplay=true`,
       anime: {
         buildUrl: (malId, episode, audio) => `https://vidlink.pro/anime/${malId}/${episode}/${audio}`
       }
-    },
-    {
-      id: "vaplayer",
-      name: "Luci",
-      quality: "HD",
-      origin: "https://vaplayer.ru",
-      buildUrl: (type, id, season, episode) => `https://vaplayer.ru/embed/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`
-    },
-    {
-      id: "cinesrc",
-      name: "Zara",
-      quality: "4K",
-      origin: "https://cinesrc.st",
-      buildUrl: (type, id, season, episode) => `https://cinesrc.st/embed/${type}/${id}${type === "tv" ? `?s=${season}&e=${episode}` : ""}`
-    },
-    {
-      id: "vixsrc",
-      name: "Kira",
-      quality: "HD",
-      origin: "https://vixsrc.to",
-      buildUrl: (type, id, season, episode) => `https://vixsrc.to/${type}/${id}${type === "tv" ? `/${season}/${episode}/` : "/"}`
     }
   ];
 
@@ -162,7 +130,6 @@
   const roomCode = $("#room-code");
   const copyInviteBtn = $("#copy-invite-btn");
   const closePartyBtn = $("#close-party-btn");
-  const serverList = $("#server-list");
   const serverStatus = $("#server-status");
   const audioControls = $("#audio-controls");
   const audioList = $("#audio-list");
@@ -448,10 +415,9 @@
       roomCode.hidden = !hasCode;
       roomCode.textContent = hasCode ? `Code ${party.code}` : "";
     }
-    partyPlayer.src = partySourceUrl(party, party.media_url);
+    setPlayerSource(partySourceUrl(party, party.media_url));
     roomVidVault.href = "https://vidvault.to";
     roomDownload.hidden = !party.media_url;
-    renderServerList();
     renderAudioControls();
     const startProvider = providerForUrl(party.media_url) || PROVIDERS[0];
     if (serverStatus) {
@@ -482,7 +448,9 @@
     state.playback = { type: "idle", currentTime: 0, isPlaying: false, mediaUrl: null, localReal: null, duration: 0 };
     state.connStatus = "idle";
     if (snapBtn) snapBtn.hidden = true;
-    if (partyPlayer) partyPlayer.src = "about:blank";
+    if (partyPlayer) setPlayerSource("about:blank");
+    disarmVidlinkWatchdog();
+    state.vidlinkOk = null;
     if (serverStatus) serverStatus.textContent = "";
     if (audioStatus) audioStatus.textContent = "";
     if (audioControls) audioControls.hidden = true;
@@ -490,7 +458,6 @@
     if (roomCode) { roomCode.hidden = true; roomCode.textContent = ""; }
     if (presenceList) presenceList.innerHTML = "";
     if (presenceCount) presenceCount.textContent = "0";
-    renderServerList();
     renderChat();
     showRoomNotice("");
     updatePlaybackUI();
@@ -801,7 +768,6 @@
     if (closePartyBtn) closePartyBtn.hidden = !state.isHost;
     if (roomMediaMeta && state.party) roomMediaMeta.textContent = mediaMetaText();
     renderAudioControls();
-    renderServerList();
     updatePlaybackUI();
   }
 
@@ -1026,11 +992,55 @@
     updatePlaybackUI();
   }
 
-  function setupVidlinkListener() {
-    if (state.vidlinkListener) window.removeEventListener("message", state.vidlinkListener);
+  /* ---------- unwatchable-content watchdog (VidLink) ----------
+     VidLink sends no error postMessage and no CORS headers, so an HTTP 404/500
+     for a missing title can't be read from the browser. Empirically, a working
+     embed starts posting MEDIA_DATA / PLAYER_EVENT messages within seconds,
+     while a broken one stays completely silent — so silence after the
+     watchdog fires means "This content can not be watched in a party". */
+  const VIDLINK_WATCHDOG_MS = 10000;
+  function disarmVidlinkWatchdog() {
+    if (state.vidlinkWatchdog) {
+      clearTimeout(state.vidlinkWatchdog);
+      state.vidlinkWatchdog = null;
+    }
+  }
+
+  function armVidlinkWatchdog(url) {
+    disarmVidlinkWatchdog();
+    state.vidlinkOk = null;
+    const provider = providerForUrl(url || "");
+    if (!provider || provider.id !== "vidlink") return;
+    state.vidlinkWatchdog = setTimeout(() => {
+      state.vidlinkWatchdog = null;
+      if (state.vidlinkOk == null && state.party) {
+        state.vidlinkOk = false;
+        showRoomNotice("This content can not be watched in a party.");
+      }
+    }, VIDLINK_WATCHDOG_MS);
+  }
+
+  function onVidlinkSignal() {
+    if (state.vidlinkOk !== true) {
+      state.vidlinkOk = true;
+      disarmVidlinkWatchdog();
+      // A slow load may have raised the error notice — clear it once the
+      // player shows signs of life.
+      if (roomNotice && roomNotice.textContent && roomNotice.textContent.includes("can not be watched")) showRoomNotice("");
+    }
+  }
+
+  function setPlayerSource(url) {
+    if (!partyPlayer) return;
+    partyPlayer.src = url;
+    armVidlinkWatchdog(url);
+  }
+
+  function setupVidlinkListener() {    if (state.vidlinkListener) window.removeEventListener("message", state.vidlinkListener);
     state.vidlinkListener = (event) => {
-      // Only accept player events from VidLink's own origin.
+      // Only accept player signals from VidLink's own origin.
       if (!event || event.origin !== "https://vidlink.pro") return;
+      onVidlinkSignal();
       const payload = event.data;
       if (!payload || payload.type !== "PLAYER_EVENT" || !payload.data) return;
       onVidlinkEvent(payload.data);
@@ -1062,7 +1072,7 @@
     const url = state.playback.mediaUrl || partyPlayer.src;
     if (!url || url === "about:blank") return;
     state.playback.localReal = null;
-    partyPlayer.src = `${partySourceUrl(state.party, url)}${url.includes("autoplay") ? "" : "&autoplay=true"}`;
+    setPlayerSource(`${partySourceUrl(state.party, url)}${url.includes("autoplay") ? "" : "&autoplay=true"}`);
     showRoomNotice("Realigning your player to the party's position… If it doesn't resume, press play on the video.");
   }
 
@@ -1088,18 +1098,6 @@
   function isAnime() {
     const info = state.mediaInfo;
     return Boolean(info && info.original_language === "ja" && (info.genres || []).some((genre) => genre.id === 16));
-  }
-
-  function renderServerList() {
-    if (!serverList) return;
-    const title = state.isHost ? "Set the server for the whole party" : "Only the party host can change the server";
-    serverList.innerHTML = PROVIDERS.map((provider) => `
-      <button class="server-button${provider.id === state.providerId ? " active" : ""}" type="button" data-server="${provider.id}" aria-pressed="${provider.id === state.providerId}"${state.isHost ? "" : " disabled"} title="${title}">
-        <span>${provider.name}</span>
-        <small>${provider.quality}</small>
-        ${isAnime() && provider.anime ? "<small>SUB/DUB</small>" : ""}
-      </button>
-    `).join("");
   }
 
   function renderAudioControls() {
@@ -1190,40 +1188,35 @@
 
     if (isAnime() && state.audioMode !== "default") {
       const label = state.audioMode === "dub" ? "Dub" : "Sub";
-      if (provider.anime) {
-        if (serverStatus) serverStatus.textContent = "Matching to MyAnimeList…";
-        try {
-          const entries = await fetchAnimeEntries(type);
-          if (!state.party || state.party.id !== partyId) return;
-          state.malEntries = entries;
-          populateMalSelect(entries);
-          const target = entries.length ? pickAnimeTarget(entries, season, episode) : null;
-          if (target) {
-            url = provider.anime.buildUrl(target.entry.malId, target.episode, state.audioMode);
-            status = `Using ${provider.name} · ${label}`;
-            if (audioStatus) {
-              audioStatus.textContent = `Matched to “${target.entry.title}”, episode ${target.episode}.`
-                + (target.guessed ? " This season didn’t line up with MyAnimeList, so that’s a best guess. The host can use the picker to choose the right entry." : "")
-                + ` If it doesn’t load, that episode may not have a ${label.toLowerCase()} yet.`;
-            }
-          } else if (audioStatus) {
-            audioStatus.textContent = "Couldn’t match this title on MyAnimeList, so the server’s default audio is playing.";
+      if (serverStatus) serverStatus.textContent = "Matching to MyAnimeList…";
+      try {
+        const entries = await fetchAnimeEntries(type);
+        if (!state.party || state.party.id !== partyId) return;
+        state.malEntries = entries;
+        populateMalSelect(entries);
+        const target = entries.length ? pickAnimeTarget(entries, season, episode) : null;
+        if (target) {
+          url = provider.anime.buildUrl(target.entry.malId, target.episode, state.audioMode);
+          status = `Using ${provider.name} · ${label}`;
+          if (audioStatus) {
+            audioStatus.textContent = `Matched to “${target.entry.title}”, episode ${target.episode}.`
+              + (target.guessed ? " This season didn’t line up with MyAnimeList, so that’s a best guess. The host can use the picker to choose the right entry." : "")
+              + ` If it doesn’t load, that episode may not have a ${label.toLowerCase()} yet.`;
           }
-        } catch (error) {
-          if (!state.party || state.party.id !== partyId) return;
-          console.error("[party] MyAnimeList lookup failed", error);
-          if (audioStatus) audioStatus.textContent = "MyAnimeList lookup failed, so the server’s default audio is playing.";
+        } else if (audioStatus) {
+          audioStatus.textContent = "Couldn’t match this title on MyAnimeList, so the server’s default audio is playing.";
         }
-      } else if (audioStatus) {
-        const capable = PROVIDERS.find((item) => item.anime);
-        audioStatus.textContent = `${provider.name} plays its own default audio.${capable ? ` Switch to ${capable.name} to pick Sub or Dub.` : ""}`;
+      } catch (error) {
+        if (!state.party || state.party.id !== partyId) return;
+        console.error("[party] MyAnimeList lookup failed", error);
+        if (audioStatus) audioStatus.textContent = "MyAnimeList lookup failed, so the server’s default audio is playing.";
       }
     }
 
     if (!state.party || state.party.id !== partyId || !state.isHost) return;
-    // Continue the party timeline on the new server: VidLink can resume at
-    // the host's position with startAt; other providers start from zero.
-    if (provider.id === "vidlink" && state.playback.currentTime > 10) {
+    // Continue the party timeline on the new source: VidLink can resume at
+    // the host's position with startAt.
+    if (state.playback.currentTime > 10) {
       url = withStartAt(url, state.playback.currentTime);
     }
     applySourceUrl(url, provider, status);
@@ -1236,9 +1229,8 @@
     state.playback.localReal = null;
     state.playback.duration = 0;
     if (provider) state.providerId = provider.id;
-    partyPlayer.src = url;
+    setPlayerSource(url);
     if (serverStatus) serverStatus.textContent = status || `Using ${provider ? provider.name : "server"}`;
-    renderServerList();
   }
 
   function broadcastSource(status) {
@@ -1263,9 +1255,8 @@
     // A new player instance resets what we know about the viewer's local time.
     state.playback.localReal = null;
     state.playback.duration = 0;
-    if (partyPlayer.src !== url) partyPlayer.src = url;
+    if (partyPlayer.src !== url) setPlayerSource(url);
     if (serverStatus) serverStatus.textContent = (payload && payload.status) || `Using ${provider ? provider.name : "server"}`;
-    renderServerList();
     if (changedServer) showRoomNotice(`The host switched the server to ${provider.name}.`);
   }
 
@@ -1316,7 +1307,6 @@
       return;
     }
     renderAudioControls();
-    renderServerList();
   }
 
   /* ---------- chat (with blacklist filter for the owner log) ---------- */
@@ -1448,13 +1438,14 @@
 
   function embedUrlFor(media) {
     if (media.media_url) return media.media_url;
-    // Auto-generate an embed URL using the default provider (vidsrc.sh).
+    // VidLink is the party provider — it reports real playback positions
+    // (PLAYER_EVENT) and can resume a party's timeline with startAt.
     if (media.media_type === "tv") {
       const season = Math.max(1, Number(media.season) || 1);
       const episode = Math.max(1, Number(media.episode) || 1);
-      return `https://vidsrc.sh/embed/tv/${media.id}?season=${season}&episode=${episode}`;
+      return `https://vidlink.pro/tv/${media.id}/${season}/${episode}?autoplay=true`;
     }
-    return `https://vidsrc.sh/embed/movie/${media.id}`;
+    return `https://vidlink.pro/movie/${media.id}?autoplay=true`;
   }
 
   function selectMedia(rawMedia) {
@@ -1492,17 +1483,6 @@
   if (signInButton) {
     signInButton.addEventListener("click", () => {
       if (window.OpieAccount && window.OpieAccount.openAuth) window.OpieAccount.openAuth("signin");
-    });
-  }
-  if (serverList) {
-    serverList.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-server]");
-      if (!button || !state.party) return;
-      if (!state.isHost) { showRoomNotice("Only the party host can change the server."); return; }
-      state.providerId = button.dataset.server;
-      state.malOverride = null;
-      if (malSelect) malSelect.hidden = true;
-      updatePartySource();
     });
   }
   if (audioList) {
