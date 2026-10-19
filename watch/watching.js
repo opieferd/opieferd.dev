@@ -1408,7 +1408,12 @@
         // Render Markdown-style links safely. Announcement text is user-editable in the
         // owner panel, so escape all text and only create links for valid HTTP(S) URLs.
         function renderAnnouncementBody(value) {
-            const source = String(value || "");
+            // Accept Markdown links and simple HTML anchors from older announcements.
+            // Convert HTML anchors to Markdown, then escape all text before creating links.
+            const source = String(value || "").replace(
+                /<a\s+[^>]*href\s*=\s*["'](https?:\/\/[^"'\s]+|\/[^"'\s]*)["'][^>]*>(.*?)<\/a>/gi,
+                (_, href, label) => `[${label.replace(/<[^>]*>/g, "")}](${href})`
+            );
             const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g;
             let html = "";
             let lastIndex = 0;
