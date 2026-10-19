@@ -961,25 +961,23 @@ drop policy if exists "watch_parties insert" on public.watch_parties;
 drop policy if exists "watch_parties update host" on public.watch_parties;
 drop policy if exists "watch_parties delete host" on public.watch_parties;
 
--- Anyone can see public parties; hosts can see their own private parties.
+-- Gold Supporters (and the owner) can access Watch Parties.
 create policy "watch_parties read"
   on public.watch_parties for select
-  using (kind = 'public' or host_id = auth.uid());
+  using (public.is_gold() and (kind = 'public' or host_id = auth.uid()));
 
--- Signed-in users can create parties.
 create policy "watch_parties insert"
   on public.watch_parties for insert
-  with check (auth.uid() = host_id);
+  with check (public.is_gold() and auth.uid() = host_id);
 
--- Hosts can update their own party.
 create policy "watch_parties update host"
-  on watch_parties for update
-  using (auth.uid() = host_id);
+  on public.watch_parties for update
+  using (public.is_gold() and auth.uid() = host_id)
+  with check (public.is_gold() and auth.uid() = host_id);
 
--- Hosts can delete their own party.
 create policy "watch_parties delete host"
-  on watch_parties for delete
-  using (auth.uid() = host_id);
+  on public.watch_parties for delete
+  using (public.is_gold() and auth.uid() = host_id);
 
 create table if not exists public.watch_party_members (
   party_id    uuid not null references public.watch_parties(id) on delete cascade,
@@ -994,20 +992,18 @@ drop policy if exists "watch_party_members read" on public.watch_party_members;
 drop policy if exists "watch_party_members insert" on public.watch_party_members;
 drop policy if exists "watch_party_members delete" on public.watch_party_members;
 
--- Members can see the roster of parties they belong to (and public party rosters).
+-- Only Gold Supporters can view or join party rosters.
 create policy "watch_party_members read"
   on public.watch_party_members for select
-  using (true);
+  using (public.is_gold());
 
--- Signed-in users can join a party (membership row).
 create policy "watch_party_members insert"
   on public.watch_party_members for insert
-  with check (auth.uid() = user_id);
+  with check (public.is_gold() and auth.uid() = user_id);
 
--- Users can leave (delete their own membership).
 create policy "watch_party_members delete"
   on public.watch_party_members for delete
-  using (auth.uid() = user_id);
+  using (public.is_gold() and auth.uid() = user_id);
 
 -- ---------- watch party helpers ----------
 
@@ -1019,7 +1015,7 @@ returns boolean language plpgsql security definer set search_path = public as $$
 declare
   me uuid := auth.uid();
 begin
-  if me is null then return false; end if;
+  if me is null or not public.is_gold() then return false; end if;
   if not exists (select 1 from public.watch_party_members where party_id = p_party and user_id = me) then
     return false;
   end if;
@@ -1039,6 +1035,9 @@ declare
 begin
   if auth.uid() is null then
     return jsonb_build_object('ok', false, 'error', 'Sign in to join a party.');
+  end if;
+  if not public.is_gold() then
+    return jsonb_build_object('ok', false, 'error', 'Watch Parties are a Gold Supporter perk.');
   end if;
   select * into p from public.watch_parties
     where kind = 'private' and code = upper(btrim(coalesce(p_code, '')));
@@ -1063,6 +1062,9 @@ declare
 begin
   if auth.uid() is null then
     return jsonb_build_object('ok', false, 'error', 'Sign in to chat.');
+  end if;
+  if not public.is_gold() then
+    return jsonb_build_object('ok', false, 'error', 'Watch Parties are a Gold Supporter perk.');
   end if;
   select * into me from public.profiles where id = auth.uid();
   if not found then
