@@ -846,6 +846,74 @@ function resetAnnouncementForm() {
     if (save) save.textContent = "Save announcement";
 }
 
+async function confirmAnnouncementPassword() {
+    if (!state.user || !state.user.email) throw new Error("Sign in again before changing announcements.");
+
+    const dialog = makeDialog("announcement-password-dialog");
+    dialog.innerHTML = `
+        <div class="disclaimer-content">
+            <p class="eyebrow">Sensitive action</p>
+            <h2>Confirm it’s you</h2>
+            <p class="acc-muted">Enter your account password to change an announcement.</p>
+            <form id="announcement-password-form">
+                <label class="acc-field">
+                    <span>Account password</span>
+                    <input id="announcement-password" type="password" autocomplete="current-password" required>
+                </label>
+                <p id="announcement-password-message" class="form-message" role="status"></p>
+                <div class="confirm-actions">
+                    <button class="primary-button" type="submit">Confirm</button>
+                    <button class="grey-button" type="button" id="announcement-password-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>`;
+
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            if (dialog.open) dialog.close();
+            dialog.remove();
+            resolve(result);
+        };
+        dialog.addEventListener("close", () => finish(false), { once: true });
+        dialog.querySelector("#announcement-password-cancel").addEventListener("click", () => finish(false));
+        dialog.querySelector("#announcement-password-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const passwordInput = dialog.querySelector("#announcement-password");
+            const message = dialog.querySelector("#announcement-password-message");
+            const button = dialog.querySelector('[type="submit"]');
+            const password = passwordInput.value;
+            if (!password) {
+                message.textContent = "Enter your password.";
+                return;
+            }
+            button.disabled = true;
+            message.textContent = "Verifying…";
+            try {
+                const { error } = await sb.auth.signInWithPassword({
+                    email: state.user.email,
+                    password
+                });
+                if (error) {
+                    message.textContent = "Incorrect password. Try again.";
+                    passwordInput.value = "";
+                    passwordInput.focus();
+                    return;
+                }
+                finish(true);
+            } catch (error) {
+                message.textContent = "Couldn’t verify your password. Try again.";
+            } finally {
+                if (!settled) button.disabled = false;
+            }
+        });
+        dialog.showModal();
+        dialog.querySelector("#announcement-password").focus();
+    });
+}
+
 async function loadOwnerAnnouncements() {
     const node = $("#own-announcements");
     if (!node) return;
@@ -1020,6 +1088,7 @@ async function loadOwnerData() {
             if (!title) throw new Error("Enter an announcement title.");
             if (!body) throw new Error("Enter an announcement message.");
             if (!show_normal && !show_gold) throw new Error("Select Normal members, Gold members, or both.");
+            if (!await confirmAnnouncementPassword()) return;
             const row = { title, body, show_normal, show_gold, enabled, updated_at: new Date().toISOString() };
             const query = id
                 ? sb.from("announcements").update(row).eq("id", Number(id))
@@ -1031,6 +1100,7 @@ async function loadOwnerData() {
         }, "Announcement saved.");
         if (act === "owner-announcement-delete") return run(async () => {
             if (!window.confirm("Delete this announcement?")) return;
+            if (!await confirmAnnouncementPassword()) return;
             const { error } = await sb.from("announcements").delete().eq("id", Number(target.dataset.id));
             if (error) throw error;
             await loadOwnerAnnouncements();
