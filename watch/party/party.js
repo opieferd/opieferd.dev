@@ -172,15 +172,59 @@
     return Math.min(12, Math.max(2, number));
   }
 
-  /* ---------- signed-in gate ---------- */
+  /* ---------- Gold-only access gate ---------- */
+  const goldGate = document.createElement("section");
+  goldGate.id = "party-gold-gate";
+  goldGate.className = "card";
+  goldGate.hidden = true;
+  goldGate.innerHTML = `
+    <div class="lobby-header">
+      <h2>★ Gold Supporter perk</h2>
+      <p id="party-gold-gate-message" class="lobby-subtitle">Watch Parties are available to Gold Supporters only.</p>
+    </div>
+    <div class="confirm-actions">
+      <button id="party-gold-gate-action" class="primary-button" type="button">Upgrade to Gold</button>
+      <a class="secondary-button" href="../">Back to Opie Watch</a>
+    </div>`;
+  if (lobbySection && lobbySection.parentNode) lobbySection.parentNode.insertBefore(goldGate, lobbySection);
+  const goldGateMessage = $("#party-gold-gate-message", goldGate);
+  const goldGateAction = $("#party-gold-gate-action", goldGate);
+
+  function hasGoldAccess() {
+    const profile = getProfile();
+    return Boolean(profile && (profile.role === "owner" || profile.tier === "gold"));
+  }
+
   function updateAuthGate() {
-    if (authNotice) authNotice.hidden = Boolean(isSignedIn());
+    const signedIn = Boolean(isSignedIn());
+    const allowed = signedIn && hasGoldAccess();
+    if (goldGate) goldGate.hidden = allowed;
+    if (lobbySection) lobbySection.hidden = !allowed;
+    if (roomSection && !allowed) roomSection.hidden = true;
+    if (authNotice) authNotice.hidden = signedIn;
+    if (goldGateMessage) {
+      goldGateMessage.textContent = !signedIn
+        ? "Sign in with a Gold Supporter account to use Watch Parties."
+        : "Watch Parties are available to Gold Supporters only. Upgrade your account to unlock them.";
+    }
+    if (goldGateAction) {
+      goldGateAction.textContent = signedIn ? "Upgrade to Gold" : "Sign in";
+      goldGateAction.onclick = () => {
+        if (!isSignedIn()) {
+          if (window.OpieAccount && window.OpieAccount.openAuth) window.OpieAccount.openAuth("signin");
+        } else {
+          window.location.href = "../upgrade/";
+        }
+      };
+    }
   }
 
   function requireSignIn(messageEl) {
-    if (isSignedIn()) return true;
+    if (isSignedIn() && hasGoldAccess()) return true;
     updateAuthGate();
-    if (messageEl) showMessage(messageEl, AUTH_DISCLAIMER);
+    if (messageEl) showMessage(messageEl, !isSignedIn()
+      ? AUTH_DISCLAIMER
+      : "Watch Parties are a Gold Supporter perk. Upgrade to Gold to continue.");
     return false;
   }
 
@@ -1519,7 +1563,7 @@
   window.addEventListener("pagehide", handlePageHide);
   window.addEventListener("account:changed", () => {
     updateAuthGate();
-    if (!isSignedIn() || state.party) return;
+    if (!isSignedIn() || !hasGoldAccess() || state.party) return;
     loadPublicParties();
     if (!inviteJoinInFlight) {
       const stashed = readStashedInvite();
@@ -1561,8 +1605,10 @@
 
   waitForAccounts(() => {
     updateAuthGate();
-    loadPublicParties();
-    tryJoinFromInvite();
+    if (isSignedIn() && hasGoldAccess()) {
+      loadPublicParties();
+      tryJoinFromInvite();
+    }
   });
 
 })();
