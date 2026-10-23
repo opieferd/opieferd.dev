@@ -1,13 +1,12 @@
-/* OPwatch optional ad prompt (A-ADS). */
+/* OPwatch optional ad tab (A-ADS). */
 (function () {
     "use strict";
     const AADS_UNIT = "2459572";
     const WATCH_SECONDS = 15;
-    const PROMPT_DELAY_MS = 20000;
-    const SEEN_KEY = "opwatch:ad-prompt-seen";
+    const DISMISS_KEY = "opwatch:ad-tab-dismissed";
 
     if (/\/party\//.test(location.pathname)) return;
-    try { if (sessionStorage.getItem(SEEN_KEY)) return; } catch (e) { /* storage blocked */ }
+    try { if (sessionStorage.getItem(DISMISS_KEY)) return; } catch (e) { /* storage blocked */ }
 
     function el(tag, cls, text) {
         const n = document.createElement(tag);
@@ -16,19 +15,18 @@
         return n;
     }
 
-    function openModal(content) {
-        const overlay = el("div", "ad-overlay");
-        overlay.setAttribute("role", "dialog");
-        overlay.setAttribute("aria-modal", "true");
-        const box = el("div", "ad-modal");
-        box.appendChild(content);
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-        return () => overlay.remove();
+    const tab = el("aside", "ad-tab");
+    tab.setAttribute("aria-label", "Optional ad");
+    tab.hidden = true;
+
+    function dismiss() {
+        try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch (e) { /* storage blocked */ }
+        tab.remove();
     }
 
     function showAd() {
-        const wrap = el("div");
+        tab.replaceChildren();
+        tab.classList.add("is-open");
         const slot = el("div", "ad-slot");
         const holder = document.getElementById("aads-unit");
         const frame = (holder && holder.querySelector("iframe")) || document.createElement("iframe");
@@ -40,9 +38,8 @@
         const close = el("button", "secondary-button", "Close");
         close.type = "button";
         close.disabled = true;
-        wrap.append(slot, status, close);
-        const remove = openModal(wrap);
-        close.addEventListener("click", remove);
+        close.addEventListener("click", dismiss);
+        tab.append(slot, status, close);
 
         let left = WATCH_SECONDS;
         const timer = setInterval(() => {
@@ -57,20 +54,20 @@
         }, 1000);
     }
 
-    function showPrompt() {
-        try { sessionStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* storage blocked */ }
-        const wrap = el("div");
-        wrap.appendChild(el("p", "ad-prompt-text", "Watch an ad to support OPwatch? This is completely optional. Your support helps keep OPwatch running."));
+    function build() {
+        tab.appendChild(el("p", "ad-prompt-text", "Watch an ad to support OPwatch? This is completely optional. Your support helps keep OPwatch running."));
         const actions = el("div", "ad-actions");
         const yes = el("button", "primary-button", "Watch an ad");
         const no = el("button", "secondary-button", "No thanks");
         yes.type = no.type = "button";
+        yes.addEventListener("click", showAd);
+        no.addEventListener("click", dismiss);
         actions.append(yes, no);
-        wrap.appendChild(actions);
-        const remove = openModal(wrap);
-        no.addEventListener("click", remove);
-        yes.addEventListener("click", () => { remove(); showAd(); });
+        tab.appendChild(actions);
+        document.body.appendChild(tab);
+        tab.hidden = false;
     }
 
-    setTimeout(showPrompt, PROMPT_DELAY_MS);
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", build);
+    else build();
 })();

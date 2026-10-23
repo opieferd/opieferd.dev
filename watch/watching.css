@@ -854,11 +854,13 @@ dialog.disclaimer[open] {
     .donation-progress-fill { transition: none; }
 }
 
-/* ---- Optional ad prompt + BTC card ---- */
-.ad-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 1rem; }
-.ad-modal { background: #141414; color: #fff; border: 1px solid rgba(255, 255, 255, .15); border-radius: 12px; padding: 1.5rem; max-width: 480px; width: 100%; text-align: center; }
-.ad-actions { display: flex; gap: .75rem; justify-content: center; margin-top: 1rem; }
-.ad-slot { min-height: 250px; margin-bottom: 1rem; }
-.ad-status { margin-bottom: 1rem; }
-.btc-qr { background: #fff; padding: .5rem; border-radius: 8px; }
+/* ---- Optional ad tab + BTC card ---- */
+.ad-tab { position: fixed; left: 1rem; bottom: 1rem; z-index: 9000; width: min(320px, calc(100vw - 2rem)); background: #141414; color: #fff; border: 1px solid rgba(255, 255, 255, .15); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); font-size: .9rem; }
+.ad-tab[hidden] { display: none; }
+.ad-tab.is-open { width: min(360px, calc(100vw - 2rem)); text-align: center; }
+.ad-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+.ad-slot { min-height: 250px; margin-bottom: .75rem; }
+.ad-status { margin-bottom: .75rem; }
+.btc-card h2 { margin-bottom: 1rem; }
+.btc-qr { display: block; margin: 1.25rem 0; background: #fff; padding: .5rem; border-radius: 8px; }
 .btc-address { word-break: break-all; }
