@@ -1,4 +1,4 @@
-/* OPwatch optional ad tab (A-ADS; the ad itself lives on /ad/). */
+/* OPwatch optional ad tab (A-ADS; the ad itself lives on /watch/ad/). */
 (function () {
     "use strict";
     const DISMISS_KEY = "opwatch:ad-tab-dismissed";
@@ -23,7 +23,7 @@
     }
 
     function openAd() {
-        window.open("/ad/", "_blank", "noopener");
+        window.open("/watch/ad/", "_blank", "noopener");
         dismiss();
     }
 
