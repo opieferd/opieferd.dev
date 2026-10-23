@@ -13,12 +13,16 @@
         p { color: #ccc; margin: 0 0 1.5rem; }
         .ad-wrap { width: 100%; margin: 0 auto 1.5rem; position: relative; z-index: 1; }
         a { color: #fff; }
+        .adblock-warning { margin: 0 0 1.5rem; padding: .85rem 1rem; border: 1px solid #f7931a; border-radius: 10px; background: rgba(247, 147, 26, .12); color: #fff; }
+        .adblock-bait { position: absolute; left: -9999px; width: 1px; height: 1px; }
     </style>
 </head>
 <body>
     <main>
         <h1>Support OPwatch</h1>
         <p>Thanks for viewing an ad. This is completely optional, and your support helps keep OPwatch running.</p>
+
+        <p id="adblock-warning" class="adblock-warning" role="alert" hidden>An ad blocker appears to be enabled. Watching this ad won't support OPwatch while it's on. Turn it off for this page to help out, or ignore this if you'd rather not.</p>
 
         <!-- BEGIN AADS AD UNIT 2459572 -->
         <div class="ad-wrap">
@@ -28,5 +32,24 @@
 
         <a href="/watch/">Back to OPwatch</a>
     </main>
+    <div class="adblock-bait ad-banner adsbox ad_unit" aria-hidden="true">&nbsp;</div>
+    <script>
+    (function () {
+        var warn = document.getElementById("adblock-warning");
+        var shown = false;
+        function show() { if (!shown) { shown = true; warn.hidden = false; } }
+        var frame = document.querySelector("iframe[data-aa]");
+        var bait = document.querySelector(".adblock-bait");
+
+        function checkDom() {
+            var hiddenBait = !bait || bait.offsetHeight === 0 || getComputedStyle(bait).display === "none";
+            var hiddenFrame = !frame || !frame.isConnected || getComputedStyle(frame).display === "none" || frame.offsetHeight === 0;
+            if (hiddenBait || hiddenFrame) show();
+        }
+
+        fetch("https://acceptable.a-ads.com/2459572", { method: "HEAD", mode: "no-cors", cache: "no-store" }).catch(show);
+        window.addEventListener("load", function () { setTimeout(checkDom, 1500); });
+    })();
+    </script>
 </body>
 </html>
