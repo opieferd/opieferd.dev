@@ -8,9 +8,9 @@
     <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
     <link rel="icon" type="image/png" href="https://opieferd.dev/favicon.png">
     <link rel="shortcut icon" type="image/png" href="https://opieferd.dev/favicon.png">
-    <link rel="stylesheet" href="../watching.css?v=202610222358">
-    <link rel="stylesheet" href="../accounts.css?v=202610222358">
-    <link rel="stylesheet" href="../../subpage-enhancements.css?v=202610222358">
+    <link rel="stylesheet" href="../watching.css?v=202610230032">
+    <link rel="stylesheet" href="../accounts.css?v=202610230032">
+    <link rel="stylesheet" href="../../subpage-enhancements.css?v=202610230032">
 </head>
 <body data-page="upgrade">
     <div class="watch-app-layout">
@@ -135,22 +135,53 @@
                     <p class="donation-progress-label"><span id="upgrade-raised">$0</span> of <span id="upgrade-goal">$100</span> raised this month</p>
                 </section>
 
+                <section class="tier-grid" aria-label="Donor tiers">
+                    <article class="card tier-card">
+                        <p class="eyebrow">Basic Supporter</p>
+                        <h2 class="tier-price">$5+<small> donated</small></h2>
+                        <ul class="tier-perks">
+                            <li>Supporter badge next to your name</li>
+                            <li>Six profile accent colours</li>
+                            <li>A spot on the supporter wall</li>
+                        </ul>
+                    </article>
+                    <article class="card tier-card is-gold">
+                        <p class="eyebrow">Gold Supporter</p>
+                        <h2 class="tier-price">$10+<small> donated</small></h2>
+                        <ul class="tier-perks">
+                            <li>Everything in Basic, with a Gold badge</li>
+                            <li>Twelve accent colours, profile borders and a banner</li>
+                            <li>Vote on what gets built next</li>
+                            <li>Early access to experimental features</li>
+                        </ul>
+                    </article>
+                </section>
+
                 <section class="card upgrade-section btc-card" id="btc" aria-labelledby="btc-title">
                     <h2 id="btc-title">Donate with Bitcoin</h2>
                     <p class="intro">Donations are optional and go toward server costs.</p>
                     <img class="btc-qr" src="../btc-qr.svg" alt="Bitcoin wallet QR code" width="200" height="200">
                     <p><code id="btc-address" class="btc-address">bc1q3640y02gjzxw248zukydnpm5juxacxc922kw2w</code></p>
                     <p><button id="btc-copy" class="secondary-button" type="button">Copy address</button></p>
+                    <h3>Sent a donation?</h3>
+                    <p class="acc-muted">Tier is based on the total you donate. After sending, contact us to get your perks applied. You need to be signed in.</p>
+                    <p><button id="perks-open" class="primary-button" type="button" disabled>Contact for perks</button></p>
+                    <form id="perks-form" class="perks-form" hidden>
+                        <label for="perks-wallet">Which wallet address did you send from?</label>
+                        <input id="perks-wallet" type="text" maxlength="100" autocomplete="off" spellcheck="false" required placeholder="bc1q...">
+                        <p id="perks-msg" class="acc-muted" role="status"></p>
+                        <button class="primary-button" type="submit">Send request</button>
+                    </form>
                 </section>
             </main>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../watching.js?v=202610222358"></script>
-    <script src="../accounts.js?v=202610222358"></script>
-    <script src="../donationslive.js?v=202610222358"></script>
-    <script src="../ads.js?v=202610222358"></script>
+    <script src="../watching.js?v=202610230032"></script>
+    <script src="../accounts.js?v=202610230032"></script>
+    <script src="../donationslive.js?v=202610230032"></script>
+    <script src="../ads.js?v=202610230032"></script>
     <script>document.getElementById("btc-copy").addEventListener("click",function(e){navigator.clipboard.writeText(document.getElementById("btc-address").textContent).then(function(){e.target.textContent="Copied"})})</script>
     <script>
     (function () {
@@ -191,6 +222,34 @@
         }
         window.addEventListener("account:changed", renderAccount);
         renderAccount();
+
+        var perksBtn = document.getElementById("perks-open");
+        var perksForm = document.getElementById("perks-form");
+        var perksMsg = document.getElementById("perks-msg");
+        function syncPerks() {
+            var acc = window.OpieAccount;
+            var signedIn = !!(acc && acc.getProfile());
+            perksBtn.disabled = !signedIn;
+            perksBtn.title = signedIn ? "" : "Sign in to contact for perks";
+            if (!signedIn) perksForm.hidden = true;
+        }
+        perksBtn.onclick = function () { perksForm.hidden = !perksForm.hidden; };
+        perksForm.onsubmit = async function (e) {
+            e.preventDefault();
+            var acc = window.OpieAccount;
+            if (!acc || !acc.client || !acc.getProfile()) return;
+            perksMsg.textContent = "Sending...";
+            var out = await acc.client.rpc("request_perks", { p_wallet: document.getElementById("perks-wallet").value });
+            var res = out.data;
+            if (out.error || !res || !res.ok) {
+                perksMsg.textContent = (res && res.error) || "Couldn't send your request. Try again later.";
+                return;
+            }
+            perksMsg.textContent = "Request sent. We'll review it and apply your perks.";
+            perksForm.reset();
+        };
+        window.addEventListener("account:changed", syncPerks);
+        syncPerks();
 
         (async function () {
             var cfg = { goal: 0, currency: "$", raised: {} };
