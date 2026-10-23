@@ -30,7 +30,8 @@
     function showAd() {
         const wrap = el("div");
         const slot = el("div", "ad-slot");
-        const frame = document.createElement("iframe");
+        const holder = document.getElementById("aads-unit");
+        const frame = (holder && holder.querySelector("iframe")) || document.createElement("iframe");
         frame.dataset.aa = AADS_UNIT;
         frame.src = `https://acceptable.a-ads.com/${AADS_UNIT}/?size=Adaptive&background_color=transparent`;
         frame.style.cssText = "border:0;padding:0;width:100%;height:250px;overflow:hidden;display:block;margin:auto";
