@@ -2,7 +2,7 @@
   "use strict";
 
   /* =====================================================================
-     Opie Watch — Watch Parties
+     OPwatch — Watch Parties
      Syncs playback state and presence across viewers using Supabase
      Realtime (Broadcast + Presence). No separate WebSocket server.
 
@@ -184,7 +184,7 @@
     </div>
     <div class="confirm-actions">
       <button id="party-gold-gate-action" class="primary-button" type="button">Upgrade to Gold</button>
-      <a class="secondary-button" href="../">Back to Opie Watch</a>
+      <a class="secondary-button" href="../">Back to OPwatch</a>
     </div>`;
   if (lobbySection && lobbySection.parentNode) lobbySection.parentNode.insertBefore(goldGate, lobbySection);
   const goldGateMessage = $("#party-gold-gate-message", goldGate);

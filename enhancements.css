@@ -266,7 +266,7 @@ h2 {
 
 .social-link:hover,
 .social-link:focus-visible,
-.kofi:hover {
+.btc:hover {
     background: var(--opie-orange);
     color: #111;
     box-shadow: 0 0 24px var(--opie-orange-glow);

@@ -5,9 +5,9 @@ This is a standalone Discord bot service for Opieferd. It is intentionally kept 
 ## Included
 
 - `/ping` — checks bot responsiveness and reports gateway latency.
-- `/watch` — links to Opie Watch.
+- `/watch` — links to OPwatch.
 - `/about` — explains the bot's basic commands.
-- Presence — shows the bot account as **Watching Opie Watch**.
+- Presence — shows the bot account as **Watching OPwatch**.
 - `GET /healthz` — JSON health endpoint for hosting-platform health checks.
 - Environment-based secrets; no bot token is stored in source control.
 

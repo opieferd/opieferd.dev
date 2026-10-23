@@ -1,5 +1,5 @@
 /* =====================================================================
-   Opie Watch accounts UI  (loads AFTER your main stylesheet)
+   OPwatch accounts UI  (loads AFTER your main stylesheet)
    Built on your tokens: --bg --card --border --muted --accent --accent-soft.
    Your global `button` rule fills orange on hover, so every custom button
    below sets explicit hover/focus states to opt out of it.

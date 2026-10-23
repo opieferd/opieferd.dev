@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upgrade · Watch · opieferd</title>
-    <meta name="description" content="Support Opie Watch and unlock supporter perks">
+    <meta name="description" content="Support OPwatch and unlock supporter perks">
     <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
     <link rel="icon" type="image/png" href="https://opieferd.dev/favicon.png">
     <link rel="shortcut icon" type="image/png" href="https://opieferd.dev/favicon.png">
@@ -21,14 +21,14 @@
                 </svg>
             </button>
             <div class="sidebar-brand">
-                <a href="../" class="brand-link" title="Opie Watch Home">
+                <a href="../" class="brand-link" title="OPwatch Home">
                     <span class="brand-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                     </span>
                     <div class="brand-text">
-                        <span class="brand-title">Opie Watch</span>
+                        <span class="brand-title">OPwatch</span>
                         <span class="brand-badge">Stream</span>
                     </div>
                 </a>
@@ -124,9 +124,9 @@
         <div class="watch-main-content">
             <main class="watching-page">
                 <header class="page-header">
-                    <p class="eyebrow">Support Opie Watch</p>
+                    <p class="eyebrow">Support OPwatch</p>
                     <h1>Upgrade<span class="title-mark"></span></h1>
-                    <p class="intro">Opie Watch is free for everyone, and the watchlist always will be. Supporters keep it running and get a few extras.</p>
+                    <p class="intro">OPwatch is free for everyone, and the watchlist always will be. Supporters keep it running and get a few extras.</p>
                 </header>
 
                 <section class="card upgrade-progress" aria-labelledby="goal-title">
@@ -135,53 +135,12 @@
                     <p class="donation-progress-label"><span id="upgrade-raised">$0</span> of <span id="upgrade-goal">$100</span> raised this month</p>
                 </section>
 
-                <section class="tier-grid" aria-label="Membership tiers">
-                    <article class="card tier-card">
-                        <p class="eyebrow">Basic Supporter</p>
-                        <h2 class="tier-price">$5<small> / month</small></h2>
-                        <ul class="tier-perks">
-                            <li>Supporter badge next to your name</li>
-                            <li>Six profile accent colours</li>
-                            <li>A spot on the supporter wall</li>
-                        </ul>
-                        <a class="secondary-button" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
-                    </article>
-
-                    <article class="card tier-card is-gold">
-                        <p class="eyebrow">Gold Supporter</p>
-                        <h2 class="tier-price">$10<small> / month</small></h2>
-                        <ul class="tier-perks">
-                            <li>Everything in Basic, with a Gold badge</li>
-                            <li>Twelve accent colours, profile borders and a banner</li>
-                            <li>Vote on what gets built next</li>
-                            <li>Early access to experimental features</li>
-                        </ul>
-                        <a class="secondary-button" href="https://ko-fi.com/opieferd/tiers" target="_blank" rel="noopener noreferrer">Join on Ko-fi</a>
-                    </article>
-                </section>
-
-                <section class="card upgrade-steps upgrade-section" aria-labelledby="steps-title">
-                    <h2 id="steps-title">How your tier gets applied</h2>
-                    <ol>
-                        <li>
-                            <strong>Have an Opie Watch account.</strong>
-                            <div id="upgrade-account"><p class="acc-muted">Loading…</p></div>
-                        </li>
-                        <li>
-                            <strong>Join a tier on Ko-fi.</strong>
-                            <p class="acc-muted">Payment happens on Ko-fi, so your card details never touch this site.</p>
-                        </li>
-                        <li>
-                            <strong>Let us match the payment to you.</strong>
-                            <p class="acc-muted">Use the same email on Ko-fi as on your Opie Watch account. If they differ, write your @username in the Ko-fi message. Your tier usually appears within a minute or two.</p>
-                        </li>
-                    </ol>
-                </section>
-
-                <section class="card upgrade-section">
-                    <h2>Just want to chip in?</h2>
-                    <p class="intro">A one-time tip on Ko-fi counts toward the monthly goal but doesn’t unlock supporter perks.</p>
-                    <p><a class="secondary-button" href="https://ko-fi.com/opieferd" target="_blank" rel="noopener noreferrer">One-time tip on Ko-fi ♥</a></p>
+                <section class="card upgrade-section btc-card" id="btc" aria-labelledby="btc-title">
+                    <h2 id="btc-title">Donate with Bitcoin</h2>
+                    <p class="intro">Donations are optional and go toward server costs.</p>
+                    <img class="btc-qr" src="../btc-qr.svg" alt="Bitcoin wallet QR code" width="200" height="200">
+                    <p><code id="btc-address" class="btc-address">bc1q3640y02gjzxw248zukydnpm5juxacxc922kw2w</code></p>
+                    <p><button id="btc-copy" class="secondary-button" type="button">Copy address</button></p>
                 </section>
             </main>
         </div>
@@ -191,6 +150,8 @@
     <script src="../watching.js"></script>
     <script src="../accounts.js"></script>
     <script src="../donationslive.js"></script>
+    <script src="../ads.js"></script>
+    <script>document.getElementById("btc-copy").addEventListener("click",function(e){navigator.clipboard.writeText(document.getElementById("btc-address").textContent).then(function(){e.target.textContent="Copied"})})</script>
     <script>
     (function () {
         "use strict";

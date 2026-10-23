@@ -34,7 +34,7 @@ const commands = [
         .setDescription("Check whether the Opieferd bot is responsive."),
     new SlashCommandBuilder()
         .setName("watch")
-        .setDescription("Get the link to Opie Watch."),
+        .setDescription("Get the link to OPwatch."),
     new SlashCommandBuilder()
         .setName("about")
         .setDescription("Learn what the Opieferd bot does.")
@@ -79,7 +79,7 @@ client.once(Events.ClientReady, (readyClient) => {
     ready = true;
     startedAt = Date.now();
     readyClient.user.setPresence({
-        activities: [{ name: "Opie Watch", type: ActivityType.Watching }],
+        activities: [{ name: "OPwatch", type: ActivityType.Watching }],
         status: "online"
     });
     console.log(`Logged in as ${readyClient.user.tag}.`);
@@ -101,8 +101,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (interaction.commandName === "watch") {
             const embed = new EmbedBuilder()
                 .setColor(0x8b5cf6)
-                .setTitle("Opie Watch")
-                .setDescription("Browse movies, TV, and anime on Opie Watch.")
+                .setTitle("OPwatch")
+                .setDescription("Browse movies, TV, and anime on OPwatch.")
                 .setURL(watchUrl)
                 .setFooter({ text: "opieferd.dev" });
 
@@ -115,7 +115,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         if (interaction.commandName === "about") {
             await interaction.reply({
-                content: "I'm the Opieferd community bot. Use /watch to open Opie Watch or /ping to check whether I'm online.",
+                content: "I'm the Opieferd community bot. Use /watch to open OPwatch or /ping to check whether I'm online.",
                 ephemeral: true
             });
         }
