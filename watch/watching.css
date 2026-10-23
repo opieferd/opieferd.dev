@@ -853,3 +853,12 @@ dialog.disclaimer[open] {
 @media (prefers-reduced-motion: reduce) {
     .donation-progress-fill { transition: none; }
 }
+
+/* ---- Optional ad prompt + BTC card ---- */
+.ad-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 1rem; }
+.ad-modal { background: #141414; color: #fff; border: 1px solid rgba(255, 255, 255, .15); border-radius: 12px; padding: 1.5rem; max-width: 480px; width: 100%; text-align: center; }
+.ad-actions { display: flex; gap: .75rem; justify-content: center; margin-top: 1rem; }
+.ad-slot { min-height: 250px; margin-bottom: 1rem; }
+.ad-status { margin-bottom: 1rem; }
+.btc-qr { background: #fff; padding: .5rem; border-radius: 8px; }
+.btc-address { word-break: break-all; }

@@ -8,7 +8,7 @@
        ===================================================================== */
     const SUPABASE_URL = "https://ykipenudpfnzbgmxrepi.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_4_AkBab6OcvzLubqcONTvw_-LLsarF9";
-    const KOFI_URL = "https://ko-fi.com/opieferd";
+    const DONATE_URL = "/watch/upgrade/#btc";
     const TMDB_POSTER = "https://image.tmdb.org/t/p/w342";
     /* Production site root used for email confirm / password-reset links.
        Never use location.origin here — local/dev hosts (localhost:3000) end up in emails. */
@@ -244,7 +244,7 @@
         const submit = recover ? "Save password" : reset ? "Send reset link" : signup ? "Create account" : "Sign in";
         authDialog.innerHTML = `
             <div class="disclaimer-content">
-                <p class="eyebrow">Opie Watch account</p>
+                <p class="eyebrow">OPwatch account</p>
                 <h2>${title}</h2>
                 ${reset || recover ? "" : `
                 <div class="acc-tabs" role="group" aria-label="Sign in or create account">
@@ -510,8 +510,8 @@
             <div class="acc-membership">
                 <h3 class="acc-h3">Membership: ${esc(tierLabel(p))}</h3>
                 <p class="acc-muted">Basic ($5/mo): badge, accent colours, supporter wall. Gold ($10/mo): Gold badge, more colours, borders, banner, roadmap voting, early access.</p>
-                <p class="acc-muted">Join a membership tier on Ko-fi using the same email as this account, or write @yourusername in the Ko-fi message, and your tier is applied automatically.</p>
-                <a class="secondary-button" href="${KOFI_URL}" target="_blank" rel="noopener noreferrer">Support on Ko-fi <span aria-hidden="true">♥</span></a>
+                <p class="acc-muted">Donations are optional and help keep OPwatch running.</p>
+                <a class="secondary-button" href="${DONATE_URL}">Donate with Bitcoin <span aria-hidden="true">♥</span></a>
             </div>`;
     }
 
@@ -1246,7 +1246,7 @@ if (act === "owner-mod") return run(async () => {
     wallSection.className = "recommendation-section acc-wall";
     wallSection.hidden = true;
     wallSection.innerHTML = `
-        <div class="section-heading"><div><p class="eyebrow">Thank you</p><h2>The people keeping the lights on</h2></div><a class="text-button" href="${KOFI_URL}" target="_blank" rel="noopener noreferrer">Support Opie Watch ♥</a></div>
+        <div class="section-heading"><div><p class="eyebrow">Thank you</p><h2>The people keeping the lights on</h2></div><a class="text-button" href="${DONATE_URL}">Support OPwatch ♥</a></div>
         <div id="supporter-wall-list" class="acc-wall-list"></div>`;
     if (wallAnchor && wallAnchor.parentNode) wallAnchor.parentNode.insertBefore(wallSection, wallAnchor);
 

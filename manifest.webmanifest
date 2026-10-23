@@ -1,6 +1,6 @@
 {
-  "name": "Opie Watch - Stream TV, Movies & Anime",
-  "short_name": "Opie Watch",
+  "name": "OPwatch - Stream TV, Movies & Anime",
+  "short_name": "OPwatch",
   "description": "Watch TV, Movies, and Anime! Find exactly what you're looking for and interact with the community.",
   "start_url": "/watch/",
   "scope": "/watch/",
