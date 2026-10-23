@@ -859,8 +859,6 @@ dialog.disclaimer[open] {
 .ad-tab[hidden] { display: none; }
 .ad-tab.is-open { width: min(360px, calc(100vw - 2rem)); text-align: center; }
 .ad-actions { display: flex; gap: .5rem; margin-top: .75rem; }
-.ad-slot { min-height: 250px; margin-bottom: .75rem; }
-.ad-status { margin-bottom: .75rem; }
 .btc-card h2 { margin-bottom: 1rem; }
 .btc-qr { display: block; margin: 1.25rem 0; background: #fff; padding: .5rem; border-radius: 8px; }
 .btc-address { word-break: break-all; }
