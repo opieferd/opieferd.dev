@@ -8,9 +8,9 @@
     <meta http-equiv="Content-Security-Policy" content="frame-src 'self' https://vidrock.to https://vidsrc.sh https://vidlink.pro https://vaplayer.ru https://cinesrc.st https://vixsrc.to; object-src 'none'; base-uri 'self';">
     <link rel="icon" type="image/png" href="https://opieferd.dev/favicon.png">
     <link rel="shortcut icon" type="image/png" href="https://opieferd.dev/favicon.png">
-    <link rel="stylesheet" href="../watching.css?v=202610230039">
-    <link rel="stylesheet" href="../accounts.css?v=202610230039">
-    <link rel="stylesheet" href="../../subpage-enhancements.css?v=202610230039">
+    <link rel="stylesheet" href="../watching.css?v=202610230042">
+    <link rel="stylesheet" href="../accounts.css?v=202610230042">
+    <link rel="stylesheet" href="../../subpage-enhancements.css?v=202610230042">
 </head>
 <body data-page="upgrade">
     <div class="watch-app-layout">
@@ -165,7 +165,7 @@
                     <p><button id="btc-copy" class="secondary-button" type="button">Copy address</button></p>
                     <h3>Sent a donation?</h3>
                     <p class="acc-muted">Tier is based on the total you donate. After sending, contact us to get your perks applied. You need to be signed in.</p>
-                    <p><button id="perks-open" class="primary-button" type="button" disabled>Contact for perks</button></p>
+                    <p><button id="perks-open" class="primary-button" type="button">Contact for perks</button></p>
                     <form id="perks-form" class="perks-form" hidden>
                         <label for="perks-wallet">Which wallet address did you send from?</label>
                         <input id="perks-wallet" type="text" maxlength="100" autocomplete="off" spellcheck="false" required placeholder="bc1q...">
@@ -178,10 +178,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../watching.js?v=202610230039"></script>
-    <script src="../accounts.js?v=202610230039"></script>
-    <script src="../donationslive.js?v=202610230039"></script>
-    <script src="../ads.js?v=202610230039"></script>
+    <script src="../watching.js?v=202610230042"></script>
+    <script src="../accounts.js?v=202610230042"></script>
+    <script src="../donationslive.js?v=202610230042"></script>
+    <script src="../ads.js?v=202610230042"></script>
     <script>document.getElementById("btc-copy").addEventListener("click",function(e){navigator.clipboard.writeText(document.getElementById("btc-address").textContent).then(function(){e.target.textContent="Copied"})})</script>
     <script>
     (function () {
@@ -226,14 +226,20 @@
         var perksBtn = document.getElementById("perks-open");
         var perksForm = document.getElementById("perks-form");
         var perksMsg = document.getElementById("perks-msg");
-        function syncPerks() {
+        function isSignedIn() {
             var acc = window.OpieAccount;
-            var signedIn = !!(acc && acc.getProfile());
-            perksBtn.disabled = !signedIn;
-            perksBtn.title = signedIn ? "" : "Sign in to contact for perks";
-            if (!signedIn) perksForm.hidden = true;
+            return !!(acc && acc.getProfile());
         }
-        perksBtn.onclick = function () { perksForm.hidden = !perksForm.hidden; };
+        function syncPerks() { if (!isSignedIn()) perksForm.hidden = true; }
+        perksBtn.addEventListener("click", function () {
+            if (!isSignedIn()) {
+                perksMsg.textContent = "";
+                if (window.OpieAccount) window.OpieAccount.openAuth("signin");
+                else alert("Accounts aren't available right now. Try again later.");
+                return;
+            }
+            perksForm.hidden = !perksForm.hidden;
+        });
         perksForm.onsubmit = async function (e) {
             e.preventDefault();
             var acc = window.OpieAccount;
