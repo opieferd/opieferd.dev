@@ -46,3 +46,23 @@ document.addEventListener('keydown', (event) => {
     setTimeout(() => cat.remove(), 4500);
   }
 });
+
+const orangeCopyButton = document.getElementById('copy-opie-orange');
+if (orangeCopyButton) {
+  let copyReset;
+  orangeCopyButton.addEventListener('click', async () => {
+    const status = document.getElementById('orange-copy-status');
+    try {
+      await navigator.clipboard.writeText('#EBAF36');
+      document.getElementById('orange-copy-label').textContent = 'Copied';
+      status.textContent = 'Opie Orange hex color copied.';
+      clearTimeout(copyReset);
+      copyReset = setTimeout(() => {
+        document.getElementById('orange-copy-label').textContent = '#EBAF36';
+        status.textContent = '';
+      }, 2000);
+    } catch {
+      status.textContent = 'Copy this color: #EBAF36';
+    }
+  });
+}
