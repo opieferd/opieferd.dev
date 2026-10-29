@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="style.min.css">
   <link rel="stylesheet" href="logoloop.css">
   <link rel="stylesheet" href="menu.css">
-  <link rel="stylesheet" href="audioplayer.css">
+  <link rel="stylesheet" href="audioplayer.css?v=20261029-seek">
   <link rel="stylesheet" href="home-2026.css?v=orange-20261029">
   <link rel="stylesheet" href="opie-orange.css?v=20261029-player-width">
 </head>
@@ -101,7 +101,21 @@
       </section>
 
       <div class="music-brand-stack">
-      <section class="currently-section" aria-label="Music player"><div class="currently-label"><span class="pulse-dot"></span> MUSIC</div><div class="custom-audio-player"><img src="assets/nirvana-palladium-1990.jpg" alt="Nirvana — Palladium, Hollywood 1990 album cover" class="audio-icon"><span class="audio-title">Where Did You Sleep Last Night — Nirvana</span><button id="playPauseBtn" aria-label="Play or pause music"><span aria-hidden="true">▶</span></button><audio id="audioPlayer" src="assets/where-did-you-sleep-last-night.mp3" preload="none" loop></audio></div><a href="/watch/upgrade/#btc" class="support-link">Support ↗</a></section>
+      <section class="currently-section" aria-label="Music player">
+        <div class="currently-label"><span class="pulse-dot"></span> MUSIC</div>
+        <div class="custom-audio-player">
+          <img src="assets/nirvana-palladium-1990.jpg" alt="Nirvana — Palladium, Hollywood 1990 album cover" class="audio-icon">
+          <span class="audio-title">Where Did You Sleep Last Night — Nirvana</span>
+          <button id="playPauseBtn" aria-label="Play or pause music"><span aria-hidden="true">▶</span></button>
+          <div class="audio-timeline">
+            <span id="audioElapsed" class="audio-time">0:00</span>
+            <input id="audioSeek" class="audio-seek" type="range" min="0" max="1" step="1" value="0" aria-label="Seek playback" disabled>
+            <span id="audioDuration" class="audio-time">--:--</span>
+          </div>
+          <audio id="audioPlayer" src="assets/where-did-you-sleep-last-night.mp3" preload="metadata" loop></audio>
+        </div>
+        <a href="/watch/upgrade/#btc" class="support-link">Support ↗</a>
+      </section>
       <section id="opie-orange" class="opie-orange-swatch" aria-labelledby="orange-title">
         <div class="orange-brand-top"><span><i aria-hidden="true"></i> SIGNATURE COLOR</span><span>OP / 01</span></div>
         <div class="orange-brand-grid">
@@ -134,7 +148,7 @@
       <div class="footer-right"><span>© 2026 opieferd</span><a href="#hero-title">Back to top ↑</a></div>
     </footer>
   </div>
-  <script src="audioplayer.js"></script>
+  <script src="audioplayer.js?v=20261029-seek"></script>
   <script src="menu.js"></script>
   <script src="home-2026.js?v=orange-20261029"></script>
 </body>
