@@ -1,0 +1,71 @@
+/* Dedicated, versioned styles for Opie's signature color. */
+#opie-orange {
+  --brand-orange: #EBAF36;
+  display: block;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0;
+  margin: 2rem 0 4rem;
+  border: 1px solid #80612e;
+  border-radius: 12px;
+  background: #12100c;
+  color: #f5efe5;
+  box-shadow: 0 30px 80px #0006;
+}
+#opie-orange .orange-brand-top, #opie-orange .orange-brand-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 2rem;
+  font: 500 .7rem var(--mono, monospace);
+  letter-spacing: .1em;
+  color: #b7a587;
+}
+#opie-orange .orange-brand-top { border-bottom: 1px solid #5e4829; }
+#opie-orange .orange-brand-top > span:first-child { display: flex; align-items: center; gap: .7rem; }
+#opie-orange .orange-brand-top i { width: 9px; height: 9px; background: var(--brand-orange); border-radius: 50%; box-shadow: 0 0 16px #ebaf3680; }
+#opie-orange .orange-brand-grid { display: grid; grid-template-columns: 1fr 1fr; min-height: 470px; }
+#opie-orange .orange-brand-copy { position: relative; z-index: 2; padding: clamp(2rem, 5vw, 4.5rem); }
+#opie-orange h2 { margin: 0; color: #f5efe5; font-size: clamp(3.7rem, 7vw, 7rem); letter-spacing: -.075em; line-height: .9; font-weight: 900; }
+#opie-orange h2 em { color: var(--brand-orange); font-style: normal; }
+#opie-orange .orange-brand-hex { margin: 1.5rem 0 2rem; font: 400 1rem var(--mono, monospace); letter-spacing: .25em; color: #c8bca8; }
+#opie-orange #copy-opie-orange { display: inline-flex; align-items: center; justify-content: space-between; gap: 2rem; min-width: 170px; padding: .9rem 1.1rem; border: 1px solid var(--brand-orange); border-radius: 5px; background: var(--brand-orange); color: #1d1508; font: 700 .8rem Inter, sans-serif; cursor: pointer; transition: box-shadow .2s, transform .2s; }
+#opie-orange #copy-opie-orange:hover { box-shadow: 0 0 28px #ebaf3645; transform: translateY(-3px); }
+#opie-orange #copy-opie-orange:focus-visible { outline: 2px solid #fff2d5; outline-offset: 5px; }
+#opie-orange .orange-brand-art { position: relative; display: grid; place-items: center; min-width: 0; overflow: hidden; background: radial-gradient(ellipse at center, #ebaf362e, transparent 68%), #19140d; border-left: 1px solid #5e4829; perspective: 1000px; }
+#opie-orange .orange-brand-art::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(#ebaf3610 1px, transparent 1px), linear-gradient(90deg,#ebaf3610 1px,transparent 1px); background-size: 32px 32px; mask-image: radial-gradient(ellipse, #000, transparent 75%); }
+#opie-orange .orange-specimen { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; width: clamp(200px, 21vw, 280px); height: 340px; padding: 1.2rem; background: #EBAF36; color: #201708; border: 1px solid #ffe0a1; border-radius: 7px; transform: rotate(-12deg) rotateY(-12deg); box-shadow: 8px 8px 0 #855719, 16px 16px 0 #3d2b13, 22px 35px 50px #0009; transition: transform .65s cubic-bezier(.2,.8,.2,1), box-shadow .65s; }
+#opie-orange:hover .orange-specimen { transform: rotate(4deg) rotateY(8deg) translateY(-8px); box-shadow: -6px 10px 0 #855719, -12px 20px 0 #3d2b13, -18px 40px 60px #0009; }
+#opie-orange .orange-specimen-head, #opie-orange .orange-specimen-foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font: 500 .6rem var(--mono, monospace); letter-spacing: .06em; }
+#opie-orange .orange-specimen-foot { border-top: 1px solid #20170855; padding-top: .8rem; }
+#opie-orange .orange-specimen-foot strong { font-size: .9rem; }
+#opie-orange .orange-specimen-foot span { font-size: .5rem; }
+#opie-orange .orange-brand-mark { width: 210px; max-width: 100%; align-self: center; height: 210px; transition: rotate .8s ease; }
+#opie-orange:hover .orange-brand-mark { rotate: 45deg; }
+#opie-orange .orange-orbit { position: absolute; width: 400px; height: 400px; border: 1px solid #ebaf3635; border-radius: 50%; }
+#opie-orange .orange-orbit-b { width: 510px; height: 510px; border-style: dashed; opacity: .5; animation: orange-orbit-turn 70s linear infinite; }
+#opie-orange .orange-art-axis { position: absolute; color: #ebaf3680; font: 1.5rem monospace; }
+#opie-orange .orange-axis-top { top: 1rem; right: 1.5rem; }
+#opie-orange .orange-axis-bottom { bottom: 1rem; left: 1.5rem; }
+#opie-orange .orange-brand-bottom { border-top: 1px solid #5e4829; }
+#opie-orange .orange-brand-bottom b { margin-left: .5rem; color: #f0d8aa; font-weight: 400; }
+#opie-orange .orange-brand-sample { flex: 0 1 180px; height: 16px; background: repeating-linear-gradient(90deg, #EBAF36 0 12px, transparent 12px 16px); }
+@keyframes orange-orbit-turn { to { transform: rotate(360deg); } }
+@media(max-width: 700px) {
+  #opie-orange .orange-brand-grid { grid-template-columns: 1fr; }
+  #opie-orange .orange-brand-copy { padding: 2rem; }
+  #opie-orange h2 { font-size: clamp(4rem, 14vw, 6rem); }
+  #opie-orange .orange-brand-art { min-height: 420px; border-left: 0; border-top: 1px solid #5e4829; }
+  #opie-orange .orange-specimen { width: 250px; height: 320px; }
+  #opie-orange .orange-brand-top, #opie-orange .orange-brand-bottom { padding: 1rem 1.25rem; font-size: .6rem; }
+  #opie-orange .orange-brand-bottom { flex-wrap: wrap; }
+  #opie-orange .orange-brand-sample { display: none; }
+}
+@media(prefers-reduced-motion: reduce) {
+  #opie-orange .orange-specimen, #opie-orange .orange-brand-mark { transition: none; }
+  #opie-orange:hover .orange-specimen { transform: rotate(-12deg) rotateY(-12deg); }
+  #opie-orange:hover .orange-brand-mark { rotate: none; }
+  #opie-orange .orange-orbit { animation: none; }
+}
