@@ -909,30 +909,65 @@ a:focus-visible,button:focus-visible {
 
 /* Opie's signature color. */
 .content .opie-orange-swatch {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 1rem 0 3rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid #f4c15c;
+  border-radius: 10px;
+  background: #EBAF36;
+  color: #211609;
+}
+.orange-spec, .orange-details {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
+  font: 500 .72rem var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
-.opie-orange-chip {
-  width: 56px;
-  height: 56px;
-  flex: none;
-  border-radius: 8px;
-  background: #EBAF36;
+.orange-spec { padding-bottom: 1.2rem; border-bottom: 1px solid #21160940; }
+.orange-identity { display: flex; align-items: center; justify-content: space-between; padding: 2.5rem 0; }
+.orange-identity h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #211609;
+  font-size: clamp(3.8rem, 10vw, 9rem);
+  font-weight: 900;
+  line-height: .85;
+  letter-spacing: -.075em;
 }
-.opie-orange-swatch strong {
-  display: block;
+.orange-identity h2 span { color: #fff1cc; }
+.orange-emblem { font-size: clamp(7rem, 23vw, 20rem); line-height: .8; color: #211609; transition: rotate .65s ease, scale .65s ease; }
+.opie-orange-swatch:hover .orange-emblem { rotate: 45deg; scale: 1.06; }
+.orange-details { border-top: 1px solid #21160940; padding-top: 1.2rem; }
+#copy-opie-orange {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: .8rem 1rem;
+  border: 1px solid #211609;
+  border-radius: 4px;
+  background: #211609;
   color: #EBAF36;
-  font-size: 1rem;
+  font: 500 .85rem var(--mono);
+  cursor: pointer;
+  transition: background .2s, color .2s;
 }
-.opie-orange-swatch div > span {
-  display: block;
-  margin-top: .25rem;
-  color: var(--muted);
-  font: .75rem var(--mono);
+#copy-opie-orange:hover { background: transparent; color: #211609; }
+#copy-opie-orange:focus-visible { outline: 2px solid #211609; outline-offset: 4px; }
+.orange-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 540px) {
+  .orange-spec { align-items: flex-start; flex-direction: column; font-size: .62rem; }
+  .orange-identity { padding: 2rem 0; }
+  .orange-emblem { margin-right: -.5rem; }
+  .orange-details { font-size: .6rem; }
+  #copy-opie-orange { gap: 1rem; font-size: .75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orange-emblem { transition: none; }
+  .opie-orange-swatch:hover .orange-emblem { rotate: none; scale: none; }
 }
