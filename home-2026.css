@@ -906,3 +906,33 @@ a:focus-visible,button:focus-visible {
     translate:none
   }
 }
+
+/* Opie's signature color. */
+.content .opie-orange-swatch {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.opie-orange-chip {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 8px;
+  background: #EBAF36;
+}
+.opie-orange-swatch strong {
+  display: block;
+  color: #EBAF36;
+  font-size: 1rem;
+}
+.opie-orange-swatch div > span {
+  display: block;
+  margin-top: .25rem;
+  color: var(--muted);
+  font: .75rem var(--mono);
+}
