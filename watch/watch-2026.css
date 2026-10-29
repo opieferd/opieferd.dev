@@ -1,0 +1,187 @@
+/* Shared visual refresh for every OPwatch route. Existing layout and behavior stay in the page scripts. */
+:root {
+  --bg:#0b0a08;
+  --card:#17140f;
+  --border:#4a3925;
+  --muted:#b2a99b;
+  --accent:#ebaf36;
+  --accent-soft:rgba(235,175,54,.15);
+  --edge:#4a3925;
+  --edge-soft:#3f3326;
+  --glass-bg:rgba(22,18,14,.96)
+}
+body {
+  background:#0b0a08;
+  color:#f5efe5
+}
+body::before {
+  opacity:.15!important;
+  background-image:linear-gradient(rgba(235,175,54,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(235,175,54,.16) 1px,transparent 1px)!important;
+  background-size:72px 72px!important;
+  mask-image:linear-gradient(#000,transparent 85%)
+}
+.watching-page {
+  width:min(100% - 4rem,1180px)
+}
+.page-header {
+  padding:3.2rem 0 2.2rem
+}
+.page-header::after {
+  opacity:.45
+}
+.eyebrow,.section-label,.sidebar-section-label {
+  letter-spacing:.16em
+}
+.page-header h1,.home-heading {
+  font-weight:850;
+  letter-spacing:-.075em;
+  color:#f6f0e5;
+  text-shadow:none
+}
+.home-heading {
+  font-size:clamp(3rem,6vw,5rem)
+}
+.page-header .intro {
+  font-size:1.05rem;
+  max-width:60ch;
+  line-height:1.65;
+  color:#b5aa9a
+}
+.home-brand-badge {
+  border-radius:9px;
+  background:#211a10;
+  box-shadow:inset 0 1px #ffffff16,0 10px 26px #0005
+}
+.home-brand-icon {
+  border-radius:7px
+}
+.watch-sidebar {
+  border-radius:12px;
+  background:#17140fee;
+  box-shadow:0 20px 50px #0009,inset 0 1px #ffffff12
+}
+.watch-sidebar:hover {
+  box-shadow:0 20px 50px #0009,0 0 0 1px #ebaf3640
+}
+.sidebar-nav-item {
+  border-radius:6px
+}
+.sidebar-nav-item.active {
+  background:#ebaf3626;
+  box-shadow:inset 3px 0 var(--accent);
+  border-color:#ebaf3650
+}
+.sidebar-nav-item:hover {
+  transform:translateX(3px)
+}
+.card,.disclaimer {
+  border-radius:9px;
+  background:#17140f;
+  border-color:#594124;
+  box-shadow:0 14px 38px #0005
+}
+.card::before,.card::after {
+  opacity:.35
+}
+.card:hover {
+  transform:none;
+  box-shadow:0 18px 42px #0007;
+  border-color:#bb8735
+}
+.search-card {
+  background:radial-gradient(circle at 100% 0%,#6b451c45,transparent 45%),#19150f;
+  border-color:#8a612d
+}
+.search-form input[type="search"] {
+  border-radius:6px
+}
+.search-form .primary-button,.primary-button {
+  border-radius:6px;
+  background:var(--accent);
+  color:#21170b;
+  border:1px solid var(--accent);
+  font-weight:800;
+  transition:background .2s,transform .2s,box-shadow .2s
+}
+.primary-button:hover,.primary-button:focus-visible {
+  background:#f7c45d;
+  color:#21170b;
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px #ebaf3630
+}
+.secondary-button,.text-button {
+  border-radius:6px
+}
+.type-button,.genre-chip,.server-button {
+  border-radius:5px
+}
+.type-button.active,.genre-tab.active {
+  background:#ebaf3626
+}
+.section-heading {
+  border-bottom:1px solid #483521;
+  padding-bottom:1rem
+}
+.section-heading h2 {
+  font-weight:800;
+  letter-spacing:-.04em
+}
+.recommendation-card,.history-card,.result-card {
+  border-radius:7px;
+  background:#17140f;
+  box-shadow:none;
+  transition:transform .24s,border-color .24s,box-shadow .24s
+}
+.recommendation-card:hover,.history-card:hover,.result-card:hover,.recommendation-card:focus-visible,.history-card:focus-visible,.result-card:focus-visible {
+  transform:translateY(-5px);
+  box-shadow:0 14px 24px #0008;
+  border-color:var(--accent)
+}
+.recommendation-poster,.history-poster,.poster {
+  background:#2a2116
+}
+.recommendation-copy,.history-copy {
+  padding:.9rem
+}
+.recommendation-copy strong,.history-copy strong {
+  line-height:1.35
+}
+.genre-grid {
+  scrollbar-color:#8a612d transparent
+}
+.player-frame {
+  border-radius:7px;
+  overflow:hidden
+}
+.attribution {
+  color:#918676;
+  line-height:1.6
+}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:3px
+}
+@media(max-width:768px) {
+  .watching-page {
+    width:min(100% - 1.5rem,100%)
+  }
+  .page-header {
+    padding:2rem 0 1.7rem
+  }
+  .section-heading {
+    gap:.7rem
+  }
+  .watch-sidebar {
+    border-radius:10px
+  }
+  .home-brand-hero {
+    align-items:flex-start
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    transition-duration:.01ms!important
+  }
+}

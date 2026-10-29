@@ -1,21 +1,20 @@
 const playPauseBtn = document.getElementById('playPauseBtn');
 const audioPlayer = document.getElementById('audioPlayer');
-const icon = playPauseBtn.querySelector('i');
-
-playPauseBtn.addEventListener('click', () => {
-  if (audioPlayer.paused) {
-    audioPlayer.play();
-    icon.classList.remove('fa-play');
-    icon.classList.add('fa-pause');
-  } else {
-    audioPlayer.pause();
-    icon.classList.remove('fa-pause');
-    icon.classList.add('fa-play');
-  }
-});
-
-// Reset to play button when song ends
-audioPlayer.addEventListener('ended', () => {
-  icon.classList.remove('fa-pause');
-  icon.classList.add('fa-play');
-});
+if (playPauseBtn && audioPlayer) {
+  const icon = playPauseBtn.querySelector('span, i');
+  const updateButton = () => {
+    const playing = !audioPlayer.paused;
+    playPauseBtn.setAttribute('aria-label', playing ? 'Pause music' : 'Play music');
+    if (icon) icon.textContent = playing ? 'Ⅱ' : '▶';
+  };
+  playPauseBtn.addEventListener('click', async () => {
+    if (audioPlayer.paused) {
+      try { await audioPlayer.play(); } catch (error) { console.warn('Audio could not start', error); }
+    } else audioPlayer.pause();
+    updateButton();
+  });
+  audioPlayer.addEventListener('play', updateButton);
+  audioPlayer.addEventListener('pause', updateButton);
+  audioPlayer.addEventListener('ended', updateButton);
+  updateButton();
+}
