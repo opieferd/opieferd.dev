@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0a08">
+  <meta name="description" content="Support opieferd's software, games, and hardware projects with a Bitcoin donation.">
+  <title>Donate with Bitcoin — opieferd</title>
+  <link rel="icon" type="image/png" href="https://opieferd.dev/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.min.css">
+  <link rel="stylesheet" href="../home-2026.css?v=orange-20261029">
+  <link rel="stylesheet" href="../donate.css?v=20261029">
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <a class="wordmark" href="../" aria-label="opieferd home"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a>
+      <a class="text-link" href="../">Back to home <span aria-hidden="true">↗</span></a>
+    </header>
+    <main class="content donation-page">
+      <section class="hero donation-hero" aria-labelledby="donate-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="pulse-dot"></span> Support my work</p>
+          <h1 id="donate-title">Support my<br><em>projects.</em></h1>
+          <p class="hero-description">If you enjoy my web apps, games, or hardware projects, you can support my development work with a Bitcoin donation.</p>
+          <p class="hero-footnote">Donations are optional. Any amount is appreciated.</p>
+        </div>
+        <div class="donation-card" aria-labelledby="bitcoin-title">
+          <p class="section-kicker">Bitcoin / BTC</p>
+          <h2 id="bitcoin-title">Donate with Bitcoin</h2>
+          <a class="donation-qr-link" href="bitcoin:bc1q3640y02gjzxw248zukydnpm5juxacxc922kw2w" aria-label="Open a Bitcoin wallet to donate to opieferd">
+            <img class="donation-qr" src="../assets/bitcoin-qr.svg" alt="Scan this QR code with your Bitcoin wallet" width="200" height="200">
+          </a>
+          <p class="donation-address-label">Bitcoin address</p>
+          <code id="bitcoin-address" class="donation-address">bc1q3640y02gjzxw248zukydnpm5juxacxc922kw2w</code>
+          <div class="hero-actions">
+            <a class="button button-primary" href="bitcoin:bc1q3640y02gjzxw248zukydnpm5juxacxc922kw2w">Open wallet <span aria-hidden="true">↗</span></a>
+            <button id="copy-bitcoin-address" class="button button-ghost" type="button"><span id="bitcoin-copy-label">Copy address</span><span aria-hidden="true">⧉</span></button>
+          </div>
+          <p id="bitcoin-copy-status" class="donation-status" role="status"></p>
+          <p class="donation-instructions">Scan the code with a Bitcoin wallet, or copy the address to send a donation.</p>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <a class="wordmark" href="../"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a>
+      <div class="footer-right"><span>© 2026 opieferd</span><a href="../#work">View projects ↗</a></div>
+    </footer>
+  </div>
+  <script src="donate.js?v=20261029"></script>
+</body>
+</html>

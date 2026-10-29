@@ -1,0 +1,82 @@
+/* Reuse the homepage's colors, type, and button styles. */
+.donate-button {
+  gap: .75rem;
+  border-color: var(--orange);
+  color: var(--orange);
+  white-space: nowrap;
+}
+.donate-button .bitcoin-symbol { font-size: 1.15em; }
+
+/* The music player and swatch share their width after removing Support. */
+.music-brand-stack { grid-template-columns: max-content minmax(0, 1fr); }
+
+.donation-page .donation-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: clamp(2rem, 5vw, 5rem);
+  min-height: 0;
+  padding: clamp(3rem, 7vw, 6rem) 0;
+}
+.donation-page .hero h1 { font-size: clamp(3.2rem, 6.5vw, 6rem); }
+.donation-page .hero-footnote { margin-top: 2rem; }
+.donation-card {
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.donation-card .section-kicker { margin-bottom: .75rem; }
+.donation-card h2 {
+  margin: 0 0 1rem;
+  color: var(--cream);
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  letter-spacing: -.045em;
+  line-height: 1.15;
+}
+.donation-qr-link { display: block; width: min(100%, 200px); margin: 1.5rem auto; }
+.donation-qr {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 1rem;
+  border-radius: 6px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+.donation-address-label {
+  margin: 0 0 .5rem;
+  color: var(--muted);
+  font: .65rem var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.donation-address {
+  display: block;
+  margin-bottom: 1.25rem;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0b0a08;
+  color: var(--cream);
+  font: .75rem/1.8 var(--mono);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.donation-card .hero-actions { gap: .65rem; }
+.donation-card .button { flex: 1 1 140px; gap: .65rem; padding: .85rem 1rem; cursor: pointer; }
+.donation-card button:disabled { cursor: wait; opacity: .7; }
+.donation-status {
+  min-height: 1.7em;
+  margin: .85rem 0 0;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.donation-instructions { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .donation-page .donation-hero { grid-template-columns: minmax(0, 1fr); }
+  .donation-card { width: 100%; max-width: 520px; }
+}
+@media (max-width: 650px) {
+  .music-brand-stack { grid-template-columns: minmax(0, 1fr); }
+}
