@@ -203,3 +203,9 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,.local-file-button:f
  .transport-play{width:42px;height:42px}
  .transport-progress{gap:.4rem}
 }
+
+.player-stage.has-audio{min-height:138px;display:flex;align-items:center;justify-content:center}
+.player-stage.has-audio audio{display:none}
+.local-visual{display:flex;align-items:center;gap:1.15rem;padding:1.4rem;color:var(--muted);font-family:var(--mono);font-size:.71rem;letter-spacing:.12em}
+.local-visual>span:first-child{display:grid;place-items:center;width:64px;height:64px;border:1px solid #66502c;border-radius:6px;background:#34291c;color:var(--orange);font-size:2rem}
+@media(max-width:600px){.local-visual{font-size:.64rem;gap:.75rem}.local-visual>span:first-child{width:50px;height:50px}}
