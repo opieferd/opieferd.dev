@@ -103,3 +103,8 @@
 #magic-trace:disabled{cursor:not-allowed;opacity:.45}
 .magic-recipe:focus-visible{outline:2px solid var(--magic-orange);outline-offset:2px}
 @media(max-width:650px){.magic-trace-progress{font-size:.68rem}.magic-actions{gap:.45rem}.magic-btn{min-height:39px}}
+
+.magic-recipe-custom{border:1px dashed #af8749;background:linear-gradient(135deg,#362612,#211810)}
+.magic-recipe-custom .magic-recipe-icon{color:#efbc60}
+.magic-recipe-custom:hover,.magic-recipe-custom:focus-visible{background:#483018;border-color:#ebaf36}
+.magic-recipe[aria-pressed=true]{border-color:#ebaf36;background:#312414;box-shadow:inset 0 0 0 1px #ebaf3640}
