@@ -57,6 +57,71 @@ function scanRings(strokes){
  return{boundary:outer,pendingRing:pending,innerRings:inner,candidates,frame};
 }
 function classify(p,frame,inners){const inside=inners.filter(r=>dist(p,r.center)<r.radius*.94).sort((a,b)=>a.radius-b.radius);return inside.length?"inner":"outer";}
+
+/* Freehand ink can be lifted in the middle of a curve, and the pen can move
+ * between components in any order. Stitch adjacent endpoints, then recognize
+ * the water sigil from its structure: a tall S between two closed droplets.
+ * Geometry is used here, not the stroke count or the drawing order. */
+function stitchNearbyFragments(strokes,indices,tolerance=.023){
+ const chains=indices.map(i=>({ids:[i],points:strokes[i]})).filter(g=>g.points.length>1);
+ if(chains.length>32)return chains;
+ while(chains.length>1){
+  let closest=null,best=tolerance;
+  for(let i=0;i<chains.length;i++)for(let j=i+1;j<chains.length;j++){
+   const a=chains[i].points,b=chains[j].points;
+   for(const [reverseA,reverseB] of [[false,false],[false,true],[true,false],[true,true]]){
+    const end=reverseA?a[0]:a.at(-1),start=reverseB?b.at(-1):b[0],gap=dist(end,start);
+    if(gap<best){best=gap;closest={i,j,reverseA,reverseB};}
+   }
+  }
+  if(!closest)break;
+  const {i,j,reverseA,reverseB}=closest,a=chains[i],b=chains[j];
+  const first=reverseA?a.points.slice().reverse():a.points;
+  const second=reverseB?b.points.slice().reverse():b.points;
+  chains[i]={ids:[...a.ids,...b.ids],points:first.concat(second)};
+  chains.splice(j,1);
+ }
+ return chains;
+}
+function findWaterByTopology(strokes,indices,frame){
+ if(indices.length<3||indices.length>32)return null;
+ const chains=stitchNearbyFragments(strokes,indices);
+ if(chains.length<3)return null;
+ const stats=chains.map(chain=>{
+  const b=bounds(chain.points),start=chain.points[0],end=chain.points.at(-1);
+  const size=Math.max(b.w,b.h,.001);
+  const span=chain.points.slice(1).reduce((sum,p,i)=>sum+dist(p,chain.points[i]),0);
+  return{...chain,b,closed:dist(start,end)<Math.max(.018,size*.28),span};
+ });
+ let winner=null;
+ for(let i=0;i<stats.length;i++){
+  const center=stats[i],mid=center.b;
+  if(mid.h<.075||mid.h<mid.w*1.35||center.closed||center.span<mid.h*1.04)continue;
+  if(dist({x:mid.cx,y:mid.cy},frame.center)>frame.radius*.82)continue;
+  for(let j=0;j<stats.length;j++){
+   const left=stats[j],l=left.b;
+   if(j===i||!left.closed||l.h<.032||l.h<l.w*.82||l.cx>=mid.x-.009)continue;
+   if(l.cx<mid.cx-mid.h*.9||l.y>mid.y+mid.h*.86||l.y+l.h<mid.y-mid.h*.08)continue;
+   for(let k=0;k<stats.length;k++){
+    const right=stats[k],r=right.b;
+    if(k===i||k===j||!right.closed||r.h<.032||r.h<r.w*.82||r.cx<=mid.x+mid.w+.009)continue;
+    if(r.cx>mid.cx+mid.h*.9||r.y>mid.y+mid.h*.86||r.y+r.h<mid.y-mid.h*.08)continue;
+    if(Math.abs(l.cy-r.cy)>mid.h*.6)continue;
+    const ranking=scoreSymbols([center.points,left.points,right.points]);
+    const water=ranking.find(s=>s.id==="water");
+    if(!water||water.score<.57||water.score<ranking[0].score-.10)continue;
+    const confidence=clamp(water.score+.05);
+    if(!winner||confidence>winner.confidence)winner={
+     ids:[...center.ids,...left.ids,...right.ids].sort((a,b)=>a-b),
+     ranking:[{...water,score:+confidence.toFixed(3)},...ranking.filter(s=>s.id!=="water")],
+     confidence
+    };
+   }
+  }
+ }
+ return winner;
+}
+
 function segment(strokes,indices,frame,innerRings){
  const n=indices.length;if(!n)return[];
  const dp=Array(n+1).fill(-Infinity),choices=Array(n),cached=new Map();dp[n]=0;
@@ -277,6 +342,10 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
 }
 /* Casting quality is resolved only after the OUTER ring is closed.
  * 50% recognition is the minimum for a controlled, recorded spell. */
+export function classifyCastAccuracy(accuracy){
+ const score=Number.isFinite(accuracy)?accuracy:0;
+ return score>=50?"success":score>=25?"uncontrolled":"failed";
+}
 export function resolveCastOutcome(ir,ringClosed=true){
  if(!ringClosed)return{...ir,castOutcome:"preparing",castSucceeded:false};
  const score=Number.isFinite(ir.reading)?Math.round(ir.reading):0;
@@ -301,10 +370,13 @@ export function analyzeSeal(input){
  if(boundary)boundary.strokeIndices.forEach(i=>excluded.add(i));
  else if(pendingRing)pendingRing.strokeIndices.forEach(i=>excluded.add(i));
  const remaining=strokes.map((_,i)=>i).filter(i=>!excluded.has(i));
- const groups=segment(strokes,remaining,frame,innerRings),regions=[],recognized=[],warnings=[];
+ const water=findWaterByTopology(strokes,remaining,frame);
+  const waterIndices=new Set(water?.ids||[]);
+  const groups=[...(water?[water.ids]:[]),...segment(strokes,remaining.filter(i=>!waterIndices.has(i)),frame,innerRings)];
+  const regions=[],recognized=[],warnings=[];
  if(!boundary)warnings.push(pendingRing?"Close the gap between the glowing endpoints to cast.":"Draw and close the outer ring to cast.");
  for(const ids of groups){
-  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&winner.score>=.47&&(lead>=.012||winner.score>.76);
+  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=water&&ids===groups[0]?water.ranking:scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&winner.score>=.47&&(lead>=.012||winner.score>.76);
   const zone=classify(p,frame,innerRings),reason=!inside?"Outside the casting ring":winner.score<.47?"No matching symbol":lead<.012?"Ambiguous symbol":"";
   const region={strokeIndices:ids,bounds:b,inside,candidates:ranking.slice(0,4),recognized:accepted?winner.id:null,confidence:winner.score,rotationDegrees:winner.rotationDegrees,zone,accepted,reason};
   regions.push(region);
