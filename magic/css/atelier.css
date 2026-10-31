@@ -71,3 +71,10 @@
 .magic-book-entry{align-items:flex-start}.magic-book-entry span{min-width:0;overflow-wrap:anywhere}
 @media(max-width:680px){.magic-tier-tab{flex:1 1 29%;padding:.55rem .4rem;font-size:.72rem}.magic-book-tabs .magic-tier-tab{flex:1 1 30%;font-size:.66rem;padding:.45rem .25rem}.magic-recipe{min-height:152px}}
 @media(max-width:400px){.magic-tier-tab{font-size:.65rem;gap:.25rem}.magic-tier-count{font-size:.58rem}}
+
+.magic-rotation-label{display:inline-flex;align-items:center;gap:.5rem;padding:.36rem .65rem;border:1px solid #57472e;border-radius:6px;background:#201a12;color:#d4bfa0;font:.7rem var(--mono)}
+.magic-rotation-label select{min-height:32px;padding:.2rem .45rem;border:1px solid #6b5331;border-radius:4px;background:#100d09;color:#f5d495;font:.75rem var(--mono)}
+.magic-rotation-label select:disabled{opacity:.55;cursor:not-allowed}
+.magic-rotation-label select:focus-visible{outline:2px solid #ebaf36;outline-offset:2px}
+.magic-canvas-wrap .magic-canvas-hud{color:#f2d69a}
+@media(max-width:600px){.magic-rotation-label{width:100%;justify-content:space-between}}
