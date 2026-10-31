@@ -1,5 +1,5 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=miscast-v1";
-import {createCastEffects} from "./cast-fx.js?v=miscast-v1";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=recognizer-3";
+import {createCastEffects} from "./cast-fx.js?v=recognizer-3";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
