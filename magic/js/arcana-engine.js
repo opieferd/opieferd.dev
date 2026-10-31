@@ -14,11 +14,11 @@ const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.
 const clean=stroke=>(stroke||[]).filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)).slice(0,3000).map(p=>({x:clamp(p.x),y:clamp(p.y),t:Number.isFinite(p.t)?p.t:0}));
 function bounds(points){if(!points.length)return{x:0,y:0,w:0,h:0,cx:0,cy:0};let minX=1,minY=1,maxX=0,maxY=0;for(const p of points){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y);}return{x:minX,y:minY,w:maxX-minX,h:maxY-minY,cx:(minX+maxX)/2,cy:(minY+maxY)/2}}
 function resample(path,n=16){if(!path.length)return[];if(path.length===1)return Array.from({length:n},()=>path[0]);const lengths=[0];for(let i=1;i<path.length;i++)lengths[i]=lengths[i-1]+dist(path[i],path[i-1]);const total=lengths.at(-1);if(total<1e-8)return Array.from({length:n},()=>path[0]);let j=1;return Array.from({length:n},(_,i)=>{const target=i*total/(n-1);while(j<lengths.length-1&&lengths[j]<target)j++;const alpha=clamp((target-lengths[j-1])/(lengths[j]-lengths[j-1]||1));return{x:path[j-1].x+(path[j].x-path[j-1].x)*alpha,y:path[j-1].y+(path[j].y-path[j-1].y)*alpha}})}
-function cloud(strokes){const all=strokes.flat();if(!all.length)return[];const b=bounds(all),scale=Math.max(b.w,b.h,.00001),n=Math.max(7,Math.round(48/strokes.length));return strokes.flatMap(s=>resample(s,n).map(p=>({x:(p.x-b.cx)/scale,y:(p.y-b.cy)/scale})))}
+function cloud(strokes){const all=strokes.flat();if(!all.length)return[];const b=bounds(all),scale=Math.max(b.w,b.h,.00001),n=Math.max(5,Math.round(30/strokes.length));return strokes.flatMap(s=>resample(s,n).map(p=>({x:(p.x-b.cx)/scale,y:(p.y-b.cy)/scale})))}
 function rotate(points,angle){const a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return points.map(p=>({x:p.x*c-p.y*s,y:p.x*s+p.y*c}))}
 function cloudError(a,b){let sum=0;for(const p of a){let best=1;for(const q of b){const dx=p.x-q.x,dy=p.y-q.y,v=dx*dx+dy*dy;if(v<best)best=v;}sum+=Math.sqrt(best);}return sum/Math.max(a.length,1)}
 function deviation(a,b){return(cloudError(a,b)+cloudError(b,a))*.5}
-const orientSteps=Array.from({length:16},(_,i)=>i*22.5);
+const orientSteps=Array.from({length:8},(_,i)=>i*45);
 const stored=new Map(SYMBOLS.map(sym=>{const baseline=cloud(sym.paths.map(s=>s.map(([x,y])=>({x:x/100,y:y/100}))));return[sym.id,orientSteps.map(deg=>({deg,points:rotate(baseline,deg)}))]}));
 function bends(lines){return lines.reduce((sum,line)=>{if(line.length<2)return sum;let length=0;for(let i=1;i<line.length;i++)length+=dist(line[i],line[i-1]);return sum+clamp(length/Math.max(dist(line[0],line.at(-1)),.0001)-1,0,2)},0)}
 const bendReference=new Map(SYMBOLS.map(s=>[s.id,bends(s.paths.map(p=>p.map(([x,y])=>({x:x/100,y:y/100}))))]));
@@ -71,7 +71,7 @@ function segment(strokes,indices,frame,innerRings){
    if(diff>2)continue;
    const radial=dist(p,frame.center)/frame.radius,zone=classify(p,frame,innerRings);
    const placement=win.role==="sigil"?(zone==="inner"?.11:radial<.62?.06:-.12):(zone==="outer"&&radial>.3?.07:0);
-   const utility=(win.score-.48)*1.55+.083*(k-1)-.11-.062*diff+placement;
+   const utility=(win.score-.48)*1.55+.17*(k-1)-.13-.062*diff+placement+(win.role==="sigil"?.18:-.05);
    const score=utility+dp[i+k];
    if(score>dp[i]){dp[i]=score;choices[i]={length:k,unknown:false};cached.set(i,{indices:ids,ranking:ratings});}
   }
