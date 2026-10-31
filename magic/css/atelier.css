@@ -32,3 +32,8 @@
 @media(max-width:650px){.magic-recipes-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.magic-lesson-art{width:83px;height:83px}.magic-lesson-art svg{width:73px;height:73px}.magic-combos{padding:.85rem}.magic-recipe{min-height:126px;padding:.75rem}}
 @media(max-width:380px){.magic-recipes-grid{grid-template-columns:1fr 1fr}.magic-recipe small{font-size:.57rem}}
 @media(prefers-reduced-motion:reduce){.magic-recipe{transition:none}}
+
+/* Reference artwork is displayed from the original wiki files, with artist credit nearby. */
+.magic-reference-sigil{position:relative;z-index:1;display:block;width:80px;height:80px;object-fit:contain;filter:invert(1) sepia(1) saturate(2) hue-rotate(345deg);mix-blend-mode:screen}
+.magic-lesson[aria-pressed=true] .magic-reference-sigil{filter:invert(1) sepia(1) saturate(3) hue-rotate(345deg) drop-shadow(0 0 4px #ebaf366e)}
+@media(max-width:650px){.magic-reference-sigil{width:64px;height:64px}}
