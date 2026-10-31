@@ -29,7 +29,7 @@
       <div class="magic-hero-copy">
         <div class="magic-kicker">✦ an experiment in drawing spells / 01</div>
         <h1>Glyph <em>Atelier.</em></h1>
-        <p class="magic-lead">Based on the magical language of Witch Hat Atelier. Learn the four elemental sigils, add modifier signs, and draw an enclosing ring to cast your own spell. Every mark matters.</p>
+        <p class="magic-lead">Based on the magical language of Witch Hat Atelier. Learn the four elemental sigils, add modifier signs, then close the outer ring to activate your spell. Every mark matters.</p>
       </div>
       <div class="magic-seal-mark" aria-hidden="true"><span>✳</span></div>
     </div>
@@ -42,17 +42,16 @@
         <div class="magic-canvas-wrap">
           <canvas id="magic-ink" aria-label="Draw a magical seal with your mouse, pen, or finger">This game requires a canvas-enabled browser.</canvas>
           <canvas id="magic-debug-layer" aria-hidden="true"></canvas>
-          <div class="magic-canvas-hud" aria-hidden="true">01 circle → 02 sigil + signs → 03 cast</div>
+          <div class="magic-canvas-hud" aria-hidden="true">01 inscribe → 02 draw ring → 03 close to cast</div>
         </div>
         <div class="magic-actions">
-          <button class="magic-btn magic-btn-primary" type="button" id="magic-cast">✦ Cast seal</button>
-          <button class="magic-btn" type="button" id="magic-finish-symbol" title="Group the pen strokes you just drew into one symbol">✓ Finish symbol</button>
           <button class="magic-btn" type="button" id="magic-undo">↶ Undo</button>
           <button class="magic-btn" type="button" id="magic-clear">Clear</button>
           <button class="magic-btn" type="button" id="magic-demo">Load example</button>
           <button class="magic-btn" type="button" id="magic-guide" aria-pressed="true">◌ Guides</button>
         </div>
-        <p class="magic-status" id="magic-status" aria-live="polite">Start with a closed circle. Draw a sigil in the center, then press Finish symbol before adding a sign.</p>
+        <div class="magic-ring-state" id="magic-ring-state" role="status" aria-live="polite">◌ Magic prepared — awaiting ring</div>
+        <p class="magic-status" id="magic-status" aria-live="polite">Draw an elemental sigil and any modifier signs. Complete the enclosing ring last to cast automatically.</p>
       </div>
       <aside class="magic-panel magic-reading-panel">
         <div class="magic-heading">
@@ -65,7 +64,7 @@
           <h3>Collected discoveries</h3>
           <button class="magic-btn" id="magic-reset-book" type="button" style="min-height:32px;padding:.35rem .6rem;font-size:.7rem">Reset</button>
         </div>
-        <p class="magic-note">Successful spells are kept in this browser's grimoire. This fan experiment stores discovered combinations in your browser. Bigger sigils create stronger magic, and signs modify its direction and behavior.</p>
+        <p class="magic-note">Successful spells are kept in this browser's grimoire. Bigger sigils create stronger magic, and signs modify its direction and behavior.</p>
         <div class="magic-book" id="magic-book"><p class="magic-note">No discoveries yet.</p></div>
       </aside>
     </div>
@@ -79,23 +78,23 @@
         <div>
           <span class="magic-mini" id="lesson-role">Central sigil</span>
           <h3 id="lesson-name" style="margin:.35rem 0;font-size:1.18rem">🌬️ Wind</h3>
-          <p id="lesson-steps">Copy each stroke individually. The recognizer can group them into a single symbol.</p>
+          <p id="lesson-steps">Copy each stroke individually. The recognizer will group them automatically.</p>
           <a id="lesson-source" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" rel="noopener noreferrer" target="_blank" style="font:.73rem var(--mono);color:#ebaf36">Reference sigils ↗</a>
           <p id="lesson-credit" class="magic-note" style="font-size:.7rem;margin:.4rem 0 0">Reference illustration: Independent Witch Hat Atelier Wiki.</p>
         </div>
         <button class="magic-btn magic-btn-primary" type="button" id="lesson-demo">Load this seal ↗</button>
       </div>
-      <div class="magic-learning-note"><span>✦ Study the reference-inspired sigils and modifier signs one stroke at a time. Click <b>Finish symbol</b> to keep multi-stroke marks together. The program checks your geometry, not just your selected lesson.</span><a href="../magic-original/">Play original sigils ↗</a></div>
+      <div class="magic-learning-note"><span>✦ Study the reference-inspired sigils and modifier signs one stroke at a time. There's no Finish button: the interpreter groups the separate pen strokes automatically. <b>Leave the outer circle open while preparing a spell</b>, then connect its endpoints to cast.</span><a href="../magic-original/">Play original sigils ↗</a></div>
       <p class="magic-note" style="margin-top:.6rem">Sigil illustrations: <a href="https://witchhatatelier.telepedia.net/wiki/File:Fire_sigil.png" target="_blank" rel="noopener noreferrer">Fire</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Water.png" target="_blank" rel="noopener noreferrer">Water</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Earth.png" target="_blank" rel="noopener noreferrer">Earth</a>, and <a href="https://witchhatatelier.telepedia.net/wiki/File:Wind_(redirect).png" target="_blank" rel="noopener noreferrer">Wind</a> are credited to Chromatic Flare and, for the current Earth version, Bleuseil. See each wiki file page for licensing and source history.</p>
       <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. The four fundamental sigils are shown using attributed reference drawings from the Independent Witch Hat Atelier Wiki; their interactive stroke templates are simplified for practice. Modifier signs are schematic studies, and spell combinations are fan interpretations, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
     </div>
     <section class="magic-combos" id="recipes">
       <div class="magic-section-head">
         <div><span class="magic-mini">03 / example spellwork</span><h2>Try these <em>circles.</em></h2></div>
-        <p>Click a recipe to load its drawn strokes, then inspect or alter it.</p>
+        <p>Recipes load an unfinished ring. Connect the glowing gap to cast.</p>
       </div>
       <div class="magic-recipes-grid" id="magic-recipes-grid"></div>
-      <p class="magic-note" style="margin:1rem 0 0">Examples are starter recipes, not the only valid spells. Change the elemental sigils or signs to invent your own combinations.</p>
+      <p class="magic-note" style="margin:1rem 0 0">Examples are starter recipes, not the only valid spells. Each loads in a prepared, inactive state until you close the circle. Undo the closing stroke to edit a seal.</p>
     </section>
     <div class="magic-panel magic-debug-section">
       <div class="magic-debug-top">
@@ -106,7 +105,7 @@
           <button class="magic-mode" data-mode="deep" type="button" aria-pressed="false">Deep debug</button>
         </div>
       </div>
-      <p class="magic-note">Inspect shows boundary fitting, glyph boxes, and recognition scores. Deep debug reveals sampled points, intermediate geometry, and JSON you can reuse when porting the system to Luau.</p>
+      <p class="magic-note">Inspect shows incomplete rings, automatic multi-stroke groupings, competing glyph scores, and closure detection. Deep debug exposes geometry and JSON for a later Luau port.</p>
       <div class="magic-inspector" id="magic-inspector" hidden>
         <div>
           <h3>What the script detected</h3>
@@ -137,6 +136,6 @@
     <a href="../#web-games">← Back to my web games</a>
   </footer>
 </div>
-<script type="module" src="js/atelier-app.js?v=20261031a"></script>
+<script type="module" src="js/atelier-app.js?v=20261031-ring-v3"></script>
 </body>
 </html>
