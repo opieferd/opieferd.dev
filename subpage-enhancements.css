@@ -255,3 +255,18 @@ button:focus-visible {
         transition-duration: .01ms !important;
     }
 }
+
+/* Hide the browser's viewport scrollbar. Scrolling remains fully enabled.
+   Keep nested scrollable panels and custom scroll indicators untouched. */
+html,
+body {
+  scrollbar-width: none; /* Firefox and modern Chromium */
+  -ms-overflow-style: none; /* legacy Edge / IE */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
