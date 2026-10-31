@@ -178,3 +178,7 @@
   font:.72rem/1.6 var(--magic-mono);
  }
 }
+
+/* Match the four elemental sigil reference links to the Opie Orange palette. */
+.magic-lessons a[href*="/wiki/File:"]{color:var(--magic-orange,#ebaf36);text-decoration-color:currentColor}
+.magic-lessons a[href*="/wiki/File:"]:hover,.magic-lessons a[href*="/wiki/File:"]:focus-visible{color:#ffd07c}
