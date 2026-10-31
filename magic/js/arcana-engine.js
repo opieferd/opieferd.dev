@@ -275,6 +275,22 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
   output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?poeticName(ids,signs.map(x=>x.id),innerRings.length):title),text}};
 }
+/* Casting quality is resolved only after the OUTER ring is closed.
+ * 50% recognition is the minimum for a controlled, recorded spell. */
+export function resolveCastOutcome(ir,ringClosed=true){
+ if(!ringClosed)return{...ir,castOutcome:"preparing",castSucceeded:false};
+ const score=Number.isFinite(ir.reading)?Math.round(ir.reading):0;
+ if(ir.valid&&score>=50)return{...ir,castOutcome:"success",castSucceeded:true};
+ const lostControl=ir.valid&&score>=35&&score<50;
+ const verdict=lostControl?"lost-control":"failed";
+ const explanation=lostControl
+  ?"You lost control of the spell: its unstable inscriptions release the magic unpredictably instead of following the intended pattern."
+  :"The spell failed: the sigils were too imprecise to hold the working together, and the magic fizzled before it could take shape.";
+ return{...ir,reading:score,castOutcome:verdict,castSucceeded:false,
+  miscast:{type:verdict,threshold:50,reading:score},
+  output:{...ir.output,emoji:lostControl?"⚡":"💨",
+    text:(ir.output.text||"The outer ring was completed.")+" "+explanation}};
+}
 export function analyzeSeal(input){
  const raw=(Array.isArray(input)?input:[]).slice(0,120);
  const entries=raw.map((line,i)=>({rawIndex:i,points:clean(line),intent:line?.intent})).filter(item=>item.points.length>1);
@@ -314,7 +330,8 @@ export function analyzeSeal(input){
  }
  const graph=spatialGraph(strokes,regions,recognized,marked,excluded);
  const base=compile(boundary,recognized,innerRings,warnings,inkCount);
- const ir=base.valid?spatialMeaning(base,graph):{...base,spatial:graph};
+ const composed=base.valid?spatialMeaning(base,graph):{...base,spatial:graph};
+ const ir=resolveCastOutcome(composed,!!boundary);
  const ast={schemaVersion:5,spatial:graph,outerRing:boundary?{strokes:boundary.strokeIndices,completedAt:boundary.completedAt}:null,
   innerRings:innerRings.map(r=>({strokes:r.strokeIndices,center:r.center,radius:r.radius})),
   regions:regions.map(r=>({strokes:r.strokeIndices,id:r.recognized,zone:r.zone,rotationDegrees:r.rotationDegrees,score:r.confidence}))};
