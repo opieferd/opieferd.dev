@@ -173,7 +173,7 @@ function describeSpell(ids,signs,direction,focusCount,quality){
  if(has("levitation"))parts.push("The magic rises, carrying its target upward.");
  if(has("pull"))parts.push("Nearby loose objects are drawn toward its center.");
  if(focusCount)parts.push((focusCount===1?"An inner focusing ring":"Two nested focusing rings")+" stabilizes the working and amplifies its force.");
- parts.push(substance.impact[0].toUpperCase()+substance.impact.slice(1)+".");
+ parts.push("The resulting spell "+substance.impact+".");
  if(quality<.48)parts.push("Uneven lines make the spell flicker at its edges.");
  return parts.join(" ");
 }
