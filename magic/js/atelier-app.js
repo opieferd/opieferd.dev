@@ -1,6 +1,6 @@
 import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-5";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
-let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false;
+let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
 const make=(tag,className,text)=>{const x=document.createElement(tag);if(className)x.className=className;if(text!==undefined)x.textContent=text;return x};
 const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
@@ -15,12 +15,39 @@ function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3
 function guidePaths(sym){const sigil=sym.role==="sigil",cx=.5,cy=sigil?.51:.24,z=sigil?.28:.145;return sym.paths.map(s=>s.map(([x,y])=>({x:cx+(x-50)*z/100,y:cy+(y-50)*z/100})));}
 function debugPaint(){const{w,h}=size();ox.clearRect(0,0,w,h);
 if(showGuide&&!casted){
- const angles=Array.from({length:93},(_,i)=>.23+(Math.PI*2-.46)*i/92);
- const ring=angles.map(a=>({x:.5+.39*Math.cos(a),y:.5+.39*Math.sin(a)}));
- poly(ox,ring,w,h,"#edb85d35",1.8,[5,7]);
- const sym=SYMBOLS.find(s=>s.id===selected);
- if(sym&&strokes.length<12){for(const path of guidePaths(sym))poly(ox,path,w,h,"#ebaf365c",2,[4,7]);}
- if(selectedTier==="advanced"&&!analysis.innerRings.length){const inner=Array.from({length:96},(_,i)=>({x:.5+.185*Math.cos(i*2*Math.PI/95),y:.5+.185*Math.sin(i*2*Math.PI/95)}));poly(ox,inner,w,h,"#a990ef55",1.6,[3,7]);}
+ if(traceMode&&traceTemplate.length){
+  // Always render the ENTIRE selected recipe on the transparent guide layer.
+  // The guide is never added to actual input strokes; it therefore cannot cast.
+  const next=Math.min(strokes.length,traceTemplate.length);
+  traceTemplate.forEach((line,i)=>{
+   const isNext=i===next,color=line.intent==="connector"?"#70d9ec":"#e9bf74";
+   poly(ox,line,w,h,color,isNext?2.6:1.35,isNext?[5,3]:[3,7]);
+  });
+  if(next<traceTemplate.length){
+   const path=traceTemplate[next],p=path?.[0];
+   if(p){ox.save();ox.fillStyle="#ebaf36";ox.shadowColor="#f5bb58";ox.shadowBlur=12;
+    ox.beginPath();ox.arc(p.x*w,p.y*h,5,0,Math.PI*2);ox.fill();
+    ox.fillStyle="#f9e4b8";ox.font="12px 'DM Mono',monospace";
+    ox.fillText(String(next+1),Math.min(p.x*w+10,w-38),Math.max(14,p.y*h-10));ox.restore();}
+  }
+  const outline=traceTemplate.at(-1);
+  if(outline?.length){
+   const a=outline[0],b=outline.at(-1);
+   poly(ox,[a,b],w,h,"#f5c36b88",1.2,[2,7]);
+   for(const p of [a,b]){ox.save();ox.fillStyle="#ecbf71";ox.beginPath();
+    ox.arc(p.x*w,p.y*h,3.7,0,Math.PI*2);ox.fill();ox.restore();}
+  }
+ }else{
+  const angles=Array.from({length:93},(_,i)=>.23+(Math.PI*2-.46)*i/92);
+  const ring=angles.map(a=>({x:.5+.39*Math.cos(a),y:.5+.39*Math.sin(a)}));
+  poly(ox,ring,w,h,"#edb85d35",1.8,[5,7]);
+  const sym=SYMBOLS.find(g=>g.id===selected);
+  if(sym&&strokes.length<12){for(const path of guidePaths(sym))poly(ox,path,w,h,"#ebaf365c",2,[4,7]);}
+  if(selectedTier==="advanced"&&!analysis.innerRings.length){
+   const inner=Array.from({length:96},(_,i)=>({x:.5+.185*Math.cos(i*2*Math.PI/95),y:.5+.185*Math.sin(i*2*Math.PI/95)}));
+   poly(ox,inner,w,h,"#a990ef55",1.6,[3,7]);
+  }
+ }
 }
 if(analysis.pendingRing&&!analysis.boundary){
  const stroke=analysis.strokes[analysis.pendingRing.strokeIndex],endpoints=[stroke?.[0],stroke?.at(-1)].filter(Boolean);
@@ -61,7 +88,7 @@ function finish(e){
  if(e.pointerId!==pointer)return;
  add(e);const added=active?.length>1;if(added)strokes.push(active);active=null;pointer=null;
  if(linkMode){linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");}
- refresh({checkClosure:added});draw();
+ refresh({checkClosure:added});renderTraceProgress();draw();
 }
 ink.addEventListener("pointerup",finish);ink.addEventListener("pointercancel",finish);
 function refresh({checkClosure=false}={}){
@@ -106,14 +133,44 @@ function displayLesson(id){selected=id;const s=SYMBOLS.find(g=>g.id===id);if(!s)
 $("lesson-source").hidden=!s.source;$("lesson-source").href=s.source||"#lessons";$("lesson-source").textContent=s.source?"Source: Sigils / Signs Explained ↗":"";
 $("lesson-credit").textContent=s.experimental?"Original experimental modifier for this web prototype; not a canonical manga sign.":s.credit?"Reference illustration: "+s.credit+" · Independent Witch Hat Atelier Wiki":"Interactive sign study based on the Independent Witch Hat Atelier Wiki";debugPaint()}
 function showLessons(){const out=$("magic-lessons-grid");for(const s of SYMBOLS){const b=make("button","magic-lesson");b.type="button";b.dataset.glyph=s.id;b.dataset.lessonLevel=s.experimental?"advanced":s.role==="sign"&&s.id!=="columns"?"intermediate":"beginner";b.setAttribute("aria-pressed","false");const art=make("span","magic-lesson-art");if(s.referenceImage){const image=make("img","magic-reference-sigil");image.src=s.referenceImage;image.loading="lazy";image.alt="Reference drawing of the "+s.name+" sigil";image.onerror=()=>{image.replaceWith(symbolSvg(s))};art.append(image)}else art.append(symbolSvg(s));const copy=make("span","magic-lesson-copy");copy.append(make("span","magic-lesson-role",s.experimental?"Experimental sign":s.role==="sigil"?"Elemental sigil":"Directional / modifier sign"),make("strong","",s.emoji+" "+s.name),make("small","",s.tip));b.append(art,copy);b.addEventListener("click",()=>displayLesson(s.id));out.append(b)}}
-function loadExample(recipe){
+function renderTraceProgress(){
+ const label=$("magic-trace-progress");
+ if(!traceMode||!traceTemplate.length){label.hidden=true;label.textContent="";return;}
+ label.hidden=false;
+ const n=strokes.length,total=traceTemplate.length;
+ label.textContent=casted?"✦ Your traced seal has been cast.":n<total?
+   "✎ Guided tracing · stroke "+(n+1)+" of "+total+" · follow the golden path":
+   "✧ Outline complete · connect the open ring's endpoints to cast";
+}
+function loadExample(recipe,{trace=false,scroll=false}={}){
  const ids=Array.isArray(recipe)?recipe:recipe.ids;
- const nested=Array.isArray(recipe)?0:recipe.nested||0,rotate=Array.isArray(recipe)?0:recipe.rotate||0,spatial=Array.isArray(recipe)?null:recipe.spatial||null;
+ const nested=Array.isArray(recipe)?0:recipe.nested||0,rotate=Array.isArray(recipe)?0:recipe.rotate||0,
+       spatial=Array.isArray(recipe)?null:recipe.spatial||null;
  const ex=makeExample(ids,{open:true,nested,rotate,spatial});
- currentRecipe={ids,nested,rotate,spatial};recipeDirty=false;
+ currentRecipe={ids,nested,rotate,spatial};
+ traceTemplate=ex.strokes;traceMode=trace;recipeDirty=false;strokes=trace?[]:ex.strokes;
+ showGuide=true;$("magic-guide").setAttribute("aria-pressed","true");
  $("magic-rotation").disabled=false;$("magic-rotation").value=String(rotate);
- strokes=ex.strokes;casted=false;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");refresh();draw();
- status.textContent="Recipe prepared"+(nested?" with "+nested+" focusing ring(s)":"")+(rotate?" and a rotated sign":"")+". Join the glowing endpoints of the outer ring to cast.";
+ $("magic-freeform").setAttribute("aria-pressed","false");
+ $("magic-trace").disabled=false;$("magic-trace").setAttribute("aria-pressed",String(trace));
+ casted=false;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");
+ refresh();renderTraceProgress();draw();
+ status.textContent=trace?
+   "✎ Trace the full "+ids.map(id=>SYMBOLS.find(x=>x.id===id)?.name||id).join(" + ")+" seal. Finish with the outer ring, then connect its gap to cast.":
+   "Prepared example loaded"+(nested?" with "+nested+" inner rings":"")+". Join its two glowing outer-ring endpoints to cast.";
+ if(scroll)$("workbench").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function tryYourOwn(){
+ strokes=[];active=null;casted=false;currentRecipe=null;traceTemplate=[];traceMode=false;
+ recipeDirty=false;linkMode=false;showGuide=false;
+ $("magic-link-pen").setAttribute("aria-pressed","false");
+ $("magic-guide").setAttribute("aria-pressed","false");
+ $("magic-freeform").setAttribute("aria-pressed","true");
+ $("magic-trace").setAttribute("aria-pressed","false");$("magic-trace").disabled=true;
+ $("magic-rotation").disabled=true;
+ refresh();renderTraceProgress();draw();
+ status.textContent="✦ Freeform workshop: create any supported combination, experiment with sign placement, then close the outermost ring to cast. Turn Guides back on if needed.";
+ $("workbench").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
 }
 function showRecipes(){
  const out=$("magic-recipes-grid");out.replaceChildren();
@@ -122,7 +179,7 @@ function showRecipes(){
   const b=make("button","magic-recipe");b.type="button";
   b.append(make("span","magic-recipe-icon",r.emoji),make("span","magic-recipe-title",r.label),make("small","",r.ids.map(id=>SYMBOLS.find(s=>s.id===id)?.name||id).join(" + ")));
   if(r.nested||r.rotate||r.spatial){const flags=make("span","magic-recipe-flags",(r.nested?"◎ "+r.nested+" inner ring(s) ":"")+(r.rotate?"↻ "+r.rotate+"° ":"")+(r.spatial?.link?"↗ Directed link":r.spatial?.contain?"⊙ Enclosed sign":""));b.append(flags);}
-  b.addEventListener("click",()=>loadExample(r));out.append(b);
+  b.addEventListener("click",()=>loadExample(r,{trace:true,scroll:true}));out.append(b);
  }
  const t=TIERS.find(x=>x.id===selectedTier);
  $("magic-tier-description").textContent=t.description+" · "+visible.length+" guided recipes.";
@@ -142,8 +199,8 @@ function setupTiers(){
  }
 }
 
-$("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;recipeDirty=true;$("magic-rotation").disabled=true;refresh();draw();});
-$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;currentRecipe=null;recipeDirty=false;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");$("magic-rotation").disabled=true;refresh();draw();});
+$("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;recipeDirty=true;$("magic-rotation").disabled=true;refresh();renderTraceProgress();draw();});
+$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;recipeDirty=true;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");$("magic-rotation").disabled=true;refresh();renderTraceProgress();draw();});
 $("magic-link-pen").addEventListener("click",()=>{
  if(casted){status.textContent="Undo the sealing stroke before connecting signs.";return;}
  linkMode=!linkMode;$("magic-link-pen").setAttribute("aria-pressed",String(linkMode));
@@ -162,11 +219,13 @@ $("magic-rotation").addEventListener("change",e=>{
  if(!currentRecipe||recipeDirty){status.textContent="Load a fresh recipe to preview a rotated modifier.";return;}
  const angle=Number(e.target.value)||0;
  const next={...currentRecipe,rotate:angle};
- loadExample(next);
+ loadExample(next,{trace:traceMode});
  status.textContent="↻ Example sign rotated "+angle+"°. Draw the missing outer-ring stroke to test its direction.";
 });
-$("magic-demo").addEventListener("click",()=>loadExample(["wind","columns"]));
-$("lesson-demo").addEventListener("click",()=>loadExample(SYMBOLS.find(s=>s.id===selected)?.role==="sign"?["wind",selected]:[selected]));
+$("magic-demo").addEventListener("click",()=>loadExample(currentRecipe||["wind","columns"]));
+$("magic-trace").addEventListener("click",()=>{if(currentRecipe)loadExample(currentRecipe,{trace:true});});
+$("magic-freeform").addEventListener("click",tryYourOwn);
+$("lesson-demo").addEventListener("click",()=>loadExample(SYMBOLS.find(s=>s.id===selected)?.role==="sign"?["wind",selected]:[selected],{trace:true,scroll:true}));
 
 $("magic-guide").addEventListener("click",()=>{showGuide=!showGuide;$("magic-guide").setAttribute("aria-pressed",String(showGuide));debugPaint()});
 for(const btn of document.querySelectorAll(".magic-mode"))btn.addEventListener("click",()=>setMode(btn.dataset.mode));for(const id of ["debug-fit","debug-boxes","debug-labels","debug-points"])$(id).addEventListener("change",debugPaint);
@@ -181,4 +240,4 @@ $("magic-json").textContent=JSON.stringify({ast:analysis.ast,spell:analysis.ir,w
 const mini=$("magic-normalized"),ratio=Math.min(devicePixelRatio||1,2),rect=mini.getBoundingClientRect(),c=mini.getContext("2d");mini.width=Math.round(rect.width*ratio);mini.height=Math.round(rect.height*ratio);c.setTransform(ratio,0,0,ratio,0,0);c.clearRect(0,0,rect.width,rect.height);const first=analysis.regions.find(r=>r.accepted)||analysis.regions[0];if(first){const paths=first.strokeIndices.map(i=>analysis.strokes[i]),cloud=normalizedCloud(paths),symbol=SYMBOLS.find(s=>s.id===first.candidates[0]?.id);for(const p of cloud){c.fillStyle="#ebaf36";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),3,3)}if(symbol){const target=normalizedCloud(symbol.paths.map(path=>path.map(([x,y])=>({x:x/100,y:y/100}))));for(const p of target){c.fillStyle="#b18cffaa";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),2,2)}}}}
 $("magic-export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({schemaVersion:5,date:new Date().toISOString(),strokes,analysis},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="witch-hat-seal-test.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 $("magic-reset-book").addEventListener("click",()=>{if(!confirm("Erase this version's grimoire entries?"))return;localStorage.removeItem(key);showSaved()});
-showLessons();setupTiers();setTier("beginner");displayLesson("wind");refresh();setMode(new URLSearchParams(location.search).has("debug")?"deep":"practice");if("ResizeObserver"in window)new ResizeObserver(setCanvasSize).observe(ink);else window.addEventListener("resize",setCanvasSize);setCanvasSize();
+showLessons();setupTiers();setTier("beginner");displayLesson("wind");refresh();renderTraceProgress();setMode(new URLSearchParams(location.search).has("debug")?"deep":"practice");if("ResizeObserver"in window)new ResizeObserver(setCanvasSize).observe(ink);else window.addEventListener("resize",setCanvasSize);setCanvasSize();
