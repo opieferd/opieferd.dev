@@ -37,3 +37,18 @@
 .magic-reference-sigil{position:relative;z-index:1;display:block;width:80px;height:80px;object-fit:contain;filter:invert(1) sepia(1) saturate(2) hue-rotate(345deg);mix-blend-mode:screen}
 .magic-lesson[aria-pressed=true] .magic-reference-sigil{filter:invert(1) sepia(1) saturate(3) hue-rotate(345deg) drop-shadow(0 0 4px #ebaf366e)}
 @media(max-width:650px){.magic-reference-sigil{width:64px;height:64px}}
+
+/* Completion is the only activation mechanism: feedback stays next to parchment. */
+.magic-ring-state{
+  display:flex;align-items:center;gap:.65rem;margin-top:.95rem;
+  padding:.4rem 0 .4rem .72rem;border-left:2px solid #d6aa61;
+  color:#e1bc74;font:500 .76rem/1.6 var(--mono);
+  transition:color .2s,border-color .2s
+}
+.magic-ring-state[data-sealed=true]{border-left-color:#a9d7ae;color:#c6e2bb}
+.magic-canvas-wrap{transition:border-color .25s,box-shadow .25s}
+.magic-drawing-panel:has(.magic-ring-state[data-sealed=true]) .magic-canvas-wrap{
+ border-color:#8d8c59;box-shadow:inset 0 0 90px #ebaf3612,0 0 28px #ebaf3610
+}
+.magic-drawing-panel .magic-status{font-size:.82rem}
+@media(prefers-reduced-motion:reduce){.magic-ring-state,.magic-canvas-wrap{transition:none}}
