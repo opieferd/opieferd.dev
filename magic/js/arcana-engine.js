@@ -212,7 +212,7 @@ function segment(strokes,indices,frame,innerRings){
   dp[i]=dp[i+1]-.075;choices[i]={length:1,unknown:true};
   for(let k=1;k<=Math.min(8,n-i);k++){
    const ids=indices.slice(i,i+k),lines=ids.map(j=>strokes[j]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy};
-   if(Math.max(b.w,b.h)<.023||dist(p,frame.center)>frame.radius*.97)continue;
+   if(Math.max(b.w,b.h)<.023||Math.max(b.w,b.h)>.42||dist(p,frame.center)>frame.radius*.97)continue;
    const ratings=scoreSymbols(lines),win=ratings[0],margin=win.score-(ratings[1]?.score||0);
    if(win.score<.47||(margin<.012&&win.score<.76))continue;
    const symbol=SYMBOLS.find(g=>g.id===win.id),diff=Math.abs(k-symbol.paths.length);
@@ -469,7 +469,7 @@ export function analyzeSeal(input){
   const regions=[],recognized=[],warnings=[];
  if(!boundary)warnings.push(pendingRing?"Close the gap between the glowing endpoints to cast.":"Draw and close the outer ring to cast.");
  for(const ids of groups){
-  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=enhanced.get(ids)||scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&winner.score>=.47&&(lead>=.012||winner.score>.76);
+  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=enhanced.get(ids)||scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&Math.max(b.w,b.h)>=.045&&Math.max(b.w,b.h)<=.42&&winner.score>=.47&&(lead>=.012||winner.score>.76);
   const zone=classify(p,frame,innerRings),reason=!inside?"Outside the casting ring":winner.score<.47?"No matching symbol":lead<.012?"Ambiguous symbol":"";
   const region={strokeIndices:ids,bounds:b,inside,candidates:ranking.slice(0,4),recognized:accepted?winner.id:null,confidence:winner.score,rotationDegrees:winner.rotationDegrees,zone,accepted,reason};
   regions.push(region);
