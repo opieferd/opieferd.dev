@@ -527,7 +527,197 @@
     $('clear-queue').disabled = queue.length === 0;
   }
 
-  function setCurrent(index) {
+
+  function formatTime(seconds) {
+    if(!Number.isFinite(seconds)||seconds<0)return '0:00';
+    const num=Math.floor(seconds);
+    return Math.floor(num/60)+':'+String(num%60).padStart(2,'0');
+  }
+
+  function updatePosition(seconds=0,duration=0) {
+    $('elapsed-time').textContent=formatTime(seconds);
+    $('total-time').textContent=formatTime(duration);
+    if(controller?.seek && duration>0) {
+      $('seek').disabled=false;
+      $('seek').value=String(Math.round(1000*Math.max(0,Math.min(1,seconds/duration))));
+    } else {
+      $('seek').disabled=true;
+      $('seek').value='0';
+    }
+  }
+
+  function updateTransport() {
+    const item=queue[current];
+    const controllable=!!controller;
+    $('play-pause').disabled=!controllable;
+    $('play-pause').textContent=playState?'Ⅱ':'▶';
+    $('play-pause').setAttribute('aria-label',playState?'Pause':'Play');
+    $('play-pause').title=playState?'Pause':'Play';
+    $('volume').disabled=!controller?.setVolume;
+    $('previous').disabled=current<0||(current===0&&!playedHistory.length);
+    $('next').disabled=current<0||(queue.length<2&&repeat===0);
+    $('shuffle-toggle').disabled=queue.length<2;
+    $('repeat-toggle').disabled=current<0;
+    $('shuffle-toggle').classList.toggle('is-active',shuffle);
+    $('shuffle-toggle').setAttribute('aria-pressed',String(shuffle));
+    $('repeat-toggle').classList.toggle('is-active',repeat>0);
+    $('repeat-toggle').textContent=repeat===2?'↻₁':'↻';
+    $('repeat-toggle').title=['Repeat off','Repeat queue','Repeat one'][repeat];
+    $('repeat-toggle').setAttribute('aria-label',['Repeat off','Repeat queue','Repeat one'][repeat]);
+    $('queue-mode-label').textContent=shuffle?'Shuffle on':repeat===0?'In order':repeat===1?'Repeat all':'Repeat one';
+    $('transport-note').textContent=!item?'Choose a track above to get started':
+      controllable?'Controls connected to '+item.source:
+      item.mode==='external'?'This album must be opened in YouTube Music':
+      'Use the '+item.source+' controls inside the embedded player';
+  }
+
+  function stopController() {
+    const old=controller;
+    controller=null;playState=false;
+    if(ticker!==null){clearInterval(ticker);ticker=null;}
+    if(old?.destroy)try{old.destroy();}catch{}
+    updatePosition();
+  }
+
+  function startTicker() {
+    if(ticker!==null)clearInterval(ticker);
+    ticker=setInterval(()=>{
+      if(!controller)return;
+      try{
+        const duration=Number(controller.duration?.()||0);
+        const time=Number(controller.position?.()||0);
+        if(duration>0)updatePosition(time,duration);
+      }catch{}
+    },500);
+  }
+
+  function advance(ended=false) {
+    if(current<0)return;
+    if(ended&&repeat===2) {
+      if(controller?.seek){controller.seek(0);controller.play();return;}
+      setCurrent(current,true);return;
+    }
+    if(queue.length<2){
+      if(repeat===1&&ended)setCurrent(current,true);
+      else{playState=false;updateTransport();}
+      return;
+    }
+    let next;
+    if(shuffle){
+      const possible=queue.map((_,i)=>i).filter(i=>i!==current);
+      next=possible[Math.floor(Math.random()*possible.length)];
+    }else if(current+1<queue.length){next=current+1;}
+    else if(repeat>0){next=0;}
+    else{playState=false;updateTransport();return;}
+    playedHistory.push(current);
+    if(playedHistory.length>60)playedHistory.shift();
+    setCurrent(next,true);
+  }
+
+  function togglePlayback(){
+    if(!controller)return;
+    try {
+      if(playState)controller.pause();
+      else {
+        const result=controller.play();
+        if(result?.catch)result.catch(()=>setFeedback(playerStatus,'Playback was blocked. Try pressing Play in the provider player.',true));
+      }
+    }catch{setFeedback(playerStatus,'Use the player controls inside the embed.',true);}
+  }
+
+  function connectAudio(audio,entry) {
+    audio.controls=false;
+    audio.volume=Number($('volume').value)/100;
+    controller={
+      play:()=>audio.play(),pause:()=>audio.pause(),
+      seek:(sec)=>{if(Number.isFinite(audio.duration))audio.currentTime=sec;},
+      setVolume:(level)=>{audio.volume=level;},
+      duration:()=>audio.duration,position:()=>audio.currentTime
+    };
+    for(const name of ['play','pause','ended'])audio.addEventListener(name,()=>{
+      if(queue[current]!==entry)return;
+      playState=name==='play';updateTransport();
+      if(name==='ended')advance(true);
+    });
+    audio.addEventListener('timeupdate',()=>{if(queue[current]===entry)updatePosition(audio.currentTime,audio.duration);});
+    audio.addEventListener('durationchange',()=>updatePosition(audio.currentTime,audio.duration));
+    startTicker();updateTransport();
+  }
+
+  function connectSoundCloud(iframe,entry,shouldAutoplay) {
+    if(!window.SC?.Widget) {setFeedback(playerStatus,'SoundCloud widget controls could not load. Use the embedded player.',true);return;}
+    const widget=window.SC.Widget(iframe);
+    controller={
+      play:()=>widget.play(),pause:()=>widget.pause(),
+      seek:(sec)=>widget.seekTo(sec*1000),
+      setVolume:(value)=>widget.setVolume(Math.round(value*100)),
+      position:()=>0,duration:()=>0
+    };
+    widget.bind(window.SC.Widget.Events.READY,()=>{
+      if(queue[current]!==entry)return;
+      widget.setVolume(Number($('volume').value));
+      widget.getDuration(ms=>{if(queue[current]===entry)updatePosition(0,ms/1000);});
+      if(shouldAutoplay)widget.play();
+      updateTransport();
+    });
+    widget.bind(window.SC.Widget.Events.PLAY,()=>{if(queue[current]!==entry)return;playState=true;updateTransport();});
+    widget.bind(window.SC.Widget.Events.PAUSE,()=>{if(queue[current]!==entry)return;playState=false;updateTransport();});
+    widget.bind(window.SC.Widget.Events.FINISH,()=>{if(queue[current]===entry)advance(true);});
+    widget.bind(window.SC.Widget.Events.PLAY_PROGRESS,data=>{
+      if(queue[current]!==entry)return;
+      widget.getDuration(ms=>updatePosition((data.currentPosition||0)/1000,ms/1000));
+    });
+    updateTransport();
+  }
+
+  function connectYoutube(iframe,entry,shouldAutoplay) {
+    // Official YouTube IFrame API. No scraping or media URL extraction.
+    if(window.YT?.Player){
+      try {
+        const yt=new window.YT.Player(iframe,{
+          events:{
+            onReady:()=>{
+              if(queue[current]!==entry)return;
+              controller={
+                play:()=>yt.playVideo(),pause:()=>yt.pauseVideo(),
+                seek:(s)=>yt.seekTo(s,true),
+                setVolume:(v)=>yt.setVolume(Math.round(v*100)),
+                position:()=>yt.getCurrentTime(),
+                duration:()=>yt.getDuration(),
+                destroy:()=>{try{yt.destroy();}catch{}}
+              };
+              yt.setVolume(Number($('volume').value));
+              startTicker();updateTransport();
+              if(shouldAutoplay)yt.playVideo();
+            },
+            onStateChange:(event)=>{
+              if(queue[current]!==entry)return;
+              playState=event.data===1;
+              if(event.data===0)advance(true);
+              updateTransport();
+            },
+            onError:(event)=>{
+              if(queue[current]!==entry)return;
+              setFeedback(playerStatus,'YouTube returned a playback error ('+event.data+'). Some YouTube Music content cannot be embedded. Open it on YouTube Music, or use “Load tracks” in Saved Library with an API key.',true);
+            }
+          }
+        });
+      }catch(error){setFeedback(playerStatus,'YouTube controls are unavailable: '+error.message,true);}
+    }else{
+      $('transport-note').textContent='YouTube controls are loading…';
+      const version=++controlVersion;
+      let attempts=0;
+      const wait=setInterval(()=>{
+        if(queue[current]!==entry||version!==controlVersion){clearInterval(wait);return;}
+        if(window.YT?.Player){clearInterval(wait);connectYoutube(iframe,entry,shouldAutoplay);}
+        else if(++attempts>=24){clearInterval(wait);updateTransport();}
+      },250);
+    }
+  }
+
+  function setCurrent(index,shouldAutoplay=false) {
+    stopController();
+    controlVersion++;
     if (index < 0 || index >= queue.length) {
       current = -1;
       $('now-heading').textContent = 'Nothing playing yet';
@@ -550,6 +740,7 @@
       setFeedback(playerStatus, '');
       downloadPanel.hidden = true;
       renderQueue();
+      updateTransport();
       return;
     }
 
@@ -594,8 +785,17 @@
         }
       });
       stage.append(audio);
-      setFeedback(playerStatus, 'Ready to play using your browser audio player.');
-    } else {
+      connectAudio(audio,entry);
+      setFeedback(playerStatus,'Ready to play in your browser.');
+      if(shouldAutoplay)audio.play().catch(()=>setFeedback(playerStatus,'Press Play to start the audio.'));
+    } else if(entry.mode==='external'){
+      const fallback=document.createElement('div');fallback.className='player-empty';
+      const message=document.createElement('p');message.textContent='This album is available on YouTube Music.';
+      const link=document.createElement('a');link.href=entry.original;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent='Open album on YouTube Music ↗';link.className='music-button primary';
+      fallback.append(message,link);stage.append(fallback);
+      setFeedback(playerStatus,'YouTube Music album browse links cannot be embedded as regular YouTube playlists.',true);
+    }else {
       const iframe = document.createElement('iframe');
       iframe.className = 'is-' + entry.size;
       iframe.src = entry.embed;
@@ -605,10 +805,15 @@
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       iframe.allowFullscreen = true;
       stage.append(iframe);
-      setFeedback(playerStatus, 'Requested the ' + entry.source + ' player. Use its controls to start listening; some links may not allow embeds.');
+      if(entry.source==='SoundCloud')connectSoundCloud(iframe,entry,shouldAutoplay);
+      if(entry.source==='YouTube'||entry.source==='YouTube Music')connectYoutube(iframe,entry,shouldAutoplay);
+      setFeedback(playerStatus,entry.playlistId?'Loading YouTube playlist. If embedding is refused, try “Load tracks” in Saved Library.':
+        'Requested the '+entry.source+' player. Some links may not allow embeds.');
+
     }
     downloadPanel.hidden = true;
     renderQueue();
+    updateTransport();
   }
 
   function removeAt(index) {
@@ -622,7 +827,7 @@
     save();
     if (!queue.length) setCurrent(-1);
     else if (index === current) setCurrent(Math.min(index, queue.length - 1));
-    else if (index < current) { current--; renderQueue(); }
+    else if (index < current) { current--; playedHistory.length=0; renderQueue(); }
     else renderQueue();
   }
 
@@ -675,27 +880,31 @@
     event.target.value = '';
   });
 
-  $('previous').addEventListener('click', () => { if (current > 0) setCurrent(current - 1); });
-  $('next').addEventListener('click', () => { if (current >= 0 && current + 1 < queue.length) setCurrent(current + 1); });
-  $('clear-queue').addEventListener('click', () => {
-    for (const url of localUrls.values()) URL.revokeObjectURL(url);
-    localUrls.clear();
-    queue.length = 0;
-    save();
-    setCurrent(-1);
-    setFeedback(importStatus, 'Queue cleared.');
+  $('previous').addEventListener('click',()=>{
+    if(playedHistory.length){const prev=playedHistory.pop();setCurrent(prev,true);}
+    else if(current>0)setCurrent(current-1,true);
   });
-  $('shuffle-queue').addEventListener('click', () => {
-    if (queue.length < 2) return;
-    const playing = queue[current]?.id;
-    for (let i = queue.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [queue[i], queue[j]] = [queue[j], queue[i]];
+  $('next').addEventListener('click',()=>advance(false));
+  $('clear-queue').addEventListener('click',()=>{
+    for(const url of localUrls.values())URL.revokeObjectURL(url);
+    localUrls.clear();queue.length=0;playedHistory.length=0;
+    save();setCurrent(-1);setFeedback(importStatus,'Queue cleared. Your saved albums and playlists are still in your library.');
+  });
+  $('shuffle-toggle').addEventListener('click',()=>{
+    shuffle=!shuffle;updateTransport();
+  });
+  $('repeat-toggle').addEventListener('click',()=>{
+    repeat=(repeat+1)%3;updateTransport();
+  });
+  $('play-pause').addEventListener('click',togglePlayback);
+  $('seek').addEventListener('change',e=>{
+    if(controller?.seek&&controller?.duration){
+      const seconds=controller.duration()*Number(e.target.value)/1000;
+      if(Number.isFinite(seconds))controller.seek(seconds);
     }
-    current = queue.findIndex((item) => item.id === playing);
-    save();
-    renderQueue();
-    setFeedback(importStatus, 'Your queue is shuffled.');
+  });
+  $('volume').addEventListener('input',e=>{
+    if(controller?.setVolume)controller.setVolume(Number(e.target.value)/100);
   });
 
   async function copyText(value) {
