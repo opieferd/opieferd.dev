@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css?v=20261031">
   <link rel="stylesheet" href="css/magic.css?v=20261031">
-  <link rel="stylesheet" href="css/atelier.css?v=arcana-5">
+  <link rel="stylesheet" href="css/atelier.css?v=arcana-5-trace">
 </head>
 <body>
 <div class="container">
@@ -47,7 +47,9 @@
         <div class="magic-actions">
           <button class="magic-btn" type="button" id="magic-undo">↶ Undo</button>
           <button class="magic-btn" type="button" id="magic-clear">Clear</button>
-          <button class="magic-btn" type="button" id="magic-demo">Load example</button>
+          <button class="magic-btn" type="button" id="magic-demo">▶ Load example</button>
+          <button class="magic-btn" type="button" id="magic-trace" disabled>✎ Trace recipe</button>
+          <button class="magic-btn magic-btn-primary" type="button" id="magic-freeform">✦ Try your own</button>
           <button class="magic-btn" type="button" id="magic-guide" aria-pressed="true">◌ Guides</button>
           <button class="magic-btn" type="button" id="magic-focus-ring" title="Add a smaller focusing circle inside the outer casting ring">◎ Focus ring</button>
           <button class="magic-btn" type="button" id="magic-link-pen" aria-pressed="false" title="Draw one directed link from the center of one sign to the center of another sign">↗ Link pen</button>
@@ -58,6 +60,7 @@
             </select>
           </label>
         </div>
+        <div class="magic-trace-progress" id="magic-trace-progress" hidden aria-live="polite"></div>
         <div class="magic-ring-state" id="magic-ring-state" role="status" aria-live="polite">◌ Magic prepared — awaiting ring</div>
         <p class="magic-status" id="magic-status" aria-live="polite">Draw a sigil and signs, then experiment with sign containment or the Link pen. Close the outermost circle last to cast.</p>
       </div>
@@ -101,7 +104,7 @@
     <section class="magic-combos" id="recipes">
       <div class="magic-section-head">
         <div><span class="magic-mini">03 / example spellwork</span><h2>Try these <em>circles.</em></h2></div>
-        <p>Recipes load an unfinished ring. Connect the glowing gap to cast.</p>
+        <p>Select a recipe to trace its full design. Or choose Load example to test a prepared seal.</p>
       </div>
       <div class="magic-tier-tabs" id="magic-tier-tabs" role="tablist" aria-label="Spell recipe difficulty"></div>
       <p class="magic-note magic-tier-description" id="magic-tier-description">Beginner — start with a single element.</p>
@@ -157,6 +160,6 @@
     <a href="../#web-games">← Back to my web games</a>
   </footer>
 </div>
-<script type="module" src="js/atelier-app.js?v=arcana-5"></script>
+<script type="module" src="js/atelier-app.js?v=arcana-5-trace"></script>
 </body>
 </html>
