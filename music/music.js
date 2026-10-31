@@ -71,7 +71,7 @@
       return {
         original: 'https://open.spotify.com/' + kind + '/' + id,
         source: 'Spotify', kind: kind === 'track' ? 'track' : kind,
-        title: 'Spotify ' + kind, mode: 'embed', size: kind === 'track' ? 'compact' : 'expanded',
+        title: 'Spotify ' + kind, mode: 'embed', size: 'expanded',
         embed: 'https://open.spotify.com/embed/' + kind + '/' + id + '?utm_source=opieferd'
       };
     }
@@ -309,7 +309,7 @@
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       iframe.allowFullscreen = true;
       stage.append(iframe);
-      setFeedback(playerStatus, 'Embedded ' + entry.source + ' player loaded. Use its controls to start listening.');
+      setFeedback(playerStatus, 'Requested the ' + entry.source + ' player. Use its controls to start listening; some links may not allow embeds.');
     }
     downloadPanel.hidden = true;
     renderQueue();
@@ -326,7 +326,7 @@
     save();
     if (!queue.length) setCurrent(-1);
     else if (index === current) setCurrent(Math.min(index, queue.length - 1));
-    else if (index < current) setCurrent(current - 1);
+    else if (index < current) { current--; renderQueue(); }
     else renderQueue();
   }
 
