@@ -119,7 +119,7 @@
           original: (isMusic ? 'https://music.youtube.com/' : 'https://www.youtube.com/') + 'playlist?list=' + encodeURIComponent(list),
           source,kind:'playlist',title:source+' playlist',mode:'embed',size:'video',
           playlistId:list,artwork:firstVideo?'https://i.ytimg.com/vi/'+firstVideo+'/hqdefault.jpg':null,
-          embed:'https://www.youtube.com'+(firstVideo?'/embed/'+firstVideo:'/embed')+'?'+params.toString()
+          embed:'https://www.youtube.com/embed/videoseries?'+params.toString()
         };
       }
       if (isMusic && segments[0] === 'browse' && /^MPRE[A-Za-z0-9_-]+$/.test(segments[1] || '')) {
@@ -701,6 +701,18 @@
     updateTransport();
   }
 
+
+  function showPlaylistFallback(entry) {
+    if(queue[current]!==entry || !entry.playlistId)return;
+    const existing=$('playlist-fallback');
+    if(existing) {
+      existing.hidden=false;
+      const label=$('playlist-fallback-label');
+      if(label)label.textContent='YouTube refused to play this playlist in the embedded player.';
+    }
+    $('transport-note').textContent='This playlist is unavailable in YouTube embeds. You can still keep it in your library.';
+  }
+
   function connectYoutube(iframe,entry,shouldAutoplay) {
     // Official YouTube IFrame API. No scraping or media URL extraction.
     if(window.YT?.Player){
@@ -745,7 +757,8 @@
             },
             onError:(event)=>{
               if(queue[current]!==entry)return;
-              setFeedback(playerStatus,'YouTube returned a playback error ('+event.data+'). Some YouTube Music content cannot be embedded. Open it on YouTube Music, or use “Load tracks” in Saved Library with an API key.',true);
+              setFeedback(playerStatus,'YouTube could not play this '+(entry.kind==='playlist'?'playlist':'track')+' in an embed (error '+event.data+'). The owner may have disabled embedding or restricted the music. You can open it on YouTube Music or load accessible tracks individually using a YouTube Data API key.',true);
+              if(entry.kind==='playlist')showPlaylistFallback(entry);
             }
           }
         });
@@ -776,6 +789,7 @@
       $('cover-image').hidden = true;
       $('track-artist').hidden = true;
       stage.replaceChildren();
+      $('playlist-fallback').hidden=true;
       stage.classList.remove('has-audio');
       const empty = document.createElement('div');
       empty.className = 'player-empty';
@@ -814,6 +828,7 @@
     }
 
     stage.replaceChildren();
+    $('playlist-fallback').hidden=true;
     stage.classList.toggle('has-audio',entry.mode==='audio');
     if (entry.mode === 'audio') {
       const audio = document.createElement('audio');
