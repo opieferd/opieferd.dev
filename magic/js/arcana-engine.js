@@ -104,7 +104,10 @@ function tierFor(elements,signs,inner){if(inner.length||elements.length>=3||sign
 function compile(boundary,recognized,innerRings,warnings,inkCount){
  const elements=[...new Map(recognized.filter(g=>g.role==="sigil").map(g=>[g.id,g])).values()];
  const signs=[...new Map(recognized.filter(g=>g.role==="sign").map(g=>[g.id,g])).values()];
- const basics={schemaVersion:4,valid:!!boundary,elements:elements.map(g=>g.id),signs:signs.map(g=>g.id),tier:tierFor(elements,signs,innerRings),rings:{outer:boundary?{center:boundary.center,radius:boundary.radius,quality:boundary.quality}:null,nested:innerRings.map(r=>({center:r.center,radius:r.radius,quality:r.quality}))},warnings};
+ const pattern=[...elements.map(e=>e.id),...signs.map(e=>e.id)].sort().join("+");
+ const angleOfFirst=signs[0]?.rotationDegrees||0;
+ const foundRecipe=recipes.find(r=>r.ids.slice().sort().join("+")===pattern&&(r.nested||0)===innerRings.length&&(!(r.rotate)||Math.abs(((angleOfFirst-r.rotate+540)%360)-180)<25));
+ const basics={schemaVersion:4,valid:!!boundary,elements:elements.map(g=>g.id),signs:signs.map(g=>g.id),tier:foundRecipe?.tier||tierFor(elements,signs,innerRings),rings:{outer:boundary?{center:boundary.center,radius:boundary.radius,quality:boundary.quality}:null,nested:innerRings.map(r=>({center:r.center,radius:r.radius,quality:r.quality}))},warnings};
  if(!boundary)return{...basics,valid:false,power:0,output:{emoji:"🖋️",title:"Spell prepared",text:recognized.length?recognized.map(g=>g.name).join(" + ")+" inscribed. Close the outer ring to cast.":"Draw the components first, then close the outer circle."}};
  if(!elements.length){if(!signs.length&&!inkCount&&!innerRings.length)return{...basics,valid:true,tier:"beginner",power:Math.round(boundary.quality*35),reading:Math.round(boundary.quality*100),output:{emoji:"💥",title:"Empty-Ring Shockwave",text:"A closed outer ring without inscriptions releases a wave of raw magic."}};return{...basics,valid:false,power:0,output:{emoji:"📜",title:"Unstable seal",text:"The completed circle needs at least one readable elemental sigil."}};}
  const ids=elements.map(e=>e.id),key=ids.slice().sort().join("+"),sigilNames=ids.map(id=>SYMBOLS.find(g=>g.id===id)?.name).join(" + ");
@@ -121,7 +124,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  return{...basics,valid:true,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),
   rotationDegrees:orientation,direction,effects:sequence,channels:{inner:recognized.filter(g=>g.zone==="inner").map(g=>g.id),outer:recognized.filter(g=>g.zone==="outer").map(g=>g.id)}, 
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
-  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:innerRings.length?"Nested "+title:title,text}};
+  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?"Nested "+title:title),text}};
 }
 export function analyzeSeal(input){
  const strokes=(Array.isArray(input)?input:[]).slice(0,120).map(clean).filter(s=>s.length>1),
