@@ -15,6 +15,7 @@
   let controller = null;
   let ticker = null;
   let playState = false;
+  let controlVersion = 0;
   const playedHistory = [];
 
   const form = $('import-form');
