@@ -1,4 +1,4 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes} from "./atelier-engine.js";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes} from "./atelier-engine.js?v=ring-closure-v3";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]);
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
