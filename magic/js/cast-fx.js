@@ -26,8 +26,11 @@ export function createCastEffects(){
   const node=document.createElement("i");node.className="magic-seal-fx-spark";node.style.setProperty("--spark-delay",((i%4)*32)+"ms");sparks.appendChild(node);return node;
  });
  seal.append(bloom,ringA,ringB,sparks,title);parchment?.appendChild(seal);
- const sound=new Audio(new URL("../audio/cast-stinger.mp3",import.meta.url).href);sound.preload="auto";sound.volume=.75;
- let soundOn=true;try{soundOn=localStorage.getItem("opie_magic_cast_sound_v1")!=="off";}catch{}
+ const sound=new Audio(new URL("../audio/cast-stinger.mp3",import.meta.url).href);
+ const failureSound=new Audio(new URL("../audio/miscast-fizzle.mp3",import.meta.url).href);
+ sound.preload="auto";sound.volume=.75;
+ failureSound.preload="auto";failureSound.volume=.8;
+ let soundOn=true;try{soundOn=localStorage.getItem(SOUND_KEY)!=="off";}catch{}
  function syncButton(button){
   if(!button)return;
   button.setAttribute("aria-pressed",String(soundOn));
@@ -46,23 +49,41 @@ export function createCastEffects(){
    dot.style.setProperty("--spark-size",i%5===0?"5px":"3px");
   });
  }
+ function activate(elements,power,ring,mode){
+  const miscast=mode!=="success",colors=miscast?["181,98,215","255,118,104","110,82,168","221,138,103"]:castColors(elements);
+  CORNERS.forEach((c,i)=>page.style.setProperty("--cast-"+c,colors[i]));
+  page.style.setProperty("--cast-alpha",miscast?".39":clamp(.29+(Number(power)||0)/560,.31,.46).toFixed(3));
+  const center=ring?.center||{x:.5,y:.5},radius=clamp(ring?.radius||.39,.18,.48);
+  seal.style.setProperty("--cast-primary",colors[0]);
+  seal.style.setProperty("--cast-secondary",colors[1]);
+  seal.style.setProperty("--cast-x",(center.x*100).toFixed(2)+"%");
+  seal.style.setProperty("--cast-y",(center.y*100).toFixed(2)+"%");
+  seal.style.setProperty("--cast-size",(2*radius*100).toFixed(2)+"%");
+  title.textContent=mode==="lost-control"?"⚡ MAGIC UNBOUND ⚡":miscast?"✕ MISCAST ✕":"✦ SPELL CAST ✦";
+  updateSparks(center,radius,Number(power)||50);
+  page.classList.remove("is-active","is-miscast");
+  seal.classList.remove("is-active","is-miscast");
+  void seal.offsetWidth;
+  if(miscast){page.classList.add("is-miscast");seal.classList.add("is-miscast");}
+  page.classList.add("is-active");seal.classList.add("is-active");
+  if(soundOn){
+   try{
+    const active=miscast?failureSound:sound,other=miscast?sound:failureSound;
+    other.pause();active.pause();active.currentTime=0;
+    const result=active.play();
+    if(result&&typeof result.catch==="function")result.catch(()=>{});
+   }catch{}
+  }
+ }
  return{
   syncButton,isSoundOn(){return soundOn;},
-  setMuted(muted,button){soundOn=!muted;try{localStorage.setItem(SOUND_KEY,muted?"off":"on");}catch{}if(muted)sound.pause();syncButton(button);},
-  play(elements=[],power=50,ring=null){
-   const colors=castColors(elements);
-   CORNERS.forEach((c,i)=>page.style.setProperty("--cast-"+c,colors[i]));
-   page.style.setProperty("--cast-alpha",clamp(.29+(Number(power)||0)/560,.31,.46).toFixed(3));
-   const center=ring?.center||{x:.5,y:.5},radius=clamp(ring?.radius||.39,.18,.48);
-   seal.style.setProperty("--cast-primary",colors[0]);
-   seal.style.setProperty("--cast-secondary",colors[1]);
-   seal.style.setProperty("--cast-x",(center.x*100).toFixed(2)+"%");
-   seal.style.setProperty("--cast-y",(center.y*100).toFixed(2)+"%");
-   seal.style.setProperty("--cast-size",(2*radius*100).toFixed(2)+"%");
-   updateSparks(center,radius,Number(power)||50);
-   page.classList.remove("is-active");seal.classList.remove("is-active");
-   void seal.offsetWidth;page.classList.add("is-active");seal.classList.add("is-active");
-   if(soundOn){try{sound.pause();sound.currentTime=0;const p=sound.play();if(p&&typeof p.catch==="function")p.catch(()=>{});}catch{}}
-  }
+  setMuted(muted,button){
+   soundOn=!muted;try{localStorage.setItem(SOUND_KEY,muted?"off":"on");}catch{}
+   if(muted){sound.pause();failureSound.pause();}
+   syncButton(button);
+  },
+  play(elements=[],power=50,ring=null){activate(elements,power,ring,"success");},
+  playMiscast(elements=[],power=50,ring=null,type="failed"){activate(elements,power,ring,type==="lost-control"?"lost-control":"failed");}
  };
+
 }
