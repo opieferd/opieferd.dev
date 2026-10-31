@@ -306,6 +306,148 @@
       ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
   }
 
+
+  function getYouTubeKey() {
+    try { return localStorage.getItem('opwatch-yt-api-key') || ''; }
+    catch { return ''; }
+  }
+
+  function loadLibrary() {
+    try {
+      const entries = JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]');
+      if (Array.isArray(entries)) for (const data of entries.slice(0, LIBRARY_LIMIT)) {
+        if (!data || typeof data.url !== 'string') continue;
+        try {
+          const parsed = parseLink(data.url);
+          if (!['album','playlist'].includes(parsed.kind)) continue;
+          library.push({...parsed,title:data.title||parsed.title,artist:data.artist||'',
+            artwork:coverUrl(data.artwork)||parsed.artwork,savedAt:data.savedAt||Date.now()});
+        } catch {}
+      }
+    } catch {}
+    renderLibrary();
+  }
+
+  function saveLibrary() {
+    try {
+      localStorage.setItem(LIBRARY_KEY,JSON.stringify(library.map(x=>({
+        url:x.original,title:x.title,artist:x.artist||'',artwork:x.artwork||'',savedAt:x.savedAt
+      }))));
+    } catch {}
+  }
+
+  function rememberCollection(entry) {
+    if (!entry || !['album','playlist'].includes(entry.kind) || entry.source === 'Local file') return;
+    const existing = library.find(x=>x.original===entry.original);
+    if(existing) {
+      existing.title=entry.title||existing.title;
+      existing.artist=entry.artist||existing.artist;
+      existing.artwork=coverUrl(entry.artwork)||existing.artwork;
+    } else {
+      library.unshift({...entry,savedAt:Date.now()});
+      if(library.length>LIBRARY_LIMIT)library.pop();
+    }
+    saveLibrary();
+    renderLibrary();
+  }
+
+  function renderLibrary() {
+    const wrap=$('library-list');
+    if(!wrap)return;
+    wrap.replaceChildren();
+    $('clear-library').disabled=!library.length;
+    if(!library.length) {
+      const p=document.createElement('p');p.className='queue-empty';
+      p.textContent='Your playlists and albums will appear here when you import them.';
+      wrap.append(p);return;
+    }
+    library.forEach((entry,index)=>{
+      const card=document.createElement('article');card.className='library-card';
+      const art=document.createElement('div');art.className='library-art';
+      const src=coverUrl(entry.artwork);
+      if(src){const img=document.createElement('img');img.src=src;img.alt='';img.loading='lazy';art.append(img);}
+      else art.textContent=(sources[entry.source]||{}).icon||'♫';
+      const detail=document.createElement('div');detail.className='library-detail';
+      const heading=document.createElement('strong');heading.textContent=entry.title;
+      const sub=document.createElement('small');sub.textContent=entry.source+' · '+entry.kind+(entry.artist?' · '+entry.artist:'');
+      detail.append(heading,sub);
+      const actions=document.createElement('div');actions.className='library-actions';
+      const open=document.createElement('button');open.type='button';open.className='music-button secondary';
+      open.textContent='Play';open.addEventListener('click',()=>{
+        if(queue.length>=MAX_ITEMS){setFeedback(importStatus,'Queue is full; remove something first.',true);return;}
+        let position=queue.findIndex(x=>x.original===entry.original);
+        if(position<0){position=queue.length;queue.push({...parseLink(entry.original),id:newId(),
+          title:entry.title,artist:entry.artist,artwork:entry.artwork});save();}
+        setCurrent(position,true);document.querySelector('.now-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+      actions.append(open);
+      if(entry.playlistId && (entry.source==='YouTube Music'||entry.source==='YouTube')) {
+        const expand=document.createElement('button');expand.type='button';expand.className='music-button secondary';
+        expand.textContent='Load tracks';
+        expand.title='Read this playlist with your YouTube Data API v3 key';
+        expand.addEventListener('click',()=>expandYouTubePlaylist(entry,expand));
+        actions.append(expand);
+      }
+      const remove=document.createElement('button');remove.type='button';remove.className='library-delete';
+      remove.textContent='×';remove.title='Remove from saved library';remove.setAttribute('aria-label','Remove '+entry.title+' from library');
+      remove.addEventListener('click',()=>{library.splice(index,1);saveLibrary();renderLibrary();});
+      card.append(art,detail,actions,remove);wrap.append(card);
+    });
+  }
+
+  async function expandYouTubePlaylist(entry,button) {
+    const key=getYouTubeKey();
+    if(!key) {
+      $('youtube-settings').open=true;
+      $('youtube-api-key').focus();
+      setFeedback($('api-key-status'),'To load tracks individually, add a YouTube Data API v3 key. The standard playlist embed requires no key.',true);
+      return;
+    }
+    button.disabled=true;button.textContent='Loading…';
+    try {
+      let token='',found=0,first=-1,requests=0;
+      do {
+        const p=new URLSearchParams({part:'snippet',playlistId:entry.playlistId,maxResults:'50',key});
+        if(token)p.set('pageToken',token);
+        const data=await getJson('https://www.googleapis.com/youtube/v3/playlistItems?'+p,10000);
+        if(data.error)throw Error(data.error.message);
+        for(const result of data.items||[]) {
+          if(queue.length>=MAX_ITEMS)break;
+          const id=result.snippet?.resourceId?.videoId;
+          if(!/^[A-Za-z0-9_-]{11}$/.test(id||''))continue;
+          const media=parseLink('https://www.youtube.com/watch?v='+id);
+          media.title=result.snippet.title||media.title;
+          media.artist=result.snippet.videoOwnerChannelTitle||result.snippet.channelTitle||'';
+          media.artwork=coverUrl(result.snippet.thumbnails?.high?.url)||media.artwork;
+          if(first<0)first=queue.length;
+          queue.push({...media,id:newId()});found++;
+        }
+        token=data.nextPageToken||'';requests++;
+      }while(token&&queue.length<MAX_ITEMS&&requests<4);
+      save();
+      if(first>=0)setCurrent(first,true);
+      setFeedback(importStatus,found?'Loaded '+found+' playlist tracks into the queue.':'The playlist returned no accessible tracks.',!found);
+      if(first>=0)document.querySelector('.now-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(error){setFeedback(importStatus,'Could not load playlist tracks: '+error.message,true);}
+    finally{button.disabled=false;button.textContent='Load tracks';}
+  }
+
+  $('clear-library').addEventListener('click',()=>{
+    if(!confirm('Clear all saved playlists and albums on this browser?'))return;
+    library.length=0;saveLibrary();renderLibrary();
+  });
+  $('youtube-api-key').value=getYouTubeKey();
+  $('save-youtube-key').addEventListener('click',()=>{
+    const key=$('youtube-api-key').value.trim();
+    if(!/^[A-Za-z0-9_-]{20,}$/.test(key)){setFeedback($('api-key-status'),'Enter a valid YouTube Data API key.',true);return;}
+    try{localStorage.setItem('opwatch-yt-api-key',key);setFeedback($('api-key-status'),'API key saved in this browser.');}
+    catch{setFeedback($('api-key-status'),'Unable to save in this browser.',true);}
+  });
+  $('forget-youtube-key').addEventListener('click',()=>{
+    try{localStorage.removeItem('opwatch-yt-api-key');}catch{}
+    $('youtube-api-key').value='';setFeedback($('api-key-status'),'API key removed from this browser.');
+  });
+
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(queue.filter((item) => item.source !== 'Local file')
