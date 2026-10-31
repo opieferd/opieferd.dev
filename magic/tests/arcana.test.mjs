@@ -255,3 +255,36 @@ test("screenshot-style freehand Earth projectile is not confused with fire or wa
  assert.ok(!analyzed.recognized.some(x=>x.strokeIndices.includes(7)||x.strokeIndices.includes(8)),"decorative dots must stay unrecognized");
  assert.equal(analyzed.innerRings.length,1);
 });
+
+
+test("improvised titles stay under four words across all elemental and modifier subsets",()=>{
+ const elements=["fire","earth","water","wind"],mods=["columns","dispersion","convergence","expansion","pull","levitation","veer","orbit","split"];
+ for(let mask=1;mask<16;mask++){
+  const ids=elements.filter((_,i)=>Boolean(mask&(1<<i)));
+  for(let signMask=0;signMask<512;signMask++){
+   const signs=mods.filter((_,i)=>Boolean(signMask&(1<<i)));
+   for(const rings of [0,1,2]){
+    const title=poeticName(ids,signs,rings);
+    assert.ok(title.split(/\\s+/).length<=3,"Too many words: "+title);
+    assert.ok(!/^(Grand|Greater)\\s/.test(title),"Stacked title prefix: "+title);
+   }
+  }
+ }
+});
+test("complex fire, wind, and stone spell names emphasize just one defining action",()=>{
+ assert.equal(poeticName(["fire"],["dispersion","columns","convergence","pull"],2),"Ember Harpoon");
+ assert.equal(poeticName(["earth"],["pull","convergence","columns"],1),"Stone Harpoon");
+ assert.equal(poeticName(["wind"],["split","veer","dispersion"],2),"Gale Manyfold Rain");
+ assert.equal(poeticName(["fire","water","wind"],["convergence","dispersion","levitation"],2),"Stormglass Starburst");
+});
+test("guided recipe labels and special Earth Projectile remain unchanged",()=>{
+ for(const recipe of recipes){
+  const example=makeExample(recipe.ids,{nested:recipe.nested,rotate:recipe.rotate,spatial:recipe.spatial,open:true});
+  const cast=analyzeSeal([...example.strokes,closeRingStroke()]);
+  assert.equal(cast.ir.output.title,recipe.label);
+ }
+ const ex=makeExample(["earth","convergence","pull","pull"],{open:true,nested:1});
+ const out=analyzeSeal([...ex.strokes,closeRingStroke()]);
+ assert.equal(out.ir.output.title,"Earth Projectile");
+ assert.ok(out.ir.output.text.includes("stone projectile"));
+});
