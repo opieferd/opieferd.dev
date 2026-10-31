@@ -170,3 +170,11 @@
 @media(hover:none){
  .magic-btn:hover,.magic-recipe:hover,.magic-lesson:hover{transform:none}
 }
+
+.magic-mobile-tip{display:none}
+@media(max-width:790px),(pointer:coarse){
+ .magic-mobile-tip{
+  display:block;margin:.7rem 0 .1rem;color:#ddbf8c;
+  font:.72rem/1.6 var(--magic-mono);
+ }
+}
