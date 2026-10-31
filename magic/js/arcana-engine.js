@@ -101,6 +101,78 @@ const baseSpells={
 };
 function bearing(degrees){const a=((degrees%360)+360)%360;return["north","northeast","east","southeast","south","southwest","west","northwest"][Math.round(a/45)%8];}
 function tierFor(elements,signs,inner){if(inner.length||elements.length>=3||signs.length>=2&&elements.length>=2||signs.length>=3)return"advanced";if(elements.length>=2||signs.length>=2||signs.some(g=>["veer","orbit","split","levitation","convergence","expansion","pull"].includes(g.id)))return"intermediate";return"beginner";}
+
+/* Spatial ink grammar: nesting and directed links are separate from glyph matching.
+   An arrow-like connector is tagged by the optional Link pen; untagged spare strokes
+   are accepted only when they unambiguously join two recognized sign centers. */
+function straightEnough(points){
+ if(points.length<2)return false;
+ const a=points[0],b=points.at(-1),len=dist(a,b);if(len<.11||len>.65)return false;
+ const mid=resample(points,16),dx=b.x-a.x,dy=b.y-a.y;
+ return mid.every(p=>Math.abs((p.x-a.x)*dy-(p.y-a.y)*dx)/len<.015);
+}
+function spatialGraph(strokes,regions,recognized,marked,excluded){
+ const nodes=recognized.map(g=>({...g,center:bounds(g.strokeIndices.flatMap(i=>strokes[i])).center,
+   rect:bounds(g.strokeIndices.flatMap(i=>strokes[i]))}));
+ // bounds() returns cx/cy, not a center object.
+ for(const node of nodes)node.center={x:node.rect.cx,y:node.rect.cy};
+ const contains=[];
+ for(const parent of nodes.filter(n=>["expansion","orbit"].includes(n.id))){
+  for(const child of nodes.filter(n=>n!==parent&&n.role==="sign")){
+   const p=parent.rect,c=child.rect;
+   const nested=c.w<p.w*.69&&c.h<p.h*.69&&c.x>=p.x-.013&&c.y>=p.y-.013&&
+    c.x+c.w<=p.x+p.w+.013&&c.y+c.h<=p.y+p.h+.013;
+   if(nested&&!contains.some(r=>r.parentStroke===parent.strokeIndices[0]&&r.childStroke===child.strokeIndices[0])){
+    contains.push({type:"contains",parent:parent.id,child:child.id,
+     parentStroke:parent.strokeIndices[0],childStroke:child.strokeIndices[0]});
+   }
+  }
+ }
+ const used=new Set([...excluded,...nodes.flatMap(n=>n.strokeIndices)]);
+ const linkIndices=[...marked];
+ for(let i=0;i<strokes.length;i++)if(!used.has(i)&&straightEnough(strokes[i])&&!linkIndices.includes(i))linkIndices.push(i);
+ const links=[];
+ for(const i of linkIndices){
+  const s=strokes[i],start=s?.[0],end=s?.at(-1);if(!start||!end||!straightEnough(s))continue;
+  const matchesAt=p=>nodes.filter(n=>n.role==="sign").map(n=>({n,error:dist(p,n.center)}))
+   .filter(item=>item.error<Math.max(.055,Math.min(.12,Math.max(item.n.rect.w,item.n.rect.h)*.86)))
+   .sort((a,b)=>a.error-b.error);
+  const from=matchesAt(start)[0]?.n,to=matchesAt(end).find(m=>m.n!==from)?.n;
+  if(from&&to&&from!==to&&from.strokeIndices[0]!==to.strokeIndices[0]){
+   links.push({type:"directed",from:from.id,to:to.id,
+    fromStroke:from.strokeIndices[0],toStroke:to.strokeIndices[0],
+    strokeIndex:i,length:+dist(start,end).toFixed(3),
+    angleDegrees:+(((Math.atan2(end.y-start.y,end.x-start.x)*180/Math.PI)+360)%360).toFixed(1)});
+  }
+ }
+ return{nodes:nodes.map(n=>({id:n.id,role:n.role,strokeIndices:n.strokeIndices,center:n.center,
+   bounds:n.rect,rotationDegrees:n.rotationDegrees})),contains,links,connectors:linkIndices};
+}
+function spatialMeaning(ir,graph){
+ const {contains,links}=graph;
+ if(!contains.length&&!links.length)return{...ir,spatial:graph};
+ const names=ir.elements.map(id=>SYMBOLS.find(s=>s.id===id)?.name||id).join(" + ");
+ const relationSignature=links.map(x=>x.from+">"+x.to).sort().join("|")+"::"+
+  contains.map(x=>x.parent+"("+x.child+")").sort().join("|");
+ let title=ir.output.title;
+ const fire=ir.elements.includes("fire"),water=ir.elements.includes("water"),wind=ir.elements.includes("wind");
+ if(links.some(x=>x.from==="columns"&&x.to==="veer")&&wind)title="Guided Wind Lance";
+ else if(links.some(x=>x.from==="veer"&&x.to==="columns")&&wind)title="Deflected Wind Lance";
+ else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&water)title="Spiral Bloom";
+ else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&fire)title="Solar Vortex";
+ else title=(contains.length?"Enclosed ":"Linked ")+title;
+ const linksText=links.map(l=>"The "+l.from+" sign channels into "+l.to+" ("+
+  Math.round(l.angleDegrees)+"°)").join(". ");
+ const containText=contains.map(c=>"The "+c.parent+" sign encloses "+c.child+
+  ", so its effect modifies the inner working").join(". ");
+ const text=ir.output.text+" "+[containText,linksText].filter(Boolean).join(". ")+".";
+ return{...ir,schemaVersion:5,tier:"advanced",
+  spatial:graph,relationSignature,
+  effects:[...(ir.effects||[]),...links.map(l=>({action:"link",source:l.from,target:l.to,
+   angleDegrees:l.angleDegrees})),...contains.map(c=>({action:"enclose",outer:c.parent,inner:c.child}))],
+  output:{...ir.output,title,text}};
+}
+
 function compile(boundary,recognized,innerRings,warnings,inkCount){
  const elements=[...new Map(recognized.filter(g=>g.role==="sigil").map(g=>[g.id,g])).values()];
  const signs=[...new Map(recognized.filter(g=>g.role==="sign").map(g=>[g.id,g])).values()];
@@ -127,8 +199,10 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
   output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?"Nested "+title:title),text}};
 }
 export function analyzeSeal(input){
- const strokes=(Array.isArray(input)?input:[]).slice(0,120).map(clean).filter(s=>s.length>1),
- scan=scanRings(strokes),{boundary,pendingRing,innerRings,frame}=scan,excluded=new Set();
+ const raw=(Array.isArray(input)?input:[]).slice(0,120);
+ const strokes=raw.map(clean).filter(s=>s.length>1);
+ const marked=new Set(raw.map((line,i)=>line?.intent==="connector"?i:-1).filter(i=>i>=0));
+ const scan=scanRings(strokes),{boundary,pendingRing,innerRings,frame}=scan,excluded=new Set(marked);
  for(const ring of innerRings)ring.strokeIndices.forEach(i=>excluded.add(i));
  if(boundary)boundary.strokeIndices.forEach(i=>excluded.add(i));
  else if(pendingRing)pendingRing.strokeIndices.forEach(i=>excluded.add(i));
@@ -144,12 +218,14 @@ export function analyzeSeal(input){
   else if(boundary)warnings.push("Strokes "+ids.map(i=>i+1).join(", ")+": "+reason+".");
  }
  const inkCount=remaining.length;
- const ir=compile(boundary,recognized,innerRings,warnings,inkCount);
- const ast={schemaVersion:4,outerRing:boundary?{strokes:boundary.strokeIndices,completedAt:boundary.completedAt}:null,
+ const graph=spatialGraph(strokes,regions,recognized,marked,excluded);
+ const base=compile(boundary,recognized,innerRings,warnings,inkCount);
+ const ir=base.valid?spatialMeaning(base,graph):{...base,spatial:graph};
+ const ast={schemaVersion:5,spatial:graph,outerRing:boundary?{strokes:boundary.strokeIndices,completedAt:boundary.completedAt}:null,
   innerRings:innerRings.map(r=>({strokes:r.strokeIndices,center:r.center,radius:r.radius})),
   regions:regions.map(r=>({strokes:r.strokeIndices,id:r.recognized,zone:r.zone,rotationDegrees:r.rotationDegrees,score:r.confidence}))};
  return{strokes,boundary,pendingRing,boundaryCandidates:scan.candidates,innerRings,regions,recognized,ast,warnings,ir,
-  ready:!!boundary,completion:boundary?{strokeIndices:boundary.strokeIndices,completedAt:boundary.completedAt,type:boundary.closureType||"single-stroke"}:null};
+  ready:!!boundary,spatial:graph,completion:boundary?{strokeIndices:boundary.strokeIndices,completedAt:boundary.completedAt,type:boundary.closureType||"single-stroke"}:null};
 }
 function circularPath(radius,open=false,center={x:.5,y:.5}){
  const start=open?.23:0,end=open?2*Math.PI-.23:2*Math.PI,count=open?93:97;
