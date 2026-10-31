@@ -163,3 +163,44 @@ test("casting outcomes honor the 50 percent accuracy threshold",()=>{
  assert.equal(classifyCastAccuracy(50),"success");
  assert.equal(classifyCastAccuracy(100),"success");
 });
+
+
+test("freehand Water: nine interleaved strokes reconstruct one water sigil",()=>{
+ const canvas=(points)=>points.map(([x,y])=>({x:(x-142)/695,y:(y-171)/695}));
+ const interpolate=(p)=>{const out=[];for(let i=0;i<p.length-1;i++)for(let j=0;j<12;j++){
+  const f=j/12;out.push([p[i][0]*(1-f)+p[i+1][0]*f,p[i][1]*(1-f)+p[i+1][1]*f]);
+ }out.push(p.at(-1));return canvas(out);};
+ // Hand-traced approximation of the user's screenshot: S + two droplet loops.
+ const paths=[
+  [[520,446],[492,446],[474,463],[470,483]],
+  [[470,483],[483,521],[505,545],[516,578],[509,603],[483,610]],
+  [[427,496],[412,539],[427,565],[443,538],[427,496]],
+  [[547,501],[533,533],[543,581],[564,527],[547,501]]
+ ].map(interpolate);
+ const ink=[paths[0],paths[2].slice(0,14),paths[3].slice(0,10),
+  paths[1].slice(0,30),paths[2].slice(14,31),paths[3].slice(10,31),
+  paths[2].slice(31),paths[3].slice(31),paths[1].slice(30)];
+ const prepared=analyzeSeal(ink);
+ assert.deepEqual(prepared.recognized.map(g=>g.id),["water"]);
+ assert.ok(prepared.recognized[0].score>=.80);
+ assert.equal(prepared.ready,false);
+ const outer=makeExample([],{open:true}).strokes.at(-1);
+ const result=analyzeSeal([...ink,outer,closeRingStroke()]);
+ assert.equal(result.ir.castOutcome,"success");
+ assert.deepEqual(result.ir.elements,["water"]);
+ assert.equal(result.ir.output.title,"Water Sigil");
+});
+test("normal Wind and Pull signs are not mistaken for Water",()=>{
+ for(const ids of [["wind"],["wind","pull"],["fire"],["earth"]]){
+  const reading=analyzeSeal(makeExample(ids,{open:true}).strokes);
+  assert.ok(!reading.recognized.some(g=>g.id==="water"),"false Water from "+ids.join("+"));
+ }
+});
+test("Water with a separate modifier remains both a water and a sign",()=>{
+ const sample=makeExample(["water","columns"],{open:true});
+ const ink=sample.strokes.slice(0,-1);
+ const result=analyzeSeal([...ink,sample.strokes.at(-1),closeRingStroke()]);
+ assert.deepEqual(result.ir.elements,["water"]);
+ assert.deepEqual(result.ir.signs,["columns"]);
+ assert.equal(result.ir.output.title,"Watershot");
+});
