@@ -177,7 +177,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  const signs=[...new Map(recognized.filter(g=>g.role==="sign").map(g=>[g.id,g])).values()];
  const pattern=[...elements.map(e=>e.id),...signs.map(e=>e.id)].sort().join("+");
  const angleOfFirst=signs[0]?.rotationDegrees||0;
- const foundRecipe=recipes.find(r=>r.ids.slice().sort().join("+")===pattern&&(r.nested||0)===innerRings.length&&(!(r.rotate)||Math.abs(((angleOfFirst-r.rotate+540)%360)-180)<25));
+ const foundRecipe=recipes.find(r=>!r.spatial&&r.ids.slice().sort().join("+")===pattern&&(r.nested||0)===innerRings.length&&(!(r.rotate)||Math.abs(((angleOfFirst-r.rotate+540)%360)-180)<25));
  const basics={schemaVersion:4,valid:!!boundary,elements:elements.map(g=>g.id),signs:signs.map(g=>g.id),tier:foundRecipe?.tier||tierFor(elements,signs,innerRings),rings:{outer:boundary?{center:boundary.center,radius:boundary.radius,quality:boundary.quality}:null,nested:innerRings.map(r=>({center:r.center,radius:r.radius,quality:r.quality}))},warnings};
  if(!boundary)return{...basics,valid:false,power:0,output:{emoji:"🖋️",title:"Spell prepared",text:recognized.length?recognized.map(g=>g.name).join(" + ")+" inscribed. Close the outer ring to cast.":"Draw the components first, then close the outer circle."}};
  if(!elements.length){if(!signs.length&&!inkCount&&!innerRings.length)return{...basics,valid:true,tier:"beginner",power:Math.round(boundary.quality*35),reading:Math.round(boundary.quality*100),output:{emoji:"💥",title:"Empty-Ring Shockwave",text:"A closed outer ring without inscriptions releases a wave of raw magic."}};return{...basics,valid:false,power:0,output:{emoji:"📜",title:"Unstable seal",text:"The completed circle needs at least one readable elemental sigil."}};}
