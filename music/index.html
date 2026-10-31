@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0a08">
+  <meta name="description" content="Music on opieferd: collect links from Spotify, Apple Music, YouTube Music, SoundCloud, Deezer, and your own audio files into one listening queue.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta property="og:title" content="Music — opieferd">
+  <meta property="og:description" content="One little listening space for music links from your favorite platforms.">
+  <link rel="canonical" href="https://opieferd.dev/music/">
+  <link rel="icon" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../home-2026.css">
+  <link rel="stylesheet" href="music.css?v=1">
+  <title>Music — opieferd</title>
+</head>
+<body>
+<div class="container music-site">
+  <header class="topbar">
+    <a class="wordmark" href="../" aria-label="opieferd home"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a>
+    <nav class="music-nav" aria-label="Main navigation">
+      <a href="../">Home</a>
+      <a href="../watch/">OPwatch</a>
+      <a href="./" aria-current="page" class="is-current">Music <span aria-hidden="true">♫</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="music-hero">
+      <div>
+        <div class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> opieferd / listening room</div>
+        <h1>All your music.<br><em>One little space.</em></h1>
+        <p>Drop a song, album, or playlist link. Mix platforms in one queue, keep the good stuff, and stay a while.</p>
+      </div>
+      <div class="music-hero-art" aria-hidden="true">
+        <div class="art-ring art-ring-one"></div><div class="art-ring art-ring-two"></div>
+        <div class="art-disc"><span>✳</span></div>
+        <div class="art-note">♪</div>
+      </div>
+    </section>
+
+    <section class="import-panel" aria-labelledby="import-title">
+      <div class="panel-heading">
+        <div><p class="mini-label">01 / ADD SOMETHING</p><h2 id="import-title">What are we listening to?</h2></div>
+        <span class="panel-deco" aria-hidden="true">↗</span>
+      </div>
+      <form id="import-form" novalidate>
+        <label for="music-url" class="input-label">Music link <span>— paste one or several, one per line</span></label>
+        <div class="input-wrap">
+          <textarea id="music-url" rows="2" placeholder="https://open.spotify.com/playlist/…&#10;https://music.youtube.com/watch?v=…" spellcheck="false" autocomplete="off" required></textarea>
+          <button class="music-button primary" type="submit"><span aria-hidden="true">＋</span> Add to queue</button>
+        </div>
+      </form>
+      <div class="import-bottom">
+        <div class="provider-pills" aria-label="Supported streaming providers">
+          <span>Spotify</span><span>Apple Music</span><span>YouTube Music</span><span>SoundCloud</span><span>Deezer</span><span>Audio files</span>
+        </div>
+        <label class="local-file-button" for="local-files"><span aria-hidden="true">↑</span> Add local audio</label>
+        <input id="local-files" type="file" accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac" multiple hidden>
+      </div>
+      <p class="feedback" id="import-status" role="status" aria-live="polite">Links stay in your browser's queue, not on our servers.</p>
+    </section>
+
+    <div class="music-grid">
+      <section class="now-panel" aria-labelledby="now-heading">
+        <div class="section-top"><p class="mini-label">02 / NOW PLAYING</p><span class="live-indicator"><span></span> LISTENING ROOM</span></div>
+        <div class="now-header">
+          <div class="cover-art" id="cover-art" aria-hidden="true"><div class="cover-grooves"></div><span id="cover-symbol">♪</span></div>
+          <div class="track-detail">
+            <p id="track-source" class="track-source">READY WHEN YOU ARE</p>
+            <h2 id="now-heading">Nothing playing yet</h2>
+            <p id="track-kind">Add a link above to start listening.</p>
+            <a id="source-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open on provider ↗</a>
+          </div>
+        </div>
+        <div class="player-stage" id="player-stage">
+          <div class="player-empty"><span aria-hidden="true">♫</span><p>Your listening space is ready.</p><small>Paste a link or choose a local audio file to begin.</small></div>
+        </div>
+        <p class="player-hint" id="player-hint">Each streaming provider controls its own playback. Some require you to sign in or only allow previews.</p>
+        <div class="player-actions">
+          <button type="button" class="music-button secondary" id="previous" disabled aria-label="Previous queue item">⏮ <span>Previous</span></button>
+          <button type="button" class="music-button secondary" id="next" disabled aria-label="Next queue item"><span>Next</span> ⏭</button>
+          <button type="button" class="music-button secondary" id="copy-link" disabled>⧉ Copy link</button>
+          <button type="button" class="music-button primary action-download" id="show-download" disabled>↓ Get audio</button>
+        </div>
+        <div class="download-panel" id="download-panel" hidden>
+          <div class="download-heading"><h3>Save this audio</h3><button type="button" id="close-download" class="icon-button" aria-label="Close download options">×</button></div>
+          <p id="download-description">Choose how you'd like to save this link.</p>
+          <div class="download-options">
+            <a id="direct-download" class="music-button primary" href="#" hidden>↓ Download audio file</a>
+            <button type="button" class="music-button primary" id="external-download">⧉ Copy link & open OFA Downloader ↗</button>
+          </div>
+          <p class="fineprint">OFA is an independent third-party site. Only download content you own or have permission to save. Its available formats and supported links may change; no streaming-service restrictions are bypassed here.</p>
+        </div>
+        <p id="player-status" class="feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <aside class="queue-panel" aria-labelledby="queue-title">
+        <div class="section-top"><p class="mini-label">03 / YOUR MIX</p><span id="queue-count" class="count-pill">0 items</span></div>
+        <div class="queue-title-row"><h2 id="queue-title">Listening queue</h2><span aria-hidden="true">✳</span></div>
+        <p class="queue-subtitle">Tracks and collections from different services, all in one place.</p>
+        <div class="queue-list" id="queue-list" aria-live="polite">
+          <p class="queue-empty">It's pretty quiet in here. Add something above. ♫</p>
+        </div>
+        <div class="queue-footer">
+          <button class="text-action" type="button" id="shuffle-queue" disabled>↝ Shuffle</button>
+          <button class="text-action danger" type="button" id="clear-queue" disabled>× Clear queue</button>
+        </div>
+        <p class="queue-note">Queue saved locally on this device. Local file selections disappear after a refresh.</p>
+      </aside>
+    </div>
+
+    <section class="music-info" aria-labelledby="info-title">
+      <div><p class="mini-label">GOOD TO KNOW</p><h2 id="info-title">The little details.</h2></div>
+      <p>Spotify, Apple Music, YouTube Music, SoundCloud, and Deezer open in their official embedded players. Albums and playlists stay inside those players; the queue switches between links, not individual songs inside an album. Direct audio URLs and locally selected files play using your browser's audio controls.</p>
+      <p>Streaming services decide whether full songs, embeds, and offline playback are available. The external downloader option is a convenience handoff, not a built-in MP3 extractor or a guarantee of downloads.</p>
+    </section>
+  </main>
+
+  <footer class="music-footer"><a class="wordmark" href="../"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a><span>made for listening · 2026</span><a href="../watch/">Back to OPwatch ↗</a></footer>
+</div>
+<script src="music.js?v=1" defer></script>
+</body>
+</html>
