@@ -136,3 +136,21 @@ test("semantic graph exports are JSON-safe and identify actual source strokes",(
  assert.equal(decoded.spatial.links[0].to,"veer");
  assert.ok(Number.isFinite(decoded.spatial.links[0].length));
 });
+
+
+test("every guided recipe provides a complete noninteractive trace template",()=>{
+ for(const recipe of recipes){
+  const guide=makeExample(recipe.ids,{open:true,nested:recipe.nested,rotate:recipe.rotate,spatial:recipe.spatial});
+  assert.ok(guide.strokes.length>=2,"missing preview for "+recipe.label);
+  assert.equal(guide.ringIndex,guide.strokes.length-1,"outer ring must be last");
+  const ring=guide.strokes.at(-1);
+  assert.ok(ring.length>50,"ring should show a continuous path");
+  const gap=Math.hypot(ring[0].x-ring.at(-1).x,ring[0].y-ring.at(-1).y);
+  assert.ok(gap>.10,"ring should remain open for manual closing");
+  for(const stroke of guide.strokes)for(const p of stroke){
+   assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y));
+   assert.ok(p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1,"point outside drawing viewport");
+  }
+  assert.equal(analyzeSeal(guide.strokes).ready,false,"trace preview must not cast");
+ }
+});
