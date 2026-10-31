@@ -218,6 +218,22 @@ export function analyzeSeal(input){
   else if(boundary)warnings.push("Strokes "+ids.map(i=>i+1).join(", ")+": "+reason+".");
  }
  const inkCount=remaining.length;
+ // A straight freehand stroke drawn after two completed signs may also be a link.
+ // Reclassify it only when its endpoints are close to two distinct earlier signs.
+ const signNodes=()=>recognized.filter(g=>g.role==="sign").map(g=>{
+  const b=bounds(g.strokeIndices.flatMap(i=>strokes[i]));return {...g,center:{x:b.cx,y:b.cy},span:Math.max(b.w,b.h)};});
+ for(let i=0;i<strokes.length;i++){
+  if(marked.has(i)||excluded.has(i)||!straightEnough(strokes[i]))continue;
+  const line=strokes[i],nodes=signNodes().filter(g=>Math.max(...g.strokeIndices)<i&&
+   !g.strokeIndices.includes(i));
+  const nearest=point=>nodes.map(g=>({...g,distance:dist(point,g.center)}))
+   .filter(g=>g.distance<Math.max(.056,Math.min(.11,g.span*.85))).sort((a,b)=>a.distance-b.distance);
+  const a=nearest(line[0])[0],b=nearest(line.at(-1)).find(g=>g.strokeIndices[0]!==a?.strokeIndices[0]);
+  if(a&&b){marked.add(i);
+   for(let j=recognized.length-1;j>=0;j--)if(recognized[j].strokeIndices.includes(i))recognized.splice(j,1);
+   const r=regions.find(r=>r.strokeIndices.includes(i));if(r){r.recognized=null;r.reason="Directed link stroke";r.accepted=false;}
+  }
+ }
  const graph=spatialGraph(strokes,regions,recognized,marked,excluded);
  const base=compile(boundary,recognized,innerRings,warnings,inkCount);
  const ir=base.valid?spatialMeaning(base,graph):{...base,spatial:graph};
@@ -242,17 +258,37 @@ export function makeExample(ids=["wind","columns"],options={}){
  const nested=options.nested?Math.min(options.nested===true?1:options.nested,2):0,angle=Number.isFinite(options.rotate)?options.rotate:0,strokes=[],placements=[];
  const ringCenter={x:.5,y:.5};
  for(let i=0;i<elems.length;i++){
-  const x=.5+(i-(elems.length-1)/2)*(elems.length>1?.19:0),y=.52;
-  const parts=renderSymbol(elems[i],{x,y},elems.length>1?.18:.265);
+  const x=.5+(i-(elems.length-1)/2)*(elems.length>1?.19:0),y=options.spatial?.contain?.68:options.spatial?.link?.61:.52;
+  const parts=renderSymbol(elems[i],{x,y},options.spatial?.contain?.18:elems.length>1?.18:.265);
   for(const path of parts)strokes.push(path);
   placements.push({id:elems[i].id,role:"sigil",center:{x,y}});
  }
  for(let i=0;i<signs.length;i++){
-  const theta=-Math.PI/2+i*Math.PI*2/Math.max(3,signs.length),
-    x=.5+Math.cos(theta)*.27,y=.5+Math.sin(theta)*.27,
-    twist=options.rotateAll?angle:(i===0?angle:0);
-  for(const path of renderSymbol(signs[i],{x,y},.12,twist))strokes.push(path);
+  const theta=-Math.PI/2+i*Math.PI*2/Math.max(3,signs.length);
+  let x=.5+Math.cos(theta)*.27,y=.5+Math.sin(theta)*.27,scale=.12;
+  if(options.spatial?.contain){
+   const [outer,inner]=options.spatial.contain;
+   if(signs[i].id===outer){x=.5;y=.34;scale=.27;}
+   if(signs[i].id===inner){x=.5;y=.34;scale=.10;}
+  }
+  if(options.spatial?.link){
+   const [from,to]=options.spatial.link;
+   if(signs[i].id===from){x=.31;y=.31;scale=.12;}
+   if(signs[i].id===to){x=.69;y=.31;scale=.12;}
+  }
+  const twist=options.rotateAll?angle:(i===0?angle:0);
+  for(const path of renderSymbol(signs[i],{x,y},scale,twist))strokes.push(path);
   placements.push({id:signs[i].id,role:"sign",center:{x,y},rotationDegrees:twist});
+ }
+ if(options.spatial?.link){
+  const [fromId,toId]=options.spatial.link,
+    from=placements.find(p=>p.id===fromId&&p.role==="sign"),
+    to=placements.find(p=>p.id===toId&&p.role==="sign");
+  if(from&&to){
+   const trace=Array.from({length:21},(_,i)=>({x:from.center.x+(to.center.x-from.center.x)*i/20,
+    y:from.center.y+(to.center.y-from.center.y)*i/20,t:2200+i*11}));
+   trace.intent="connector";strokes.push(trace);
+  }
  }
  for(let i=0;i<nested;i++)strokes.push(circularPath(i===0?.185:.115,false,ringCenter));
  strokes.push(circularPath(.39,options.open!==false,ringCenter));
@@ -282,7 +318,11 @@ export const recipes=[
  {tier:"advanced",ids:["fire","convergence","orbit"],nested:2,label:"Pyre Constellation",emoji:"✨"},
  {tier:"advanced",ids:["earth","water","convergence"],nested:1,label:"Living Clay",emoji:"🪨"},
  {tier:"advanced",ids:["wind","water","fire","expansion"],nested:1,label:"Tempest Crucible",emoji:"⛈️"},
- {tier:"advanced",ids:["earth","levitation","split"],nested:2,label:"Orbiting Shards",emoji:"🪨"}
+ {tier:"advanced",ids:["earth","levitation","split"],nested:2,label:"Orbiting Shards",emoji:"🪨"},
+ {tier:"advanced",ids:["wind","columns","veer"],spatial:{link:["columns","veer"]},label:"Guided Wind Lance",emoji:"🪄"},
+ {tier:"advanced",ids:["wind","columns","veer"],spatial:{link:["veer","columns"]},label:"Deflected Wind Lance",emoji:"↪️"},
+ {tier:"advanced",ids:["water","expansion","orbit"],spatial:{contain:["expansion","orbit"]},label:"Spiral Bloom",emoji:"🌀"},
+ {tier:"advanced",ids:["fire","expansion","orbit"],spatial:{contain:["expansion","orbit"]},label:"Solar Vortex",emoji:"☀️"}
 ];
 export const TIERS=[
 {id:"beginner",name:"Beginner",subtitle:"Meet the elements",description:"One sigil at a time. Learn how enclosing a circle releases magic."},
