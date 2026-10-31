@@ -1,6 +1,6 @@
 import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-4";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
-let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]);
+let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false;
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
 const make=(tag,className,text)=>{const x=document.createElement(tag);if(className)x.className=className;if(text!==undefined)x.textContent=text;return x};
 const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
@@ -42,7 +42,7 @@ if(mode==="deep"&&points){const ringIndices=new Set(analysis.boundary?.strokeInd
 }
 function point(e){const r=ink.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width),y:clamp((e.clientY-r.top)/r.height),t:performance.now()};}
 function add(e){if(!active)return;const p=point(e),last=active.at(-1);if(!last||Math.hypot(p.x-last.x,p.y-last.y)>.0009)active.push(p)}
-ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;ink.setPointerCapture(pointer);active=[];add(e);draw()});
+ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;recipeDirty=true;$("magic-rotation").disabled=true;ink.setPointerCapture(pointer);active=[];add(e);draw()});
 ink.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!active)return;const ev=typeof e.getCoalescedEvents==="function"?e.getCoalescedEvents():[e];for(const v of ev)add(v);draw()});
 function finish(e){
  if(e.pointerId!==pointer)return;
@@ -57,8 +57,9 @@ function refresh({checkClosure=false}={}){
  if(justClosed){
   casted=true;
   if(analysis.ir.valid){
-   save();
+   save();if(analysis.ir.tier!==selectedTier)setTier(analysis.ir.tier);
    status.textContent="✦ Circle closed! "+analysis.ir.output.title+" was cast automatically.";
+
   }else status.textContent="The ring closed, but the inscriptions were unstable. "+(analysis.warnings.at(-1)||"Try another sigil.");
  }else if(!analysis.ready){
   casted=false;
@@ -81,11 +82,11 @@ const key="opie_magic_wha_lab_v1";function loadSaved(){try{return JSON.parse(loc
 function save(){try{const data=loadSaved(),ir=analysis.ir,signature=[...ir.elements].sort().join("+")+"::"+[...ir.signs].sort().join("+");data[signature]={emoji:ir.output.emoji,title:ir.output.title,power:Math.max(data[signature]?.power||0,ir.power),tier:ir.tier,rotation:ir.rotationDegrees,nested:ir.rings?.nested?.length||0};localStorage.setItem(key,JSON.stringify(data));showSaved()}catch{status.textContent="Spell cast successfully. Your browser did not allow saving it."}}
 function showSaved(){
  book.replaceChildren();
- const entries=Object.values(loadSaved()).filter(v=>(v.tier||"beginner")===selectedTier);
- if(!entries.length){book.append(make("p","magic-note","No "+selectedTier+" discoveries yet. Explore a recipe, close its outer ring, and it will appear here."));return;}
- for(const spell of entries){const item=make("div","magic-book-entry");item.append(make("span","",spell.emoji+" "+spell.title),make("small","","Power "+spell.power));book.append(item);}
  const counts=Object.values(loadSaved());
  for(const button of document.querySelectorAll("[data-book-tier]"))button.querySelector(".magic-tier-count").textContent=counts.filter(v=>(v.tier||"beginner")===button.dataset.bookTier).length;
+ const entries=counts.filter(v=>(v.tier||"beginner")===selectedTier);
+ if(!entries.length){book.append(make("p","magic-note","No "+selectedTier+" discoveries yet. Explore a recipe, close its outer ring, and it will appear here."));return;}
+ for(const spell of entries){const item=make("div","magic-book-entry");item.append(make("span","",spell.emoji+" "+spell.title),make("small","","Power "+spell.power));book.append(item);}
 }
 function displayLesson(id){selected=id;const s=SYMBOLS.find(g=>g.id===id);if(!s)return;document.querySelectorAll(".magic-lesson").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.glyph===id)));$("lesson-name").textContent=s.emoji+" "+s.name;$("lesson-role").textContent=s.role==="sigil"?"Central sigil":"Modifier sign";$("lesson-steps").textContent=s.tip+" "+s.paths.length+" pen stroke"+(s.paths.length===1?"":"s")+".";
 $("lesson-source").hidden=!s.source;$("lesson-source").href=s.source||"#lessons";$("lesson-source").textContent=s.source?"Source: Sigils / Signs Explained ↗":"";
@@ -95,6 +96,8 @@ function loadExample(recipe){
  const ids=Array.isArray(recipe)?recipe:recipe.ids;
  const nested=Array.isArray(recipe)?0:recipe.nested||0,rotate=Array.isArray(recipe)?0:recipe.rotate||0;
  const ex=makeExample(ids,{open:true,nested,rotate});
+ currentRecipe={ids,nested,rotate};recipeDirty=false;
+ $("magic-rotation").disabled=false;$("magic-rotation").value=String(rotate);
  strokes=ex.strokes;casted=false;refresh();draw();
  status.textContent="Recipe prepared"+(nested?" with "+nested+" focusing ring(s)":"")+(rotate?" and a rotated sign":"")+". Join the glowing endpoints of the outer ring to cast.";
 }
@@ -125,8 +128,24 @@ function setupTiers(){
  }
 }
 
-$("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;refresh();draw();});
-$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;refresh();draw();});
+$("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;recipeDirty=true;$("magic-rotation").disabled=true;refresh();draw();});
+$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;currentRecipe=null;recipeDirty=false;$("magic-rotation").disabled=true;refresh();draw();});
+$("magic-focus-ring").addEventListener("click",()=>{
+ if(casted){status.textContent="Undo the sealing stroke before changing a completed spell.";return;}
+ const count=analysis.innerRings.length;
+ if(count>=2){status.textContent="Two focusing rings is the limit in this prototype.";return;}
+ const radius=count===0?.185:.115;
+ strokes.push(Array.from({length:97},(_,i)=>({x:.5+radius*Math.cos(i*Math.PI*2/96),y:.5+radius*Math.sin(i*Math.PI*2/96),t:performance.now()+i*5})));
+ recipeDirty=true;$("magic-rotation").disabled=true;refresh();draw();
+ status.textContent="◎ Inner focus ring added. It won't cast until you close the OUTER ring.";
+});
+$("magic-rotation").addEventListener("change",e=>{
+ if(!currentRecipe||recipeDirty){status.textContent="Load a fresh recipe to preview a rotated modifier.";return;}
+ const angle=Number(e.target.value)||0;
+ const next={...currentRecipe,rotate:angle};
+ loadExample(next);
+ status.textContent="↻ Example sign rotated "+angle+"°. Draw the missing outer-ring stroke to test its direction.";
+});
 $("magic-demo").addEventListener("click",()=>loadExample(["wind","columns"]));
 $("lesson-demo").addEventListener("click",()=>loadExample(SYMBOLS.find(s=>s.id===selected)?.role==="sign"?["wind",selected]:[selected]));
 
