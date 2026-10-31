@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css?v=20261031">
   <link rel="stylesheet" href="css/magic.css?v=20261031">
-  <link rel="stylesheet" href="css/atelier.css?v=ring-closure-v3">
+  <link rel="stylesheet" href="css/atelier.css?v=arcana-4">
 </head>
 <body>
 <div class="container">
@@ -29,7 +29,7 @@
       <div class="magic-hero-copy">
         <div class="magic-kicker">✦ an experiment in drawing spells / 01</div>
         <h1>Glyph <em>Atelier.</em></h1>
-        <p class="magic-lead">Based on the magical language of Witch Hat Atelier. Learn the four elemental sigils, add modifier signs, then close the outer ring to activate your spell. Every mark matters.</p>
+        <p class="magic-lead">Based on the magical language of Witch Hat Atelier. Learn elemental sigils, rotate directional signs, and weave magic through nested rings. Closing the <strong>outermost</strong> ring is the only way to cast.</p>
       </div>
       <div class="magic-seal-mark" aria-hidden="true"><span>✳</span></div>
     </div>
@@ -64,14 +64,15 @@
           <h3>Collected discoveries</h3>
           <button class="magic-btn" id="magic-reset-book" type="button" style="min-height:32px;padding:.35rem .6rem;font-size:.7rem">Reset</button>
         </div>
-        <p class="magic-note">Successful spells are kept in this browser's grimoire. Bigger sigils create stronger magic, and signs modify its direction and behavior.</p>
+        <p class="magic-note">Your grimoire is divided into three chapters. Switch chapters to keep your studies manageable.</p>
+        <div class="magic-tier-tabs magic-book-tabs" id="magic-book-tabs" role="tablist" aria-label="Grimoire level"></div>
         <div class="magic-book" id="magic-book"><p class="magic-note">No discoveries yet.</p></div>
       </aside>
     </div>
     <div class="magic-lessons" id="lessons">
       <div class="magic-section-head">
         <div><span class="magic-mini">02 / primary tetrad and modifier signs</span><h2>Learn the <em>sigils.</em></h2></div>
-        <p>10 traceable symbols · 4 elements · 6 signs</p>
+        <p>13 symbols · 4 elements · 6 reference-based signs · 3 experimental signs</p>
       </div>
       <div class="magic-lessons-grid" id="magic-lessons-grid"></div>
       <div class="magic-lesson-details">
@@ -84,17 +85,20 @@
         </div>
         <button class="magic-btn magic-btn-primary" type="button" id="lesson-demo">Load this seal ↗</button>
       </div>
+      <div class="magic-learning-note"><span>◎ <strong>Circle grammar:</strong> An inner ring can focus a working, but won't cast. Tilt or rotate asymmetric signs to redirect magic. Complete the <strong>outermost</strong> ring to release it.</span><a href="#recipes">Study recipes ↓</a></div>
       <div class="magic-learning-note"><span>✦ Study the reference-inspired sigils and modifier signs one stroke at a time. There's no Finish button: the interpreter groups the separate pen strokes automatically. <b>Leave the outer circle open while preparing a spell</b>, then connect its endpoints to cast.</span><a href="../magic-original/">Play original sigils ↗</a></div>
       <p class="magic-note" style="margin-top:.6rem">Sigil illustrations: <a href="https://witchhatatelier.telepedia.net/wiki/File:Fire_sigil.png" target="_blank" rel="noopener noreferrer">Fire</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Water.png" target="_blank" rel="noopener noreferrer">Water</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Earth.png" target="_blank" rel="noopener noreferrer">Earth</a>, and <a href="https://witchhatatelier.telepedia.net/wiki/File:Wind_(redirect).png" target="_blank" rel="noopener noreferrer">Wind</a> are credited to Chromatic Flare and, for the current Earth version, Bleuseil. See each wiki file page for licensing and source history.</p>
-      <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. The four fundamental sigils are shown using attributed reference drawings from the Independent Witch Hat Atelier Wiki; their interactive stroke templates are simplified for practice. Modifier signs are schematic studies, and spell combinations are fan interpretations, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
+      <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. The four fundamental sigils use attributed wiki illustrations; their interactive templates are simplified. Veer, Orbit and Fork, rotation rules, nested-ring amplification and combination outcomes are experimental game mechanics, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
     </div>
     <section class="magic-combos" id="recipes">
       <div class="magic-section-head">
         <div><span class="magic-mini">03 / example spellwork</span><h2>Try these <em>circles.</em></h2></div>
         <p>Recipes load an unfinished ring. Connect the glowing gap to cast.</p>
       </div>
+      <div class="magic-tier-tabs" id="magic-tier-tabs" role="tablist" aria-label="Spell recipe difficulty"></div>
+      <p class="magic-note magic-tier-description" id="magic-tier-description">Beginner — start with a single element.</p>
       <div class="magic-recipes-grid" id="magic-recipes-grid"></div>
-      <p class="magic-note" style="margin:1rem 0 0">Examples are starter recipes, not the only valid spells. Each loads in a prepared, inactive state until you close the circle. Undo the closing stroke to edit a seal.</p>
+      <p class="magic-note" style="margin:1rem 0 0">Lessons are grouped by chapter rather than showing hundreds of combinations at once. Start with a single element, then learn rotations and asymmetric signs. Advanced circles can contain smaller focusing rings; close the outermost ring last. Undo its closing stroke to edit.</p>
     </section>
     <div class="magic-panel magic-debug-section">
       <div class="magic-debug-top">
@@ -105,7 +109,7 @@
           <button class="magic-mode" data-mode="deep" type="button" aria-pressed="false">Deep debug</button>
         </div>
       </div>
-      <p class="magic-note">Inspect shows incomplete rings, automatic multi-stroke groupings, competing glyph scores, and closure detection. Deep debug exposes geometry and JSON for a later Luau port.</p>
+      <p class="magic-note">Inspect shows nested rings, stroke groupings, glyph bearings and confidence scores. Deep debug exposes layered spell structure and semantic JSON for a later Luau port.</p>
       <div class="magic-inspector" id="magic-inspector" hidden>
         <div>
           <h3>What the script detected</h3>
@@ -136,6 +140,6 @@
     <a href="../#web-games">← Back to my web games</a>
   </footer>
 </div>
-<script type="module" src="js/atelier-app.js?v=20261031-ring-v3"></script>
+<script type="module" src="js/atelier-app.js?v=arcana-4"></script>
 </body>
 </html>
