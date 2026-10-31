@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css?v=20261031">
   <link rel="stylesheet" href="css/magic.css?v=20261031">
-  <link rel="stylesheet" href="css/atelier.css?v=arcana-4-final">
+  <link rel="stylesheet" href="css/atelier.css?v=arcana-5">
 </head>
 <body>
 <div class="container">
@@ -50,6 +50,7 @@
           <button class="magic-btn" type="button" id="magic-demo">Load example</button>
           <button class="magic-btn" type="button" id="magic-guide" aria-pressed="true">◌ Guides</button>
           <button class="magic-btn" type="button" id="magic-focus-ring" title="Add a smaller focusing circle inside the outer casting ring">◎ Focus ring</button>
+          <button class="magic-btn" type="button" id="magic-link-pen" aria-pressed="false" title="Draw one directed link from the center of one sign to the center of another sign">↗ Link pen</button>
           <label class="magic-rotation-label" for="magic-rotation">↻ Rotate sample
             <select id="magic-rotation" disabled aria-label="Rotate the first modifier sign in a loaded example">
               <option value="0">0°</option><option value="45">45°</option><option value="90">90°</option><option value="135">135°</option>
@@ -58,7 +59,7 @@
           </label>
         </div>
         <div class="magic-ring-state" id="magic-ring-state" role="status" aria-live="polite">◌ Magic prepared — awaiting ring</div>
-        <p class="magic-status" id="magic-status" aria-live="polite">Draw a sigil, optionally add an inner focus ring or rotate a sign, then close the outermost circle to cast.</p>
+        <p class="magic-status" id="magic-status" aria-live="polite">Draw a sigil and signs, then experiment with sign containment or the Link pen. Close the outermost circle last to cast.</p>
       </div>
       <aside class="magic-panel magic-reading-panel">
         <div class="magic-heading">
@@ -95,7 +96,7 @@
       <div class="magic-learning-note"><span>◎ <strong>Circle grammar:</strong> An inner ring can focus a working, but won't cast. Tilt or rotate asymmetric signs to redirect magic. Complete the <strong>outermost</strong> ring to release it.</span><a href="#recipes">Study recipes ↓</a></div>
       <div class="magic-learning-note"><span>✦ Study the reference-inspired sigils and modifier signs one stroke at a time. There's no Finish button: the interpreter groups the separate pen strokes automatically. <b>Leave the outer circle open while preparing a spell</b>, then connect its endpoints to cast.</span><a href="../magic-original/">Play original sigils ↗</a></div>
       <p class="magic-note" style="margin-top:.6rem">Sigil illustrations: <a href="https://witchhatatelier.telepedia.net/wiki/File:Fire_sigil.png" target="_blank" rel="noopener noreferrer">Fire</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Water.png" target="_blank" rel="noopener noreferrer">Water</a>, <a href="https://witchhatatelier.telepedia.net/wiki/File:Earth.png" target="_blank" rel="noopener noreferrer">Earth</a>, and <a href="https://witchhatatelier.telepedia.net/wiki/File:Wind_(redirect).png" target="_blank" rel="noopener noreferrer">Wind</a> are credited to Chromatic Flare and, for the current Earth version, Bleuseil. See each wiki file page for licensing and source history.</p>
-      <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. The four fundamental sigils use attributed wiki illustrations; their interactive templates are simplified. Veer, Orbit and Fork, rotation rules, nested-ring amplification and combination outcomes are experimental game mechanics, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
+      <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. The four fundamental sigils use attributed wiki illustrations; their interactive templates are simplified. Veer, Orbit and Fork, rotation rules, nested-ring amplification, directed links, containment, and combination outcomes are experimental game mechanics, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
     </div>
     <section class="magic-combos" id="recipes">
       <div class="magic-section-head">
@@ -105,6 +106,15 @@
       <div class="magic-tier-tabs" id="magic-tier-tabs" role="tablist" aria-label="Spell recipe difficulty"></div>
       <p class="magic-note magic-tier-description" id="magic-tier-description">Beginner — start with a single element.</p>
       <div class="magic-recipes-grid" id="magic-recipes-grid"></div>
+      <div class="magic-spatial-lesson" id="magic-spatial-lesson">
+        <div><span class="magic-mini">advanced / spatial spell grammar</span><h3>Placement is part of the spell.</h3></div>
+        <div class="magic-spatial-steps">
+          <p><strong>⊙ Enclose:</strong> Trace a large Expansion sign, then draw a smaller Orbit sign <em>inside it</em>. This changes how the signs combine.</p>
+          <p><strong>↗ Connect:</strong> Draw two separate signs, choose <strong>Link pen</strong>, and draw a line <em>from the first sign to the second</em>. Reversing that line changes the spell.</p>
+          <p><strong>◌ Activate:</strong> Leave the outer ring open while you experiment. Close the ring to cast and inspect the resulting relationship graph.</p>
+        </div>
+        <p class="magic-note">These spatial mechanics and named examples are original game experiments, not established Witch Hat Atelier canon.</p>
+      </div>
       <p class="magic-note" style="margin:1rem 0 0">Lessons are grouped by chapter rather than showing hundreds of combinations at once. Start with a single element, then learn rotations and asymmetric signs. Advanced circles can contain smaller focusing rings; close the outermost ring last. Undo its closing stroke to edit.</p>
     </section>
     <div class="magic-panel magic-debug-section">
@@ -116,7 +126,7 @@
           <button class="magic-mode" data-mode="deep" type="button" aria-pressed="false">Deep debug</button>
         </div>
       </div>
-      <p class="magic-note">Inspect shows nested rings, stroke groupings, glyph bearings and confidence scores. Deep debug exposes layered spell structure and semantic JSON for a later Luau port.</p>
+      <p class="magic-note">Inspect shows nested rings, stroke groupings, rotation, and sign-to-sign relationships. Deep debug exports the full spell graph as JSON for the eventual Luau port.</p>
       <div class="magic-inspector" id="magic-inspector" hidden>
         <div>
           <h3>What the script detected</h3>
@@ -127,7 +137,7 @@
             <label><input type="checkbox" id="debug-labels" checked> Labels</label>
             <label id="deep-settings" hidden><input type="checkbox" id="debug-points"> Raw points</label>
           </div>
-          <div id="debug-regions"></div>
+          <div id="debug-regions"></div><div class="magic-spatial-inspector" id="magic-spatial-relations" aria-live="polite"></div>
         </div>
         <div>
           <h3>Normalized glyph comparison</h3>
@@ -147,6 +157,6 @@
     <a href="../#web-games">← Back to my web games</a>
   </footer>
 </div>
-<script type="module" src="js/atelier-app.js?v=arcana-4-final"></script>
+<script type="module" src="js/atelier-app.js?v=arcana-5"></script>
 </body>
 </html>
