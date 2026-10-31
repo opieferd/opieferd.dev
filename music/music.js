@@ -520,8 +520,8 @@
       item.append(select, remove);
       list.append(item);
     });
-    $('previous').disabled = current <= 0;
-    $('next').disabled = current < 0 || current >= queue.length - 1;
+    $('previous').disabled = current <= 0 && !playedHistory.length;
+    $('next').disabled = current < 0 || (queue.length < 2 && repeat === 0);
     $('copy-link').disabled = current < 0 || queue[current]?.source === 'Local file';
     $('show-download').disabled = current < 0;
     $('clear-queue').disabled = queue.length === 0;
@@ -729,6 +729,7 @@
       $('cover-image').hidden = true;
       $('track-artist').hidden = true;
       stage.replaceChildren();
+      stage.classList.remove('has-audio');
       const empty = document.createElement('div');
       empty.className = 'player-empty';
       const symbol = document.createElement('span'); symbol.textContent = '♫';
@@ -766,10 +767,11 @@
     }
 
     stage.replaceChildren();
+    stage.classList.toggle('has-audio',entry.mode==='audio');
     if (entry.mode === 'audio') {
       const audio = document.createElement('audio');
       audio.src = entry.original;
-      audio.controls = true;
+      audio.controls = false;
       audio.preload = 'metadata';
       audio.playsInline = true;
       audio.addEventListener('error', () => {
@@ -777,14 +779,11 @@
           setFeedback(playerStatus, 'The browser could not load this audio. The file may be unavailable or blocked by its host.', true);
         }
       });
-      audio.addEventListener('ended', () => {
-        if (queue[current] === entry && current + 1 < queue.length) {
-          setCurrent(current + 1);
-          const upcoming = stage.querySelector('audio');
-          if (upcoming) upcoming.play().catch(() => {});
-        }
-      });
       stage.append(audio);
+      const visual=document.createElement('div');visual.className='local-visual';
+      const visualIcon=document.createElement('span');visualIcon.textContent='♫';
+      const visualText=document.createElement('span');visualText.textContent='BROWSER AUDIO / LOCAL PLAYBACK';
+      visual.append(visualIcon,visualText);stage.append(visual);
       connectAudio(audio,entry);
       setFeedback(playerStatus,'Ready to play in your browser.');
       if(shouldAutoplay)audio.play().catch(()=>setFeedback(playerStatus,'Press Play to start the audio.'));
@@ -824,6 +823,7 @@
       localUrls.delete(entry.id);
     }
     queue.splice(index, 1);
+    playedHistory.length=0;
     save();
     if (!queue.length) setCurrent(-1);
     else if (index === current) setCurrent(Math.min(index, queue.length - 1));
@@ -962,6 +962,7 @@
 
   loadLibrary();
   restore();
+  queue.filter(item=>['album','playlist'].includes(item.kind)).forEach(rememberCollection);
   if (queue.length) setCurrent(0);
   else setCurrent(-1);
 
