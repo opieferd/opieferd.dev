@@ -1,6 +1,7 @@
 /* Music / opieferd — builds on the shared homepage tokens and typography. */
 :root{--music-outline:rgba(235,175,54,.21)}
 html{scroll-behavior:smooth}
+[hidden]{display:none!important}
 body{min-width:320px}
 button,textarea{font:inherit}
 button,a,textarea{-webkit-tap-highlight-color:transparent}
