@@ -68,10 +68,11 @@
       <section class="now-panel" aria-labelledby="now-heading">
         <div class="section-top"><p class="mini-label">02 / NOW PLAYING</p><span class="live-indicator"><span></span> LISTENING ROOM</span></div>
         <div class="now-header">
-          <div class="cover-art" id="cover-art" aria-hidden="true"><div class="cover-grooves"></div><span id="cover-symbol">♪</span></div>
+          <div class="cover-art" id="cover-art" aria-hidden="true"><div class="cover-grooves"></div><span id="cover-symbol">♪</span><img id="cover-image" alt="" hidden></div>
           <div class="track-detail">
             <p id="track-source" class="track-source">READY WHEN YOU ARE</p>
             <h2 id="now-heading">Nothing playing yet</h2>
+            <p id="track-artist" class="track-artist" hidden></p>
             <p id="track-kind">Add a link above to start listening.</p>
             <a id="source-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open on provider ↗</a>
           </div>
@@ -79,10 +80,27 @@
         <div class="player-stage" id="player-stage">
           <div class="player-empty"><span aria-hidden="true">♫</span><p>Your listening space is ready.</p><small>Paste a link or choose a local audio file to begin.</small></div>
         </div>
+        <div class="transport" aria-label="Music playback controls">
+          <div class="transport-buttons">
+            <button type="button" id="shuffle-toggle" class="transport-icon" title="Shuffle off" aria-label="Enable shuffle" aria-pressed="false">⤨</button>
+            <button type="button" id="previous" class="transport-icon" title="Previous" aria-label="Previous item" disabled>⏮</button>
+            <button type="button" id="play-pause" class="transport-play" title="Play or pause" aria-label="Play" disabled>▶</button>
+            <button type="button" id="next" class="transport-icon" title="Next" aria-label="Next item" disabled>⏭</button>
+            <button type="button" id="repeat-toggle" class="transport-icon" title="Repeat off" aria-label="Repeat off" aria-pressed="false">↻</button>
+          </div>
+          <div class="transport-progress">
+            <span id="elapsed-time">0:00</span>
+            <input id="seek" type="range" min="0" max="1000" value="0" step="1" disabled aria-label="Playback position">
+            <span id="total-time">0:00</span>
+          </div>
+          <div class="transport-volume">
+            <span aria-hidden="true">♪</span><label for="volume">Volume</label>
+            <input id="volume" type="range" min="0" max="100" value="80" step="1" disabled>
+          </div>
+          <p id="transport-note" class="transport-note">Your player controls will appear here.</p>
+        </div>
         <p class="player-hint" id="player-hint">Each streaming provider controls its own playback. Some require you to sign in or only allow previews.</p>
         <div class="player-actions">
-          <button type="button" class="music-button secondary" id="previous" disabled aria-label="Previous queue item">⏮ <span>Previous</span></button>
-          <button type="button" class="music-button secondary" id="next" disabled aria-label="Next queue item"><span>Next</span> ⏭</button>
           <button type="button" class="music-button secondary" id="copy-link" disabled>⧉ Copy link</button>
           <button type="button" class="music-button primary action-download" id="show-download" disabled>↓ Get audio</button>
         </div>
@@ -106,7 +124,7 @@
           <p class="queue-empty">It's pretty quiet in here. Add something above. ♫</p>
         </div>
         <div class="queue-footer">
-          <button class="text-action" type="button" id="shuffle-queue" disabled>↝ Shuffle</button>
+          <span id="queue-mode-label" class="queue-mode-label">In order</span>
           <button class="text-action danger" type="button" id="clear-queue" disabled>× Clear queue</button>
         </div>
         <p class="queue-note">Queue saved locally on this device. Local file selections disappear after a refresh.</p>
@@ -115,13 +133,15 @@
 
     <section class="music-info" aria-labelledby="info-title">
       <div><p class="mini-label">GOOD TO KNOW</p><h2 id="info-title">The little details.</h2></div>
-      <p>Spotify, Apple Music, YouTube Music, SoundCloud, and Deezer open in their official embedded players. Albums and playlists stay inside those players; the queue switches between links, not individual songs inside an album. Direct audio URLs and locally selected files play using your browser's audio controls.</p>
+      <p>Spotify, Apple Music, YouTube Music, SoundCloud, and Deezer open in their official embedded players. Albums and playlists stay inside those players; queue skip moves between links, not individual songs inside an album. The transport controls can directly operate browser audio and supported YouTube/SoundCloud widgets; other services use their own controls. Direct audio URLs and locally selected files play using your browser's audio controls.</p>
       <p>Streaming services decide whether full songs, embeds, and offline playback are available. The external downloader option is a convenience handoff, not a built-in MP3 extractor or a guarantee of downloads.</p>
     </section>
   </main>
 
   <footer class="music-footer"><a class="wordmark" href="../"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a><span>made for listening · 2026</span><a href="../watch/">Back to OPwatch ↗</a></footer>
 </div>
-<script src="music.js?v=1" defer></script>
+<script src="https://w.soundcloud.com/player/api.js" defer></script>
+<script src="https://www.youtube.com/iframe_api" async></script>
+<script src="music.js?v=2" defer></script>
 </body>
 </html>
