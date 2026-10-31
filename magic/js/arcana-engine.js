@@ -122,6 +122,89 @@ function findWaterByTopology(strokes,indices,frame){
  return winner;
 }
 
+
+/* Interpret the complete Earth silhouette (cap, stem, stone, base)
+ * before classifying individual pen strokes. */
+function findEarthByTopology(strokes,indices,frame){
+ if(indices.length<4||indices.length>46)return null;
+ const ink=indices.map(id=>{
+  const points=strokes[id],box=bounds(points),a=points[0],z=points.at(-1),
+   span=dist(a,z),length=points.slice(1).reduce((sum,p,i)=>sum+dist(p,points[i]),0);
+  return{id,points,box,span,length,
+   horizontal:span>.039&&Math.abs(z.y-a.y)<Math.abs(z.x-a.x)*.21&&length/span<1.20,
+   vertical:span>.06&&Math.abs(z.x-a.x)<Math.abs(z.y-a.y)*.22&&length/span<1.20};
+ });
+ const bars=ink.filter(i=>i.horizontal&&i.box.w>.048&&i.box.w<.28);
+ let best=null;
+ for(const top of bars)for(const bottom of bars){
+  if(top.id===bottom.id||bottom.box.cy<=top.box.cy)continue;
+  const width=top.box.w,dy=bottom.box.cy-top.box.cy,cx=top.box.cx;
+  if(dy<width*.86||dy>width*2.08||bottom.box.w<width*.47||bottom.box.w>width*1.68)continue;
+  if(Math.abs(bottom.box.cx-cx)>width*.24)continue;
+  if(dist({x:cx,y:top.box.cy+dy*.50},frame.center)>frame.radius*.78)continue;
+  const stem=ink.find(v=>v.vertical&&v.id!==top.id&&v.id!==bottom.id&&Math.abs(v.box.cx-cx)<width*.17&&
+   v.box.y<top.box.cy+dy*.19&&v.box.y+v.box.h>top.box.cy+dy*.62&&v.box.h>dy*.56);
+  if(!stem)continue;
+  const position=([x,y])=>({x:cx+(x-50)*width/56,y:top.box.cy+(y-14)*dy/82});
+  const template=[[35,32],[16,55],[50,85],[84,55],[65,32]];
+  const edges=template.slice(1).map((p,i)=>[position(template[i]),position(p)]);
+  const tolerance=Math.max(.012,Math.min(.023,width*.14));
+  const lineDistance=(p,a,b)=>{
+   const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1));
+   return dist(p,{x:a.x+t*dx,y:a.y+t*dy});
+  };
+  const candidates=ink.filter(item=>![top.id,bottom.id,stem.id].includes(item.id)&&
+   item.box.cx>cx-width*.78&&item.box.cx<cx+width*.78&&
+   item.box.cy>=top.box.cy-width*.19&&item.box.cy<=bottom.box.cy+width*.13&&item.length>.024)
+   .map(item=>({...item,samples:resample(item.points,24)}))
+   .map(item=>({...item,fit:item.samples.filter(p=>edges.some(([a,b])=>lineDistance(p,a,b)<tolerance)).length/item.samples.length}))
+   .filter(item=>item.fit>.58);
+  if(!candidates.length)continue;
+  const points=candidates.flatMap(item=>item.samples);
+  const support=edges.map(([a,b])=>{
+   let count=0;for(let i=0;i<12;i++){const t=(i+.5)/12,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(points.some(q=>dist(p,q)<tolerance))count++;}
+   return count/12;
+  });
+  if(support.some(x=>x<.40)||support.reduce((sum,x)=>sum+x,0)<2.52)continue;
+  const ids=[top.id,bottom.id,stem.id,...candidates.map(x=>x.id)].sort((a,b)=>a-b),quality=support.reduce((sum,x)=>sum+x,0)/4;
+  const confidence=clamp(.74+quality*.22);
+  if(!best||confidence>best.confidence){
+   const def=SYMBOLS.find(x=>x.id==="earth");
+   best={ids,confidence,ranking:[{id:"earth",name:def.name,role:"sigil",emoji:def.emoji,score:+confidence.toFixed(3),error:+(1-quality).toFixed(3),rotationDegrees:0,orientationAmbiguous:false},
+    ...scoreSymbols(ids.map(id=>strokes[id])).filter(x=>x.id!=="earth")]};
+  }
+ }
+ return best;
+}
+/* Components are spatially separate, even when their strokes are interleaved
+ * in drawing order. Collect nearby lines into independent candidate glyphs. */
+function findIndependentGroups(strokes,indices){
+ const samples=new Map(indices.map(i=>[i,resample(strokes[i],Math.min(20,Math.max(5,strokes[i].length)))]));
+ const near=(a,b)=>{for(const p of samples.get(a))for(const q of samples.get(b))if(dist(p,q)<.038)return true;return false;};
+ const unclaimed=new Set(indices),groups=[];
+ for(const first of indices){
+  if(!unclaimed.has(first))continue;
+  const queue=[first],group=[];unclaimed.delete(first);
+  for(let j=0;j<queue.length;j++){
+   const i=queue[j];group.push(i);
+   for(const other of [...unclaimed])if(near(i,other)){queue.push(other);unclaimed.delete(other);}
+  }
+  groups.push(group.sort((a,b)=>a-b));
+ }
+ return groups;
+}
+function identifyUnordered(strokes,indices){
+ const groups=findIndependentGroups(strokes,indices),found=[];
+ for(const ids of groups){
+  if(ids.length<2||ids.length>9)continue;
+  const ranking=scoreSymbols(ids.map(i=>strokes[i])),best=ranking[0];
+  if(best.score<.74||best.score-(ranking[1]?.score||0)<.055)continue;
+  if(Math.abs(ids.length-SYMBOLS.find(s=>s.id===best.id).paths.length)>2)continue;
+  found.push({ids,ranking});
+ }
+ return found;
+}
+
 function segment(strokes,indices,frame,innerRings){
  const n=indices.length;if(!n)return[];
  const dp=Array(n+1).fill(-Infinity),choices=Array(n),cached=new Map();dp[n]=0;
@@ -325,7 +408,9 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  if(!boundary)return{...basics,valid:false,power:0,output:{emoji:"🖋️",title:"Spell prepared",text:recognized.length?recognized.map(g=>g.name).join(" + ")+" inscribed. Close the outer ring to cast.":"Draw the components first, then close the outer circle."}};
  if(!elements.length){if(!signs.length&&!inkCount&&!innerRings.length)return{...basics,valid:true,tier:"beginner",power:Math.round(boundary.quality*35),reading:Math.round(boundary.quality*100),output:{emoji:"💥",title:"Empty-Ring Shockwave",text:"A closed outer ring without inscriptions releases a wave of raw magic."}};return{...basics,valid:false,power:0,output:{emoji:"📜",title:"Unstable seal",text:"The completed circle needs at least one readable elemental sigil."}};}
  const ids=elements.map(e=>e.id),key=ids.slice().sort().join("+"),sigilNames=ids.map(id=>SYMBOLS.find(g=>g.id===id)?.name).join(" + ");
- const title=ids.length===1?(baseSpells[ids[0]+"|"+signs[0]?.id]||poeticName(ids,signs.map(x=>x.id))):signs.length?poeticName(ids,signs.map(x=>x.id)):hybridNames[key]||poeticName(ids,[]);
+ const earthProjectile=ids.length===1&&ids[0]==="earth"&&
+   recognized.filter(g=>g.id==="pull").length>=2&&recognized.some(g=>g.id==="convergence");
+  const title=earthProjectile?"Earth Projectile":ids.length===1?(baseSpells[ids[0]+"|"+signs[0]?.id]||poeticName(ids,signs.map(x=>x.id))):signs.length?poeticName(ids,signs.map(x=>x.id)):hybridNames[key]||poeticName(ids,[]);
  const description=ids.length===1?"The seal conjures "+elementDescriptions[ids[0]]+" magic.":(combos[key]?.[1]||"Several elemental sigils weave into a single magical working.");
  const directionSign=signs.find(s=>["veer","split","columns","levitation","pull"].includes(s.id))||signs[0];
  const orientation=directionSign?directionSign.rotationDegrees:0,direction=bearing(orientation),rotateMeaning=directionSign&&directionSign.id!=="dispersion"&&!directionSign.orientationAmbiguous;
@@ -334,11 +419,13 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  const focus=innerRings.length?" "+innerRings.length+" nested ring"+(innerRings.length>1?"s":"")+" isolate and intensify the inner working.":"";
  const orientationText=rotateMeaning?" The main effect points "+direction+".":"";
  const power=Math.round(clamp((.22+elements.reduce((s,e)=>s+e.relativeSize,0)/elements.length*.96)*boundary.quality+Math.min(.16,innerRings.length*.055)+Math.min(.10,signs.length*.028))*100);
- const text=describeSpell(ids,signs,direction,innerRings.length,boundary.quality);
+ const text=earthProjectile
+   ?"Convergence gathers earth into a compact stone projectile. Two Pull signs draw the mass inward and accelerate it along the casting path, hurling it toward the target with a concentrated, crushing impact."+(innerRings.length?" An inner ring further amplifies the pressure.":"")
+   :describeSpell(ids,signs,direction,innerRings.length,boundary.quality);
  return{...basics,valid:true,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),
   rotationDegrees:orientation,direction,effects:sequence,channels:{inner:recognized.filter(g=>g.zone==="inner").map(g=>g.id),outer:recognized.filter(g=>g.zone==="outer").map(g=>g.id)}, 
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
-  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?poeticName(ids,signs.map(x=>x.id),innerRings.length):title),text}};
+  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:earthProjectile?title:foundRecipe?.label||(innerRings.length?poeticName(ids,signs.map(x=>x.id),innerRings.length):title),text}};
 }
 /* Casting quality is resolved only after the OUTER ring is closed.
  * 50% recognition is the minimum for a controlled, recorded spell. */
@@ -370,13 +457,19 @@ export function analyzeSeal(input){
  if(boundary)boundary.strokeIndices.forEach(i=>excluded.add(i));
  else if(pendingRing)pendingRing.strokeIndices.forEach(i=>excluded.add(i));
  const remaining=strokes.map((_,i)=>i).filter(i=>!excluded.has(i));
- const water=findWaterByTopology(strokes,remaining,frame);
-  const waterIndices=new Set(water?.ids||[]);
-  const groups=[...(water?[water.ids]:[]),...segment(strokes,remaining.filter(i=>!waterIndices.has(i)),frame,innerRings)];
+ const earth=findEarthByTopology(strokes,remaining,frame);
+  const claimed=new Set(earth?.ids||[]);
+  const water=findWaterByTopology(strokes,remaining.filter(i=>!claimed.has(i)),frame);
+  for(const i of water?.ids||[])claimed.add(i);
+  const unordered=identifyUnordered(strokes,remaining.filter(i=>!claimed.has(i)));
+  for(const item of unordered)for(const i of item.ids)claimed.add(i);
+  const groups=[...(earth?[earth.ids]:[]),...(water?[water.ids]:[]),...unordered.map(g=>g.ids),
+   ...segment(strokes,remaining.filter(i=>!claimed.has(i)),frame,innerRings)];
+  const enhanced=new Map([...(earth?[[earth.ids,earth.ranking]]:[]),...(water?[[water.ids,water.ranking]]:[]),...unordered.map(g=>[g.ids,g.ranking])]);
   const regions=[],recognized=[],warnings=[];
  if(!boundary)warnings.push(pendingRing?"Close the gap between the glowing endpoints to cast.":"Draw and close the outer ring to cast.");
  for(const ids of groups){
-  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=water&&ids===groups[0]?water.ranking:scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&winner.score>=.47&&(lead>=.012||winner.score>.76);
+  const lines=ids.map(i=>strokes[i]),b=bounds(lines.flat()),p={x:b.cx,y:b.cy},inside=dist(p,frame.center)<frame.radius*.98,ranking=enhanced.get(ids)||scoreSymbols(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=inside&&winner.score>=.47&&(lead>=.012||winner.score>.76);
   const zone=classify(p,frame,innerRings),reason=!inside?"Outside the casting ring":winner.score<.47?"No matching symbol":lead<.012?"Ambiguous symbol":"";
   const region={strokeIndices:ids,bounds:b,inside,candidates:ranking.slice(0,4),recognized:accepted?winner.id:null,confidence:winner.score,rotationDegrees:winner.rotationDegrees,zone,accepted,reason};
   regions.push(region);
