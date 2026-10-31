@@ -271,6 +271,47 @@ $("magic-rotation").addEventListener("change",e=>{
  loadExample(next,{trace:traceMode});
  status.textContent="↻ Example sign rotated "+angle+"°. Draw the missing outer-ring stroke to test its direction.";
 });
+function saveGlyphPng(){
+ if(!strokes.length){
+  status.textContent="Draw a seal first, then save it as a PNG.";
+  return;
+ }
+ const exportSize=1600,canvas=document.createElement("canvas");
+ canvas.width=exportSize;canvas.height=exportSize;
+ const context=canvas.getContext("2d");
+ if(!context){status.textContent="PNG export isn't supported by this browser.";return;}
+ // Export only the user's ink. Never bake lesson guides or debugger overlays into the image.
+ context.clearRect(0,0,exportSize,exportSize);
+ context.lineCap="round";context.lineJoin="round";
+ context.shadowBlur=13;context.shadowColor="#ebaf3675";
+ for(const stroke of strokes){
+  poly(context,stroke,exportSize,exportSize,
+   stroke.intent==="connector"?"#81cfe9":"#f1c980",8);
+ }
+ context.shadowBlur=0;
+ const title=casted&&analysis.ir?.valid?analysis.ir.output.title:"my-magic-seal";
+ const filename=(title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"my-magic-seal")+".png";
+ const trigger=blob=>{
+  if(!blob){status.textContent="Unable to create the PNG.";return;}
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement("a");
+  anchor.href=url;anchor.download=filename;
+  anchor.style.display="none";document.body.appendChild(anchor);
+  anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  status.textContent="✦ PNG exported (1600 × 1600, transparent background).";
+ };
+ if(canvas.toBlob)canvas.toBlob(trigger,"image/png");
+ else{
+  try{
+   const data=canvas.toDataURL("image/png");
+   const anchor=document.createElement("a");
+   anchor.href=data;anchor.download=filename;anchor.click();
+   status.textContent="✦ PNG exported.";
+  }catch(error){status.textContent="PNG export failed in this browser.";}
+ }
+}
+$("magic-save").addEventListener("click",saveGlyphPng);
 $("magic-demo").addEventListener("click",()=>loadExample(currentRecipe||["wind","columns"]));
 $("magic-trace").addEventListener("click",()=>{if(currentRecipe)loadExample(currentRecipe,{trace:true});});
 $("magic-freeform").addEventListener("click",tryYourOwn);
