@@ -1,9 +1,12 @@
 import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=spell-names-v6";
-import {createCastEffects} from "./cast-fx.js?v=corner-flare-1";
+import {createCastEffects} from "./cast-fx.js?v=cast-upgrade-2";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
 const castEffects=createCastEffects();
+const soundToggle=document.getElementById("magic-sound-toggle");
+castEffects.syncButton(soundToggle);
+soundToggle?.addEventListener("click",()=>castEffects.setMuted(castEffects.isSoundOn(),soundToggle));
 const make=(tag,className,text)=>{const x=document.createElement(tag);if(className)x.className=className;if(text!==undefined)x.textContent=text;return x};
 const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
 const size=()=>({w:ink.getBoundingClientRect().width,h:ink.getBoundingClientRect().height});
@@ -145,7 +148,7 @@ function refresh({checkClosure=false}={}){
  if(justClosed){
   casted=true;
   if(analysis.ir.valid){
-   castEffects.play(analysis.ir.elements,analysis.ir.power);
+   castEffects.play(analysis.ir.elements,analysis.ir.power,analysis.ir.rings?.outer||analysis.boundary);
    save();if(analysis.ir.tier!==selectedTier)setTier(analysis.ir.tier);
    status.textContent="✦ Circle closed! "+analysis.ir.output.title+" was cast automatically.";
 
