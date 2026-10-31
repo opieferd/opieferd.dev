@@ -108,3 +108,65 @@
 .magic-recipe-custom .magic-recipe-icon{color:#efbc60}
 .magic-recipe-custom:hover,.magic-recipe-custom:focus-visible{background:#483018;border-color:#ebaf36}
 .magic-recipe[aria-pressed=true]{border-color:#ebaf36;background:#312414;box-shadow:inset 0 0 0 1px #ebaf3640}
+
+/* Mobile / tablet compatibility and touch-friendly controls. */
+#magic-ink{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:contain;touch-action:none}
+.magic-canvas-wrap{-webkit-user-select:none;user-select:none;touch-action:none}
+.magic-lesson,.magic-recipe,.magic-btn,.magic-tier-tab,.magic-mode{-webkit-tap-highlight-color:transparent}
+.magic-output,.magic-debug-row,.magic-lesson-copy,.magic-recipe-title{overflow-wrap:anywhere}
+.magic-tier-tabs{min-width:0}
+.magic-tier-tab,.magic-mode,.magic-actions>.magic-btn{min-height:44px}
+.magic-rotation-label select{min-height:44px;touch-action:manipulation}
+.magic-actions{align-items:stretch}
+.magic-actions>.magic-btn{flex:1 1 auto}
+.magic-mode-switch{max-width:100%;flex-wrap:wrap}
+.magic-mode{flex:1 1 auto}
+.magic-lesson-copy strong{white-space:normal}
+@media(max-width:790px){
+ .magic-layout{grid-template-columns:minmax(0,1fr)}
+ .magic-panel,.magic-lessons,.magic-combos{min-width:0}
+ .magic-canvas-wrap{width:100%;max-height:none;aspect-ratio:1/1}
+ .magic-output{min-height:0}
+ .magic-debug-section{overflow-wrap:anywhere}
+}
+@media(max-width:580px){
+ .magic-main{padding-top:1.5rem}
+ .magic-hero{padding-bottom:1.4rem;margin-bottom:1.3rem}
+ .magic-hero h1{font-size:clamp(2.75rem,12.8vw,3.55rem);overflow-wrap:normal}
+ .magic-kicker{font-size:.64rem}
+ .magic-heading{flex-wrap:wrap}
+ .magic-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+ .magic-actions>.magic-btn{width:100%;min-width:0;min-height:46px;padding:.6rem .5rem;font-size:.78rem;white-space:normal}
+ .magic-rotation-label{min-height:46px;width:100%;grid-column:1/-1}
+ .magic-rotation-label select{min-width:88px}
+ .magic-actions>.magic-btn#magic-freeform{grid-column:1/-1;order:-1}
+ .magic-actions>.magic-btn#magic-trace{grid-column:1/-1}
+ .magic-mode-switch{width:100%}
+ .magic-debug-top{align-items:stretch}
+ .magic-debug-top>div:first-child{min-width:0}
+ .magic-lesson{min-height:94px}
+ .magic-tier-tab{min-height:46px;font-size:.72rem;min-width:0}
+ .magic-tier-count{flex:none}
+ .magic-lesson-details a{overflow-wrap:anywhere}
+ .magic-canvas-hud{font-size:.58rem;bottom:8px;left:8px;padding:.4rem .5rem}
+ .magic-stats span{font-size:.68rem}
+ .magic-book-entry{gap:.35rem}
+ .magic-book-entry small{flex:none}
+}
+@media(max-width:360px){
+ .magic-panel,.magic-lessons,.magic-combos{padding:.7rem}
+ .magic-nav{gap:.45rem;min-width:0}
+ .magic-nav a{font-size:.67rem}
+ .magic-hero h1{font-size:2.7rem}
+ .magic-tier-tab{font-size:.66rem;padding:.45rem .25rem}
+ .magic-lesson-art{width:62px;height:62px}
+ .magic-lesson-art svg,.magic-reference-sigil{width:53px;height:53px}
+ .magic-recipes-grid{gap:.5rem}
+ .magic-recipe{padding:.6rem}
+}
+@media(max-width:700px) and (orientation:landscape){
+ .magic-canvas-wrap{width:min(100%,90svh);margin-inline:auto}
+}
+@media(hover:none){
+ .magic-btn:hover,.magic-recipe:hover,.magic-lesson:hover{transform:none}
+}
