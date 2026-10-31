@@ -314,7 +314,7 @@ export function poeticName(elements,signs,layerCount=0){
  if(!mods.length)return ids.length===1?core+" Sigil":core;
  const form=dominantForm(mods);
  const title=core+" "+form;
- return title.split(/\\s+/).length<=3?title:core+" "+form.split(" ")[0];
+ return title.split(/\s+/).length<=3?title:core+" "+form.split(" ")[0];
 }
 
 const spellSubstances={
