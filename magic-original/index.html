@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0a08">
+  <meta name="description" content="Glyph Atelier: a little interactive magic lab on opieferd.dev. Learn original glyphs, draw seals, and inspect spell recognition.">
+  <title>Glyph Atelier ✧ opieferd</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../home-2026.css?v=20261031">
+  <link rel="stylesheet" href="css/magic.css?v=20261031">
+</head>
+<body>
+<div class="container">
+  <header class="topbar">
+    <a class="wordmark" href="../" aria-label="opieferd home"><span class="wordmark-symbol">✳</span> opieferd<span class="wordmark-dot">.</span></a>
+    <nav class="magic-nav" aria-label="Magic lab navigation">
+      <a href="../#web-games">← Web games</a>
+      <a href="#lessons">Grimoire</a>
+      <a href="#workbench">Draw seals</a>
+    </nav>
+  </header>
+  <main class="magic-main">
+    <div class="magic-hero">
+      <div class="magic-hero-copy">
+        <div class="magic-kicker">✦ an experiment in drawing spells / 01</div>
+        <h1>Glyph <em>Atelier.</em></h1>
+        <p class="magic-lead">Magic has a language. Learn its alphabet, inscribe an enclosing ring, and discover what happens when different glyphs share the same seal. Your mouse, touch, or stylus is the wand.</p>
+      </div>
+      <div class="magic-seal-mark" aria-hidden="true"><span>✳</span></div>
+    </div>
+    <div class="magic-layout" id="workbench">
+      <div class="magic-panel magic-drawing-panel">
+        <div class="magic-heading">
+          <h2>Your parchment <span aria-hidden="true">✧</span></h2>
+          <span class="magic-pill" id="magic-strokes">0 strokes</span>
+        </div>
+        <div class="magic-canvas-wrap">
+          <canvas id="magic-ink" aria-label="Draw a magical seal with your mouse, pen, or finger">This game requires a canvas-enabled browser.</canvas>
+          <canvas id="magic-debug-layer" aria-hidden="true"></canvas>
+          <div class="magic-canvas-hud" aria-hidden="true">01 ring → 02 glyphs → 03 cast</div>
+        </div>
+        <div class="magic-actions">
+          <button class="magic-btn magic-btn-primary" type="button" id="magic-cast">✦ Cast seal</button>
+          <button class="magic-btn" type="button" id="magic-undo">↶ Undo</button>
+          <button class="magic-btn" type="button" id="magic-clear">Clear</button>
+          <button class="magic-btn" type="button" id="magic-demo">Load example</button>
+          <button class="magic-btn" type="button" id="magic-guide" aria-pressed="true">◌ Guides</button>
+        </div>
+        <p class="magic-status" id="magic-status" aria-live="polite">Start with one big closed circle. Add a glyph inside.</p>
+      </div>
+      <aside class="magic-panel magic-reading-panel">
+        <div class="magic-heading">
+          <h2>Spell reading</h2><span class="magic-pill">live laboratory</span>
+        </div>
+        <div class="magic-output" id="magic-result" aria-live="polite">
+          <div class="magic-output-emoji">📜</div><h3>Awaiting a spell</h3><p>Draw a seal and cast it to see your results.</p>
+        </div>
+        <div class="magic-subhead">
+          <h3>Collected discoveries</h3>
+          <button class="magic-btn" id="magic-reset-book" type="button" style="min-height:32px;padding:.35rem .6rem;font-size:.7rem">Reset</button>
+        </div>
+        <p class="magic-note">Successful spells are kept in this browser's grimoire. Smaller, cleanly drawn glyphs create gentler magic; larger ones push more power into the circle.</p>
+        <div class="magic-book" id="magic-book"><p class="magic-note">No discoveries yet.</p></div>
+      </aside>
+    </div>
+    <div class="magic-lessons" id="lessons">
+      <div class="magic-section-head">
+        <div><span class="magic-mini">02 / the language of seals</span><h2>Learn the <em>glyphs.</em></h2></div>
+        <p>Six symbols, infinite experiments eventually.</p>
+      </div>
+      <div class="magic-lessons-grid" id="magic-lessons-grid"></div>
+      <div class="magic-lesson-details">
+        <div>
+          <span class="magic-mini" id="lesson-role">Element glyph</span>
+          <h3 id="lesson-name" style="margin:.35rem 0;font-size:1.18rem">🔥 Flame</h3>
+          <p id="lesson-steps">Trace a triangle and close it at the starting point.</p>
+        </div>
+        <button class="magic-btn magic-btn-primary" type="button" id="lesson-demo">Load this seal ↗</button>
+      </div>
+      <p class="magic-note" style="margin-top:1rem">The ornate rings and accent marks are decorative teaching guides. Only the large boundary ring and the simple glyph strokes need to be drawn. These are original training shapes, not copies of Witch Hat Atelier artwork.</p>
+    </div>
+    <div class="magic-panel magic-debug-section">
+      <div class="magic-debug-top">
+        <div><span class="magic-mini">03 / developer tools</span><h2 style="margin:.4rem 0 0">Recognition lens</h2></div>
+        <div class="magic-mode-switch" role="group" aria-label="Drawing debug mode">
+          <button class="magic-mode" data-mode="practice" type="button" aria-pressed="true">Practice</button>
+          <button class="magic-mode" data-mode="inspect" type="button" aria-pressed="false">Inspect</button>
+          <button class="magic-mode" data-mode="deep" type="button" aria-pressed="false">Deep debug</button>
+        </div>
+      </div>
+      <p class="magic-note">Inspect shows boundary fitting, glyph boxes, and recognition scores. Deep debug reveals sampled points, intermediate geometry, and JSON you can reuse when porting the system to Luau.</p>
+      <div class="magic-inspector" id="magic-inspector" hidden>
+        <div>
+          <h3>What the script detected</h3>
+          <p id="debug-summary">No strokes analyzed yet.</p>
+          <div class="magic-checkboxes">
+            <label><input type="checkbox" id="debug-fit" checked> Ring fit</label>
+            <label><input type="checkbox" id="debug-boxes" checked> Boxes</label>
+            <label><input type="checkbox" id="debug-labels" checked> Labels</label>
+            <label id="deep-settings" hidden><input type="checkbox" id="debug-points"> Raw points</label>
+          </div>
+          <div id="debug-regions"></div>
+        </div>
+        <div>
+          <h3>Normalized glyph comparison</h3>
+          <p style="margin-bottom:.6rem">Gold = your drawing. Violet dashed = closest template. Stroke direction is allowed to reverse.</p>
+          <canvas class="magic-mini-canvas" id="magic-normalized" aria-label="Normalized glyph matching visualization"></canvas>
+          <div id="magic-json-wrap" hidden style="margin-top:1rem">
+            <h3>Seal AST + spell IR</h3>
+            <pre class="magic-json" id="magic-json">{}</pre>
+            <div class="magic-actions"><button class="magic-btn" id="magic-export" type="button">↓ Export debug JSON</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="magic-foot">
+    <span>© 2026 opieferd · Glyph Atelier (prototype)</span>
+    <a href="../#web-games">← Back to my web games</a>
+  </footer>
+</div>
+<script type="module" src="js/app.js?v=20261031"></script>
+</body>
+</html>
