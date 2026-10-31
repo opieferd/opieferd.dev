@@ -166,6 +166,7 @@ function tryYourOwn(){
  $("magic-link-pen").setAttribute("aria-pressed","false");
  $("magic-guide").setAttribute("aria-pressed","false");
  $("magic-freeform").setAttribute("aria-pressed","true");
+ document.querySelectorAll(".magic-recipe").forEach(button=>button.setAttribute("aria-pressed","false"));
  $("magic-trace").setAttribute("aria-pressed","false");$("magic-trace").disabled=true;
  $("magic-rotation").disabled=true;
  refresh();renderTraceProgress();draw();
@@ -179,8 +180,11 @@ function showRecipes(){
   const b=make("button","magic-recipe");b.type="button";
   b.append(make("span","magic-recipe-icon",r.emoji),make("span","magic-recipe-title",r.label),make("small","",r.ids.map(id=>SYMBOLS.find(s=>s.id===id)?.name||id).join(" + ")));
   if(r.nested||r.rotate||r.spatial){const flags=make("span","magic-recipe-flags",(r.nested?"◎ "+r.nested+" inner ring(s) ":"")+(r.rotate?"↻ "+r.rotate+"° ":"")+(r.spatial?.link?"↗ Directed link":r.spatial?.contain?"⊙ Enclosed sign":""));b.append(flags);}
-  b.addEventListener("click",()=>loadExample(r,{trace:true,scroll:true}));out.append(b);
+  b.addEventListener("click",()=>{loadExample(r,{trace:true,scroll:true});document.querySelectorAll(".magic-recipe").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));});out.append(b);
  }
+ const custom=make("button","magic-recipe magic-recipe-custom");custom.type="button";
+ custom.append(make("span","magic-recipe-icon","✧"),make("span","magic-recipe-title","Try your own"),make("small","","Blank parchment · no template · experiment freely"));
+ custom.addEventListener("click",tryYourOwn);out.append(custom);
  const t=TIERS.find(x=>x.id===selectedTier);
  $("magic-tier-description").textContent=t.description+" · "+visible.length+" guided recipes.";
 }
