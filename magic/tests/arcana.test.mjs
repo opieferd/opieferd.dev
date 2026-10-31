@@ -204,3 +204,23 @@ test("Water with a separate modifier remains both a water and a sign",()=>{
  assert.deepEqual(result.ir.signs,["columns"]);
  assert.equal(result.ir.output.title,"Watershot");
 });
+
+
+test("custom mixtures survive shuffled pen strokes",()=>{
+ const mixtures=[["earth","convergence","pull","pull"],["fire","columns","pull"],["water","convergence","pull"],["earth","levitation","expansion"],["wind","dispersion","convergence"],["fire","earth","columns"],["water","wind","pull"],["earth","columns","convergence"],["fire","water","earth"],["earth","water","levitation"]];
+ function shuffle(input,seed){
+  let state=seed;const random=()=>((state=Math.imul(state,1664525)+1013904223|0)>>>0)/4294967296;
+  const strokes=input.map(x=>x.slice()),ring=strokes.pop();
+  for(let i=strokes.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[strokes[i],strokes[j]]=[strokes[j],strokes[i]];}
+  return[...strokes,ring];
+ }
+ for(const ids of mixtures)for(const seed of [42,100,261]){
+  const input=shuffle(makeExample(ids,{open:true}).strokes,seed);
+  const outcome=analyzeSeal(input);
+  assert.deepEqual(outcome.recognized.map(x=>x.id).sort(),ids.slice().sort(),"Custom glyph order "+ids.join("+")+" seed "+seed);
+ }
+ const prepared=shuffle(makeExample(["earth","convergence","pull","pull"],{open:true}).strokes,42);
+ const cast=analyzeSeal([...prepared,closeRingStroke()]);
+ assert.equal(cast.ir.output.title,"Earth Projectile");
+ assert.ok(cast.ir.output.text.includes("stone projectile"));
+});
