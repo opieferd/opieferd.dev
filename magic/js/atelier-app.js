@@ -1,6 +1,6 @@
 import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes} from "./atelier-engine.js";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
-let strokes=[],groups=[],active=null,pointer=null,selected="wind",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),groupStart=0;
+let strokes=[],active=null,pointer=null,selected="wind",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]);
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
 const make=(tag,className,text)=>{const x=document.createElement(tag);if(className)x.className=className;if(text!==undefined)x.textContent=text;return x};
 const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
@@ -11,42 +11,89 @@ const circle=document.createElementNS(NS,"circle");circle.setAttribute("cx","60"
 for(const path of sym.paths){const line=document.createElementNS(NS,"polyline");line.setAttribute("points",path.map(([x,y])=>(10+x)+","+(10+y)).join(" "));line.setAttribute("stroke",sym.color);line.setAttribute("stroke-width","3");line.setAttribute("stroke-linecap","round");line.setAttribute("stroke-linejoin","round");line.setAttribute("fill","none");svg.append(line)}
 return svg;}
 function setCanvasSize(){const ratio=Math.min(devicePixelRatio||1,2.3);for(const canvas of [ink,overlay]){const r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);canvas.getContext("2d").setTransform(ratio,0,0,ratio,0,0)}draw();}
-function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3675";ctx.shadowBlur=10;for(const s of strokes)poly(ctx,s,w,h,"#f1c980",3.1);if(active)poly(ctx,active,w,h,"#ffdda1",3.2);ctx.shadowBlur=0;$("magic-strokes").textContent=strokes.length+" strokes · "+groups.length+" symbols";debugPaint();}
+function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3675";ctx.shadowBlur=10;for(const s of strokes)poly(ctx,s,w,h,"#f1c980",3.1);if(active)poly(ctx,active,w,h,"#ffdda1",3.2);ctx.shadowBlur=0;$("magic-strokes").textContent=strokes.length+" strokes · "+analysis.recognized.length+" detected";debugPaint();}
 function guidePaths(sym){const sigil=sym.role==="sigil",cx=.5,cy=sigil?.51:.24,z=sigil?.28:.145;return sym.paths.map(s=>s.map(([x,y])=>({x:cx+(x-50)*z/100,y:cy+(y-50)*z/100})));}
 function debugPaint(){const{w,h}=size();ox.clearRect(0,0,w,h);
-if(showGuide){const ring=Array.from({length:97},(_,i)=>({x:.5+.39*Math.cos(i*2*Math.PI/96),y:.5+.39*Math.sin(i*2*Math.PI/96)}));poly(ox,ring,w,h,"#edb85d40",1.8,[5,7]);const sym=SYMBOLS.find(s=>s.id===selected);if(sym){for(const path of guidePaths(sym))poly(ox,path,w,h,"#ebaf366b",2,[4,7]);const first=guidePaths(sym)[0][0];ox.beginPath();ox.fillStyle="#f2bb51";ox.arc(first.x*w,first.y*h,4,0,Math.PI*2);ox.fill();}}
+if(showGuide&&!casted){
+ const angles=Array.from({length:93},(_,i)=>.23+(Math.PI*2-.46)*i/92);
+ const ring=angles.map(a=>({x:.5+.39*Math.cos(a),y:.5+.39*Math.sin(a)}));
+ poly(ox,ring,w,h,"#edb85d35",1.8,[5,7]);
+ const sym=SYMBOLS.find(s=>s.id===selected);
+ if(sym&&strokes.length<12){for(const path of guidePaths(sym))poly(ox,path,w,h,"#ebaf365c",2,[4,7]);}
+}
+if(analysis.pendingRing&&!analysis.boundary){
+ const stroke=analysis.strokes[analysis.pendingRing.strokeIndex],endpoints=[stroke?.[0],stroke?.at(-1)].filter(Boolean);
+ if(endpoints.length===2){
+  poly(ox,endpoints,w,h,"#ffc970a8",1.7,[3,5]);
+  for(const p of endpoints){ox.save();ox.fillStyle="#ffc970";ox.shadowColor="#ebaf36";ox.shadowBlur=11;ox.beginPath();ox.arc(p.x*w,p.y*h,5.5,0,Math.PI*2);ox.fill();ox.restore();}
+ }
+}
 if(mode==="practice")return;
 const fit=$("debug-fit").checked,boxes=$("debug-boxes").checked,labels=$("debug-labels").checked,points=$("debug-points").checked;
-if(fit&&analysis.boundary){const b=analysis.boundary;ox.save();ox.beginPath();ox.setLineDash([7,5]);ox.strokeStyle="#ffe1a0";ox.lineWidth=1.8;ox.arc(b.center.x*w,b.center.y*h,b.radius*Math.min(w,h),0,2*Math.PI);ox.stroke();ox.restore();}
-for(const r of analysis.regions){const b=r.bounds,col=r.accepted?"#9cdca7":"#f28f8f";if(boxes){ox.save();ox.strokeStyle=col;ox.lineWidth=1.8;ox.setLineDash([4,5]);ox.strokeRect(b.x*w-6,b.y*h-6,b.w*w+12,b.h*h+12);ox.restore()}
-if(labels){const label=(r.recognized||"unknown")+" "+Math.round(r.confidence*100)+"%",max=ox.measureText(label).width+30,x=clamp(b.x*w-4,0,Math.max(0,w-max));ox.save();ox.font="11px 'DM Mono',monospace";ox.fillStyle="#15110de8";ox.fillRect(x,Math.max(0,b.y*h-22),Math.max(max,ox.measureText(label).width+15),19);ox.fillStyle=col;ox.fillText(label,x+5,Math.max(12,b.y*h-8));ox.restore()}}
-if(mode==="deep"&&points){strokes.forEach((s,i)=>{ox.fillStyle=i===analysis.boundary?.strokeIndex?"#ffc86d":"#cda1ff";const skip=Math.max(1,Math.round(s.length/40));for(let j=0;j<s.length;j+=skip){ox.beginPath();ox.arc(s[j].x*w,s[j].y*h,2,0,Math.PI*2);ox.fill()}})}
+const boundary=analysis.boundary||analysis.pendingRing;
+if(fit&&boundary){ox.save();ox.beginPath();ox.setLineDash([7,5]);ox.strokeStyle=analysis.ready?"#a3f8b3":"#ffe1a0";ox.lineWidth=1.8;ox.arc(boundary.center.x*w,boundary.center.y*h,boundary.radius*Math.min(w,h),0,2*Math.PI);ox.stroke();ox.restore();}
+for(const r of analysis.regions){const b=r.bounds,col=r.accepted?"#9cdca7":"#f28f8f";
+ if(boxes){ox.save();ox.strokeStyle=col;ox.lineWidth=1.8;ox.setLineDash([4,5]);ox.strokeRect(b.x*w-6,b.y*h-6,b.w*w+12,b.h*h+12);ox.restore();}
+ if(labels){const label=(r.recognized||"unknown")+" "+Math.round(r.confidence*100)+"%";ox.save();ox.font="11px 'DM Mono',monospace";const width=ox.measureText(label).width+13,x=clamp(b.x*w-4,0,Math.max(0,w-width));ox.fillStyle="#15110de8";ox.fillRect(x,Math.max(0,b.y*h-22),width,19);ox.fillStyle=col;ox.fillText(label,x+5,Math.max(12,b.y*h-8));ox.restore();}
+}
+if(mode==="deep"&&points){const ringIndices=new Set(analysis.boundary?.strokeIndices||[]);strokes.forEach((s,i)=>{ox.fillStyle=ringIndices.has(i)?"#ffc86d":"#cda1ff";const skip=Math.max(1,Math.round(s.length/40));for(let j=0;j<s.length;j+=skip){ox.beginPath();ox.arc(s[j].x*w,s[j].y*h,2,0,Math.PI*2);ox.fill();}})}
 }
 function point(e){const r=ink.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width),y:clamp((e.clientY-r.top)/r.height),t:performance.now()};}
 function add(e){if(!active)return;const p=point(e),last=active.at(-1);if(!last||Math.hypot(p.x-last.x,p.y-last.y)>.0009)active.push(p)}
-ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;pointer=e.pointerId;ink.setPointerCapture(pointer);active=[];add(e);draw()});
+ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;ink.setPointerCapture(pointer);active=[];add(e);draw()});
 ink.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!active)return;const ev=typeof e.getCoalescedEvents==="function"?e.getCoalescedEvents():[e];for(const v of ev)add(v);draw()});
-function finish(e){if(e.pointerId!==pointer)return;add(e);if(active?.length>1)strokes.push(active);active=null;pointer=null;refresh(false);draw()}
+function finish(e){
+ if(e.pointerId!==pointer)return;
+ add(e);const added=active?.length>1;if(added)strokes.push(active);active=null;pointer=null;
+ refresh({checkClosure:added});draw();
+}
 ink.addEventListener("pointerup",finish);ink.addEventListener("pointercancel",finish);
-function refresh(cast){analysis=analyzeSeal(strokes,groups);if(cast){casted=true;renderResult();if(analysis.ir.valid){save();status.textContent="✦ Spell cast! You discovered "+analysis.ir.output.title+"."}else status.textContent=analysis.warnings[0]||"Incomplete seal.";}else{casted=false;status.textContent=analysis.boundary?"Ring detected ("+Math.round(analysis.boundary.quality*100)+"%). "+analysis.recognized.length+" symbol(s) currently recognized.":"Start with one closed circle, then inscribe a multi-stroke sigil. Press Finish symbol when its parts are done.";}
-inspect();}
-function renderResult(){const ir=analysis.ir;result.replaceChildren();result.append(make("div","magic-output-emoji",casted?ir.output.emoji:"📜"),make("h3","",casted?ir.output.title:"Awaiting a spell"),make("p","",casted?ir.output.text:"Try Wind + Columns to discover a Wind Blast. Use the recipe cards below to study the strokes."));if(casted&&ir.valid){const stats=make("div","magic-stats");stats.append(make("span","","Power "+ir.power+" / 100"),make("span","","Recognition "+ir.reading+" / 100"));result.append(stats)}}
+function refresh({checkClosure=false}={}){
+ const wasClosed=analysis.ready;
+ analysis=analyzeSeal(strokes); // Fully automatic, with no explicit stroke-group hints.
+ const justClosed=checkClosure&&!wasClosed&&analysis.ready&&analysis.completion?.completedAt===strokes.length-1;
+ if(justClosed){
+  casted=true;
+  if(analysis.ir.valid){
+   save();
+   status.textContent="✦ Circle closed! "+analysis.ir.output.title+" was cast automatically.";
+  }else status.textContent="The ring closed, but the inscriptions were unstable. "+(analysis.warnings.at(-1)||"Try another sigil.");
+ }else if(!analysis.ready){
+  casted=false;
+  if(analysis.pendingRing)status.textContent="Seal prepared. Connect the two glowing endpoints to close the ring and cast.";
+  else if(analysis.recognized.length)status.textContent=analysis.recognized.map(g=>g.name).join(" + ")+" detected. Draw a large outer ring last to cast.";
+  else status.textContent="Draw elemental sigils and modifier signs first, then close a large circle around them.";
+ }
+ const ringStatus=$("magic-ring-state");
+ ringStatus.textContent=casted?"✦ Ring sealed — spell activated":analysis.pendingRing?"◌ Ring open — connect endpoints":"◌ Magic prepared — awaiting ring";
+ ringStatus.dataset.sealed=String(casted);
+ renderResult();inspect();
+}
+function renderResult(){
+ const ir=analysis.ir;result.replaceChildren();
+ result.append(make("div","magic-output-emoji",ir.output.emoji),make("h3","",ir.output.title),make("p","",ir.output.text));
+ if(casted&&ir.valid){const stats=make("div","magic-stats");stats.append(make("span","","Power "+ir.power+" / 100"),make("span","","Recognition "+ir.reading+" / 100"));result.append(stats);}
+}
+
 const key="opie_magic_wha_lab_v1";function loadSaved(){try{return JSON.parse(localStorage.getItem(key)||"{}")||{}}catch{return{}}}
 function save(){try{const data=loadSaved(),ir=analysis.ir,signature=[...ir.elements].sort().join("+")+"::"+[...ir.signs].sort().join("+");data[signature]={emoji:ir.output.emoji,title:ir.output.title,power:Math.max(data[signature]?.power||0,ir.power)};localStorage.setItem(key,JSON.stringify(data));showSaved()}catch{status.textContent="Spell cast successfully. Your browser did not allow saving it."}}
 function showSaved(){book.replaceChildren();const entries=Object.values(loadSaved());if(!entries.length){book.append(make("p","magic-note","Your discovered spells appear here."));return}for(const spell of entries){const item=make("div","magic-book-entry");item.append(make("span","",spell.emoji+" "+spell.title),make("small","","Power "+spell.power));book.append(item)}}
 function displayLesson(id){selected=id;const s=SYMBOLS.find(g=>g.id===id);if(!s)return;document.querySelectorAll(".magic-lesson").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.glyph===id)));$("lesson-name").textContent=s.emoji+" "+s.name;$("lesson-role").textContent=s.role==="sigil"?"Central sigil":"Modifier sign";$("lesson-steps").textContent=s.tip+" "+s.paths.length+" pen stroke"+(s.paths.length===1?"":"s")+".";
 $("lesson-source").href=s.source;$("lesson-source").textContent="Source: Sigils / Signs Explained ↗";$("lesson-credit").textContent=s.credit?"Reference illustration: "+s.credit+" · Independent Witch Hat Atelier Wiki":"Interactive sign study based on the Independent Witch Hat Atelier Wiki";debugPaint()}
 function showLessons(){const out=$("magic-lessons-grid");for(const s of SYMBOLS){const b=make("button","magic-lesson");b.type="button";b.dataset.glyph=s.id;b.setAttribute("aria-pressed","false");const art=make("span","magic-lesson-art");if(s.referenceImage){const image=make("img","magic-reference-sigil");image.src=s.referenceImage;image.loading="lazy";image.alt="Reference drawing of the "+s.name+" sigil";image.onerror=()=>{image.replaceWith(symbolSvg(s))};art.append(image)}else art.append(symbolSvg(s));const copy=make("span","magic-lesson-copy");copy.append(make("span","magic-lesson-role",s.role==="sigil"?"Elemental sigil":"Directional / modifier sign"),make("strong","",s.emoji+" "+s.name),make("small","",s.tip));b.append(art,copy);b.addEventListener("click",()=>displayLesson(s.id));out.append(b)}}
-function loadExample(ids){const ex=makeExample(ids);strokes=ex.strokes;groups=ex.groups;groupStart=strokes.length;refresh(true);draw();status.textContent="Example loaded! Try copying the seal, and use Inspect mode to see how the symbols are recognized.";}
+function loadExample(ids){const ex=makeExample(ids,{open:true});strokes=ex.strokes;casted=false;refresh();draw();status.textContent="Recipe loaded but NOT cast. Draw a short line connecting the two glowing endpoints of its open ring to activate the spell.";} 
 function showRecipes(){const out=$("magic-recipes-grid");for(const r of recipes){const b=make("button","magic-recipe");b.type="button";b.append(make("span","magic-recipe-icon",r.emoji),make("span","magic-recipe-title",r.label),make("small","",r.ids.map(id=>SYMBOLS.find(s=>s.id===id)?.name||id).join(" + ")));b.addEventListener("click",()=>loadExample(r.ids));out.append(b)}}
-function finishGroup(){const ring=analysis.boundary?.strokeIndex??0;const used=new Set(groups.flat()),list=[];for(let i=groupStart;i<strokes.length;i++)if(i!==ring&&!used.has(i))list.push(i);if(!list.length){status.textContent="Draw the component's strokes first, then click Finish symbol.";return}groups.push(list);groupStart=strokes.length;refresh(false);draw();const last=analysis.regions.find(r=>r.strokeIndices.some(i=>list.includes(i)));status.textContent=last?.accepted?"✓ "+SYMBOLS.find(s=>s.id===last.recognized)?.name+" recognized. Start drawing the next symbol.":"Symbol grouped, but not recognized. Open Inspect to see the closest shapes.";}
-$("magic-cast").addEventListener("click",()=>refresh(true));$("magic-undo").addEventListener("click",()=>{strokes.pop();groups=groups.map(g=>g.filter(i=>i<strokes.length)).filter(g=>g.length);groupStart=Math.min(groupStart,strokes.length);refresh(false);renderResult();draw()});$("magic-clear").addEventListener("click",()=>{strokes=[];groups=[];groupStart=0;refresh(false);renderResult();draw()});$("magic-demo").addEventListener("click",()=>loadExample(["wind","columns"]));$("lesson-demo").addEventListener("click",()=>loadExample([selected==="columns"||SYMBOLS.find(s=>s.id===selected)?.role==="sign"?"wind":selected,...(SYMBOLS.find(s=>s.id===selected)?.role==="sign"?[selected]:[])]));$("magic-finish-symbol").addEventListener("click",finishGroup);
+$("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;refresh();draw();});
+$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;refresh();draw();});
+$("magic-demo").addEventListener("click",()=>loadExample(["wind","columns"]));
+$("lesson-demo").addEventListener("click",()=>loadExample(SYMBOLS.find(s=>s.id===selected)?.role==="sign"?["wind",selected]:[selected]));
+
 $("magic-guide").addEventListener("click",()=>{showGuide=!showGuide;$("magic-guide").setAttribute("aria-pressed",String(showGuide));debugPaint()});
 for(const btn of document.querySelectorAll(".magic-mode"))btn.addEventListener("click",()=>setMode(btn.dataset.mode));for(const id of ["debug-fit","debug-boxes","debug-labels","debug-points"])$(id).addEventListener("change",debugPaint);
 function setMode(value){mode=value;document.querySelectorAll(".magic-mode").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.mode===value)));$("magic-inspector").hidden=value==="practice";$("deep-settings").hidden=value!=="deep";$("magic-json-wrap").hidden=value!=="deep";inspect();draw()}
-function inspect(){if(mode==="practice")return;const info=$("debug-summary"),regions=$("debug-regions");info.textContent=analysis.boundary?"Ring "+Math.round(analysis.boundary.quality*100)+"% · "+analysis.recognized.length+" symbols · "+groups.length+" explicit groups":"Ring not found · "+strokes.length+" raw strokes";regions.replaceChildren();if(!analysis.regions.length)regions.append(make("p","magic-note","No symbols detected. Finish your first drawing."));for(const r of analysis.regions){const box=make("div","magic-debug-row"),left=make("div",""),right=make("div","");left.append(make("strong","",(r.recognized||"Unknown")+" · strokes "+r.strokeIndices.map(i=>i+1).join(",")),make("small","",r.reason||"Group recognized"));for(const c of r.candidates.slice(0,3))right.append(make("div","",c.name+" "+Math.round(c.score*100)+"%"));box.append(left,right);regions.append(box)}
+function inspect(){if(mode==="practice")return;const info=$("debug-summary"),regions=$("debug-regions");info.textContent=analysis.boundary?"Ring "+Math.round(analysis.boundary.quality*100)+"% · "+analysis.recognized.length+" symbols · "+groups.length+" explicit groups":"Ring not found · "+strokes.length+" raw strokes";regions.replaceChildren();if(!analysis.regions.length)regions.append(make("p","magic-note","No symbols detected yet. Draw the individual marks of a sigil and they will be grouped automatically."));for(const r of analysis.regions){const box=make("div","magic-debug-row"),left=make("div",""),right=make("div","");left.append(make("strong","",(r.recognized||"Unknown")+" · strokes "+r.strokeIndices.map(i=>i+1).join(",")),make("small","",r.reason||"Group recognized"));for(const c of r.candidates.slice(0,3))right.append(make("div","",c.name+" "+Math.round(c.score*100)+"%"));box.append(left,right);regions.append(box)}
 $("magic-json").textContent=JSON.stringify({ast:analysis.ast,spell:analysis.ir,warnings:analysis.warnings},null,2);
 const mini=$("magic-normalized"),ratio=Math.min(devicePixelRatio||1,2),rect=mini.getBoundingClientRect(),c=mini.getContext("2d");mini.width=Math.round(rect.width*ratio);mini.height=Math.round(rect.height*ratio);c.setTransform(ratio,0,0,ratio,0,0);c.clearRect(0,0,rect.width,rect.height);const first=analysis.regions.find(r=>r.accepted)||analysis.regions[0];if(first){const paths=first.strokeIndices.map(i=>analysis.strokes[i]),cloud=normalizedCloud(paths),symbol=SYMBOLS.find(s=>s.id===first.candidates[0]?.id);for(const p of cloud){c.fillStyle="#ebaf36";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),3,3)}if(symbol){const target=normalizedCloud(symbol.paths.map(path=>path.map(([x,y])=>({x:x/100,y:y/100}))));for(const p of target){c.fillStyle="#b18cffaa";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),2,2)}}}}
-$("magic-export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({schemaVersion:2,date:new Date().toISOString(),strokes,groups,analysis},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="witch-hat-seal-test.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+$("magic-export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({schemaVersion:3,date:new Date().toISOString(),strokes,analysis},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="witch-hat-seal-test.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 $("magic-reset-book").addEventListener("click",()=>{if(!confirm("Erase this version's grimoire entries?"))return;localStorage.removeItem(key);showSaved()});
-showLessons();showRecipes();showSaved();displayLesson("wind");renderResult();setMode(new URLSearchParams(location.search).has("debug")?"deep":"practice");if("ResizeObserver"in window)new ResizeObserver(setCanvasSize).observe(ink);else window.addEventListener("resize",setCanvasSize);setCanvasSize();
+showLessons();showRecipes();showSaved();displayLesson("wind");refresh();setMode(new URLSearchParams(location.search).has("debug")?"deep":"practice");if("ResizeObserver"in window)new ResizeObserver(setCanvasSize).observe(ink);else window.addEventListener("resize",setCanvasSize);setCanvasSize();
