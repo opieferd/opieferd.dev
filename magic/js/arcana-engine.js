@@ -275,18 +275,47 @@ const pairForms={
 "veer+dispersion":"Curved Sweep","veer+expansion":"Winding Surge",
 "veer+convergence":"Turning Focus","veer+levitation":"Spiral Ascent",
 "veer+orbit":"Wayward Halo","veer+pull":"Crooked Grasp","veer+split":"Forked Arc"};
-function poeticName(elements,signs,layerCount=0){
- const ids=[...new Set(elements)].sort(),mods=[...new Set(signs)].sort();
- if(!ids.length)return"Unwritten Spell";
- const core=hybridNames[ids.join("+")]||ids.map(id=>essenceNames[id]||id).join("");
- if(!mods.length)return ids.length===1?core+" Seal":core+" Weave";
- const form=mods.length===1?(formNames[mods[0]]||"Working"):
- mods.length===2?(pairForms[mods.join("+")]||mods.map(id=>formNames[id]||"Arc").join(" ")) :
- (formNames[mods[2]]||"Arc")+" "+(pairForms[mods.slice(0,2).join("+")]||mods.slice(0,2).map(id=>formNames[id]||"Ward").join(" "))+
- (mods.length>3?" of "+mods.slice(3).map(id=>formNames[id]||"Magic").join(" and "):"");
- return (layerCount===1?"Greater ":layerCount>=2?"Grand ":"")+core+" "+form;
+/* Short titles for improvised spells: one elemental identity + one defining
+ * action. Extra signs and focusing rings still alter the detailed description,
+ * but never pile up prefixes or a list of move names. */
+const shortHybridNames={
+ "earth+fire":"Cinderforge","earth+water":"Clayweaver","earth+wind":"Dustwhirl",
+ "fire+water":"Steamveil","fire+wind":"Wildfire","water+wind":"Raincurrent",
+ "earth+fire+water":"Lookingglass","earth+fire+wind":"Cinderstorm",
+ "earth+water+wind":"Siltstorm","fire+water+wind":"Stormglass",
+ "earth+fire+water+wind":"Primal"
+};
+const signaturePairs={
+ "columns+pull":120,"columns+convergence":112,"convergence+pull":108,
+ "columns+veer":104,"columns+split":103,"columns+orbit":102,
+ "columns+dispersion":101,"columns+expansion":100,
+ "dispersion+expansion":99,"convergence+dispersion":98,
+ "convergence+orbit":97,"expansion+orbit":96,
+ "dispersion+orbit":95,"levitation+pull":94,"levitation+split":93,
+ "pull+split":92,"convergence+split":91
+};
+function dominantForm(mods){
+ if(mods.length===1)return formNames[mods[0]]||"Working";
+ const choices=[];
+ for(let i=0;i<mods.length;i++)for(let j=i+1;j<mods.length;j++){
+  const a=mods[i],b=mods[j],pair=a+"+"+b,reverse=b+"+"+a;
+  const form=pairForms[pair]||pairForms[reverse];
+  if(form)choices.push({form,rank:signaturePairs[pair]||signaturePairs[reverse]||60,key:pair});
+ }
+ choices.sort((a,b)=>b.rank-a.rank||a.key.localeCompare(b.key));
+ const form=choices[0]?.form||formNames[mods[0]]||"Working";
+ return form==="Wheel of Shards"?"Shardwheel":form;
 }
-
+export function poeticName(elements,signs,layerCount=0){
+ const ids=[...new Set(elements)].filter(Boolean).sort(),mods=[...new Set(signs)].filter(Boolean).sort();
+ if(!ids.length)return"Unwritten Spell";
+ const key=ids.join("+");
+ const core=mods.length?(shortHybridNames[key]||essenceNames[ids[0]]||"Arcane"):(hybridNames[key]||essenceNames[ids[0]]||"Arcane");
+ if(!mods.length)return ids.length===1?core+" Sigil":core;
+ const form=dominantForm(mods);
+ const title=core+" "+form;
+ return title.split(/\\s+/).length<=3?title:core+" "+form.split(" ")[0];
+}
 
 const spellSubstances={
  "fire":{noun:"a ribbon of living flame",motion:"ignites in the air",impact:"scorches whatever it touches"},
@@ -385,7 +414,7 @@ function spatialMeaning(ir,graph){
  else if(links.some(x=>x.from==="veer"&&x.to==="columns")&&wind)title="Deflected Wind Lance";
  else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&water)title="Spiral Bloom";
  else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&fire)title="Solar Vortex";
- else title=(contains.length?"Heartbound ":"Threadbound ")+title;
+ else if(title.trim().split(/\s+/).length<3)title=(contains.length?"Heartbound ":"Threadbound ")+title;
  const linksText=links.map(l=>"The "+l.from+" sign channels into "+l.to+" ("+
   Math.round(l.angleDegrees)+"°)").join(". ");
  const containText=contains.map(c=>"The "+c.parent+" sign encloses "+c.child+
@@ -410,7 +439,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  const ids=elements.map(e=>e.id),key=ids.slice().sort().join("+"),sigilNames=ids.map(id=>SYMBOLS.find(g=>g.id===id)?.name).join(" + ");
  const earthProjectile=ids.length===1&&ids[0]==="earth"&&
    recognized.filter(g=>g.id==="pull").length>=2&&recognized.some(g=>g.id==="convergence");
-  const title=earthProjectile?"Earth Projectile":ids.length===1?(baseSpells[ids[0]+"|"+signs[0]?.id]||poeticName(ids,signs.map(x=>x.id))):signs.length?poeticName(ids,signs.map(x=>x.id)):hybridNames[key]||poeticName(ids,[]);
+  const title=earthProjectile?"Earth Projectile":ids.length===1&&signs.length===1&&baseSpells[ids[0]+"|"+signs[0].id]?baseSpells[ids[0]+"|"+signs[0].id]:poeticName(ids,signs.map(x=>x.id),innerRings.length);
  const description=ids.length===1?"The seal conjures "+elementDescriptions[ids[0]]+" magic.":(combos[key]?.[1]||"Several elemental sigils weave into a single magical working.");
  const directionSign=signs.find(s=>["veer","split","columns","levitation","pull"].includes(s.id))||signs[0];
  const orientation=directionSign?directionSign.rotationDegrees:0,direction=bearing(orientation),rotateMeaning=directionSign&&directionSign.id!=="dispersion"&&!directionSign.orientationAmbiguous;
@@ -425,7 +454,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  return{...basics,valid:true,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),
   rotationDegrees:orientation,direction,effects:sequence,channels:{inner:recognized.filter(g=>g.zone==="inner").map(g=>g.id),outer:recognized.filter(g=>g.zone==="outer").map(g=>g.id)}, 
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
-  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:earthProjectile?title:foundRecipe?.label||(innerRings.length?poeticName(ids,signs.map(x=>x.id),innerRings.length):title),text}};
+  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:earthProjectile?title:foundRecipe?.label||title,text}};
 }
 /* Casting quality is resolved only after the OUTER ring is closed.
  * 50% recognition is the minimum for a controlled, recorded spell. */
