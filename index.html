@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="home-2026.css?v=orange-20261029">
   <link rel="stylesheet" href="opie-orange.css?v=20261029-player-width">
   <link rel="stylesheet" href="donate.css?v=20261029">
+  <link rel="stylesheet" href="webgames.css?v=20261031">
 </head>
 <body>
   <div class="container">
@@ -42,7 +43,7 @@
             <a href="https://discord.com/users/931745609252233257" target="_blank" rel="noopener noreferrer">Discord ↗</a>
             <a href="https://open.spotify.com/user/31qbysm2dpyr7rfur5ljkunpyt34" target="_blank" rel="noopener noreferrer">Spotify ↗</a>
           </div>
-          <a class="menu-item menu-link" href="guessthefood/">Guess the Food <span aria-hidden="true">↗</span></a>
+          <a class="menu-item menu-link" href="#web-games">My Web Games <span aria-hidden="true">↓</span></a>
           <a class="menu-item menu-link" href="watch/">OPwatch <span aria-hidden="true">↗</span></a>
           <a class="menu-item menu-link" href="music/">Music <span aria-hidden="true">♫</span></a>
         </div>
@@ -89,12 +90,19 @@
         </section>
       </div>
 
-      <section class="work-section" id="work">
+      <section class="work-section" id="web-games">
         <div class="section-heading"><div><p class="section-kicker">03 / Work</p><h2>Here's some of my <em>projects.</em></h2></div></div>
         <div class="project-grid">
           <a class="project-card project-watch" href="watch/"><span class="project-top"><span class="project-index">01 / WEB APP</span><span class="project-arrow">↗</span></span><span class="project-art project-art-watch" aria-hidden="true"><span class="play-glyph">▶</span><span class="project-art-caption">OP / WATCH</span></span><span class="project-info"><strong>OPwatch</strong><span>Browse movies, shows, and anime.</span></span><span class="project-tags"><span>Entertainment</span><span>Web app</span></span></a>
-          <a class="project-card project-food" href="guessthefood/"><span class="project-top"><span class="project-index">02 / GAME</span><span class="project-arrow">↗</span></span><span class="project-art project-art-food" aria-hidden="true"><span class="food-glyph">?</span><span class="food-orbit food-orbit-one">🍓</span><span class="food-orbit food-orbit-two">🍜</span><span class="food-orbit food-orbit-three">🥑</span></span><span class="project-info"><strong>Guess the Food</strong><span>Guess a food from a Wikipedia clue.</span></span><span class="project-tags"><span>Interactive</span><span>Game</span></span></a>
+          <button class="project-card project-webgames" id="webgames-toggle" type="button" aria-expanded="false" aria-controls="webgames-reveal"><span class="project-top"><span class="project-index">02 / WEB GAMES</span><span class="project-arrow" aria-hidden="true">↓</span></span><span class="project-art project-art-games" aria-hidden="true"><span class="games-mark">✳</span><span class="project-art-caption">PLAY / EXPLORE</span></span><span class="project-info"><strong>My Web Games</strong><span>Little experiments and games you can play right here. Open the collection!</span></span><span class="project-tags"><span>Interactive</span><span>2 games</span></span></button>
           <a class="project-card project-github" href="https://github.com/opieferd" target="_blank" rel="noopener noreferrer"><span class="project-top"><span class="project-index">03 / MORE PROJECTS</span><span class="project-arrow">↗</span></span><span class="project-art project-art-code" aria-hidden="true"><span>&lt;hello, world /&gt;</span></span><span class="project-info"><strong>More on GitHub</strong><span>See my other projects and source code.</span></span><span class="project-tags"><span>Code</span><span>Experiments</span></span></a>
+          <div class="webgames-reveal" id="webgames-reveal" hidden>
+            <div class="webgames-reveal-head"><h3>Pick something to play <span aria-hidden="true">✦</span></h3><span>02 / WEB GAMES</span></div>
+            <div class="webgames-cards">
+              <a class="webgame-card" href="guessthefood/"><span class="webgame-icon" aria-hidden="true">🍓</span><span class="webgame-details"><strong>Guess the Food</strong><small>Can you guess the food from a Wikipedia clue?</small></span><span class="webgame-arrow" aria-hidden="true">↗</span></a>
+              <a class="webgame-card" href="magic/"><span class="webgame-icon" aria-hidden="true">✧</span><span class="webgame-details"><strong>Glyph Atelier</strong><small>Draw magical seals, learn glyphs, and discover spells.</small></span><span class="webgame-arrow" aria-hidden="true">↗</span></a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -152,6 +160,7 @@
   </div>
   <script src="audioplayer.js?v=20261029-seek"></script>
   <script src="menu.js"></script>
+  <script src="webgames.js?v=20261031"></script>
   <script src="home-2026.js?v=orange-20261029"></script>
 </body>
 </html>
