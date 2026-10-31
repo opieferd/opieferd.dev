@@ -52,3 +52,22 @@
 }
 .magic-drawing-panel .magic-status{font-size:.82rem}
 @media(prefers-reduced-motion:reduce){.magic-ring-state,.magic-canvas-wrap{transition:none}}
+
+/* Tiered spellbook and rotating / nested glyph visualization. */
+.magic-tier-tabs{display:flex;flex-wrap:wrap;gap:.45rem;margin:0 0 .85rem}
+.magic-tier-tab{display:inline-flex;align-items:center;gap:.55rem;justify-content:center;border:1px solid #59442a;background:#1d1811;color:#d3c5b1;min-height:40px;border-radius:5px;padding:.55rem .85rem;cursor:pointer;font-size:.79rem;font-weight:780;transition:background .2s,border-color .2s}
+.magic-tier-tab:hover,.magic-tier-tab:focus-visible{border-color:var(--magic-orange);outline:none}
+.magic-tier-tab[aria-selected=true]{background:var(--magic-orange);border-color:var(--magic-orange);color:#251808}
+.magic-tier-count{min-width:18px;text-align:center;border-radius:10px;border:1px solid #887046;font:.66rem var(--mono);padding:.1rem .25rem}
+.magic-tier-tab[aria-selected=true] .magic-tier-count{border-color:#9d6f25}
+.magic-book-tabs{margin:.5rem 0 1rem}
+.magic-book-tabs .magic-tier-tab{font-size:.68rem;padding:.45rem .55rem;min-height:38px}
+.magic-tier-description{padding:.2rem 0 .55rem;border-bottom:1px solid #443623;margin-bottom:1rem!important}
+.magic-recipe-flags{margin-top:auto;color:#edc678;font:.63rem var(--mono)}
+.magic-recipe{min-height:160px}
+.magic-lesson[hidden]{display:none!important}
+.magic-learning-note strong{color:#ffe0a0}
+.magic-debug-row div div{max-width:200px;overflow-wrap:anywhere}
+.magic-book-entry{align-items:flex-start}.magic-book-entry span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:680px){.magic-tier-tab{flex:1 1 29%;padding:.55rem .4rem;font-size:.72rem}.magic-book-tabs .magic-tier-tab{flex:1 1 30%;font-size:.66rem;padding:.45rem .25rem}.magic-recipe{min-height:152px}}
+@media(max-width:400px){.magic-tier-tab{font-size:.65rem;gap:.25rem}.magic-tier-count{font-size:.58rem}}
