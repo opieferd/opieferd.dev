@@ -1,4 +1,4 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-5-trace";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-5-mobile";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
@@ -10,7 +10,21 @@ function symbolSvg(sym){const svg=document.createElementNS("http://www.w3.org/20
 const circle=document.createElementNS(NS,"circle");circle.setAttribute("cx","60");circle.setAttribute("cy","60");circle.setAttribute("r","53");circle.setAttribute("fill","none");circle.setAttribute("stroke","#b5894670");circle.setAttribute("stroke-width","1.3");circle.setAttribute("stroke-dasharray","4 4");svg.append(circle);
 for(const path of sym.paths){const line=document.createElementNS(NS,"polyline");line.setAttribute("points",path.map(([x,y])=>(10+x)+","+(10+y)).join(" "));line.setAttribute("stroke",sym.color);line.setAttribute("stroke-width","3");line.setAttribute("stroke-linecap","round");line.setAttribute("stroke-linejoin","round");line.setAttribute("fill","none");svg.append(line)}
 return svg;}
-function setCanvasSize(){const ratio=Math.min(devicePixelRatio||1,2.3);for(const canvas of [ink,overlay]){const r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);canvas.getContext("2d").setTransform(ratio,0,0,ratio,0,0)}draw();}
+function setCanvasSize(){
+ const ratio=Math.min(window.devicePixelRatio||1,2);
+ for(const canvas of [ink,overlay]){
+  const r=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(r.width*ratio)),h=Math.max(1,Math.round(r.height*ratio));
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+  canvas.getContext("2d").setTransform(ratio,0,0,ratio,0,0);
+ }
+ draw();
+}
+let paintQueued=false;
+function requestPaint(){
+ if(paintQueued)return;
+ paintQueued=true;
+ requestAnimationFrame(()=>{paintQueued=false;draw();});
+}
 function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3675";ctx.shadowBlur=10;for(const s of strokes)poly(ctx,s,w,h,s.intent==="connector"?"#81cfe9":"#f1c980",3.1);if(active)poly(ctx,active,w,h,linkMode?"#81dcfa":"#ffdda1",3.2);ctx.shadowBlur=0;$("magic-strokes").textContent=strokes.length+" strokes · "+analysis.recognized.length+" detected";debugPaint();}
 function guidePaths(sym){const sigil=sym.role==="sigil",cx=.5,cy=sigil?.51:.24,z=sigil?.28:.145;return sym.paths.map(s=>s.map(([x,y])=>({x:cx+(x-50)*z/100,y:cy+(y-50)*z/100})));}
 function debugPaint(){const{w,h}=size();ox.clearRect(0,0,w,h);
@@ -81,16 +95,47 @@ for(const r of analysis.regions){const b=r.bounds,col=r.accepted?"#9cdca7":"#f28
 if(mode==="deep"&&points){const ringIndices=new Set(analysis.boundary?.strokeIndices||[]);strokes.forEach((s,i)=>{ox.fillStyle=ringIndices.has(i)?"#ffc86d":"#cda1ff";const skip=Math.max(1,Math.round(s.length/40));for(let j=0;j<s.length;j+=skip){ox.beginPath();ox.arc(s[j].x*w,s[j].y*h,2,0,Math.PI*2);ox.fill();}})}
 }
 function point(e){const r=ink.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width),y:clamp((e.clientY-r.top)/r.height),t:performance.now()};}
-function add(e){if(!active)return;const p=point(e),last=active.at(-1);if(!last||Math.hypot(p.x-last.x,p.y-last.y)>.0009)active.push(p)}
-ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;recipeDirty=true;$("magic-rotation").disabled=true;ink.setPointerCapture(pointer);active=[];if(linkMode)active.intent="connector";add(e);draw()});
-ink.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!active)return;const ev=typeof e.getCoalescedEvents==="function"?e.getCoalescedEvents():[e];for(const v of ev)add(v);draw()});
-function finish(e){
- if(e.pointerId!==pointer)return;
- add(e);const added=active?.length>1;if(added)strokes.push(active);active=null;pointer=null;
- if(linkMode){linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");}
- refresh({checkClosure:added});renderTraceProgress();draw();
+function add(e){
+ if(!active||active.length>=650)return;
+ const p=point(e),last=active.at(-1);
+ if(!last||Math.hypot(p.x-last.x,p.y-last.y)>.001)active.push(p);
 }
-ink.addEventListener("pointerup",finish);ink.addEventListener("pointercancel",finish);
+// Pointer Events unify touch, pen and mouse. A canceled touch must NEVER cast.
+function stopStroke(cancelled=false,ev=null){
+ if(pointer===null||ev&&ev.pointerId!==pointer)return;
+ if(!cancelled&&ev)add(ev);
+ const completed=!cancelled&&active&&active.length>1;
+ if(completed)strokes.push(active);
+ active=null;pointer=null;
+ if(linkMode){linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");}
+ if(completed)refresh({checkClosure:true});
+ if(cancelled)status.textContent="Touch interrupted — the unfinished stroke was discarded. Continue drawing.";
+ renderTraceProgress();requestPaint();
+}
+ink.addEventListener("pointerdown",e=>{
+ if(pointer!==null||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
+ if(casted&&analysis.ready){
+  status.textContent="This circle is sealed. Undo the last stroke or clear the parchment to make another spell.";
+  return;
+ }
+ if(e.cancelable)e.preventDefault();
+ pointer=e.pointerId;recipeDirty=true;$("magic-rotation").disabled=true;
+ try{ink.setPointerCapture?.(pointer)}catch{}
+ active=[];if(linkMode)active.intent="connector";
+ add(e);requestPaint();
+});
+ink.addEventListener("pointermove",e=>{
+ if(e.pointerId!==pointer||!active)return;
+ if(e.cancelable)e.preventDefault();
+ const batch=typeof e.getCoalescedEvents==="function"?e.getCoalescedEvents():null;
+ for(const sample of batch?.length?batch:[e])add(sample);
+ requestPaint();
+});
+ink.addEventListener("pointerup",e=>{if(e.pointerId!==pointer)return;if(e.cancelable)e.preventDefault();stopStroke(false,e);});
+ink.addEventListener("pointercancel",e=>stopStroke(true,e));
+ink.addEventListener("lostpointercapture",e=>stopStroke(true,e));
+ink.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopStroke(true);});
 function refresh({checkClosure=false}={}){
  const wasClosed=analysis.ready;
  analysis=analyzeSeal(strokes); // Fully automatic, with no explicit stroke-group hints.
