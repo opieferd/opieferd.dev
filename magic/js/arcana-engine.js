@@ -99,6 +99,46 @@ const baseSpells={
 "earth|columns":"Earth Lift","earth|dispersion":"Shifting Ground","earth|levitation":"Suspended Stone","earth|convergence":"Stone Bastion","earth|expansion":"Stone Bloom",
 "wind|veer":"Curving Gale","wind|orbit":"Cyclone Halo","wind|split":"Forked Wind","water|veer":"Bending Stream","water|orbit":"Tidal Orbit","water|split":"Forked Rapids"
 };
+
+/* Original fan-game naming grammar. Deterministic for every recognized combination. */
+const hybridNames={
+"earth+fire":"Cinderforge","earth+water":"Clayweaver","earth+wind":"Dustwhirl",
+"fire+water":"Steamveil","fire+wind":"Wildfire Gale","water+wind":"Raincurrent",
+"earth+fire+water":"Molten Lookingglass","earth+fire+wind":"Cinderstorm",
+"earth+water+wind":"Silt Tempest","fire+water+wind":"Stormglass",
+"earth+fire+water+wind":"Primal Convergence"};
+const essenceNames={fire:"Ember",water:"Tide",earth:"Stone",wind:"Gale"};
+const formNames={columns:"Lance",dispersion:"Bloom",levitation:"Ascension",convergence:"Heart",expansion:"Surge",pull:"Grasp",veer:"Arc",orbit:"Halo",split:"Crown"};
+const pairForms={
+"columns+dispersion":"Scatterlance","columns+expansion":"Greatlance","columns+convergence":"Piercing Ray",
+"columns+levitation":"Skyspike","columns+pull":"Harpoon","columns+veer":"Guided Lance",
+"columns+orbit":"Comet Spiral","columns+split":"Forked Bolt",
+"convergence+dispersion":"Starburst","convergence+expansion":"Bloomheart",
+"convergence+levitation":"Floating Heart","convergence+orbit":"Orbiting Core",
+"convergence+pull":"Singularity","convergence+split":"Shattering Heart",
+"dispersion+expansion":"Nova","dispersion+levitation":"Skyblossom",
+"dispersion+orbit":"Whirlpool","dispersion+pull":"Gathering Storm",
+"dispersion+split":"Manyfold Rain","expansion+levitation":"Skywell",
+"expansion+orbit":"Growing Vortex","expansion+pull":"Tidal Embrace",
+"expansion+split":"Branching Surge","levitation+orbit":"Floating Halo",
+"levitation+pull":"Skyhook","levitation+split":"Featherstorm",
+"orbit+pull":"Gravitating Halo","orbit+split":"Wheel of Shards",
+"pull+split":"Raking Talons","veer+columns":"Guided Lance",
+"veer+dispersion":"Curved Sweep","veer+expansion":"Winding Surge",
+"veer+convergence":"Turning Focus","veer+levitation":"Spiral Ascent",
+"veer+orbit":"Wayward Halo","veer+pull":"Crooked Grasp","veer+split":"Forked Arc"};
+function poeticName(elements,signs,layerCount=0){
+ const ids=[...new Set(elements)].sort(),mods=[...new Set(signs)].sort();
+ if(!ids.length)return"Unwritten Spell";
+ const core=hybridNames[ids.join("+")]||ids.map(id=>essenceNames[id]||id).join("");
+ if(!mods.length)return ids.length===1?core+" Seal":core+" Weave";
+ const form=mods.length===1?(formNames[mods[0]]||"Working"):
+ mods.length===2?(pairForms[mods.join("+")]||mods.map(id=>formNames[id]||"Arc").join(" ")) :
+ (formNames[mods[2]]||"Arc")+" "+(pairForms[mods.slice(0,2).join("+")]||mods.slice(0,2).map(id=>formNames[id]||"Ward").join(" "))+
+ (mods.length>3?" of "+mods.slice(3).map(id=>formNames[id]||"Magic").join(" and "):"");
+ return (layerCount===1?"Greater ":layerCount>=2?"Grand ":"")+core+" "+form;
+}
+
 function bearing(degrees){const a=((degrees%360)+360)%360;return["north","northeast","east","southeast","south","southwest","west","northwest"][Math.round(a/45)%8];}
 function tierFor(elements,signs,inner){if(inner.length||elements.length>=3||signs.length>=2&&elements.length>=2||signs.length>=3)return"advanced";if(elements.length>=2||signs.length>=2||signs.some(g=>["veer","orbit","split","levitation","convergence","expansion","pull"].includes(g.id)))return"intermediate";return"beginner";}
 
@@ -159,7 +199,7 @@ function spatialMeaning(ir,graph){
  else if(links.some(x=>x.from==="veer"&&x.to==="columns")&&wind)title="Deflected Wind Lance";
  else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&water)title="Spiral Bloom";
  else if(contains.some(x=>x.parent==="expansion"&&x.child==="orbit")&&fire)title="Solar Vortex";
- else title=(contains.length?"Enclosed ":"Linked ")+title;
+ else title=(contains.length?"Heartbound ":"Threadbound ")+title;
  const linksText=links.map(l=>"The "+l.from+" sign channels into "+l.to+" ("+
   Math.round(l.angleDegrees)+"°)").join(". ");
  const containText=contains.map(c=>"The "+c.parent+" sign encloses "+c.child+
@@ -182,7 +222,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  if(!boundary)return{...basics,valid:false,power:0,output:{emoji:"🖋️",title:"Spell prepared",text:recognized.length?recognized.map(g=>g.name).join(" + ")+" inscribed. Close the outer ring to cast.":"Draw the components first, then close the outer circle."}};
  if(!elements.length){if(!signs.length&&!inkCount&&!innerRings.length)return{...basics,valid:true,tier:"beginner",power:Math.round(boundary.quality*35),reading:Math.round(boundary.quality*100),output:{emoji:"💥",title:"Empty-Ring Shockwave",text:"A closed outer ring without inscriptions releases a wave of raw magic."}};return{...basics,valid:false,power:0,output:{emoji:"📜",title:"Unstable seal",text:"The completed circle needs at least one readable elemental sigil."}};}
  const ids=elements.map(e=>e.id),key=ids.slice().sort().join("+"),sigilNames=ids.map(id=>SYMBOLS.find(g=>g.id===id)?.name).join(" + ");
- const title=ids.length===1?(baseSpells[ids[0]+"|"+signs[0]?.id]||sigilNames+" Working"):(combos[key]?.[0]||sigilNames+" Weaving");
+ const title=ids.length===1?(baseSpells[ids[0]+"|"+signs[0]?.id]||poeticName(ids,signs.map(x=>x.id))):signs.length?poeticName(ids,signs.map(x=>x.id)):hybridNames[key]||poeticName(ids,[]);
  const description=ids.length===1?"The seal conjures "+elementDescriptions[ids[0]]+" magic.":(combos[key]?.[1]||"Several elemental sigils weave into a single magical working.");
  const directionSign=signs.find(s=>["veer","split","columns","levitation","pull"].includes(s.id))||signs[0];
  const orientation=directionSign?directionSign.rotationDegrees:0,direction=bearing(orientation),rotateMeaning=directionSign&&directionSign.id!=="dispersion"&&!directionSign.orientationAmbiguous;
@@ -195,7 +235,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  return{...basics,valid:true,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),
   rotationDegrees:orientation,direction,effects:sequence,channels:{inner:recognized.filter(g=>g.zone==="inner").map(g=>g.id),outer:recognized.filter(g=>g.zone==="outer").map(g=>g.id)}, 
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
-  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?"Nested "+title:title),text}};
+  output:{emoji:ids.map(id=>SYMBOLS.find(s=>s.id===id)?.emoji).join(" "),title:foundRecipe?.label||(innerRings.length?poeticName(ids,signs.map(x=>x.id),innerRings.length):title),text}};
 }
 export function analyzeSeal(input){
  const raw=(Array.isArray(input)?input:[]).slice(0,120);
