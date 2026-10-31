@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css">
-  <link rel="stylesheet" href="music.css?v=20261030d">
+  <link rel="stylesheet" href="music.css?v=20261030e">
   <title>Music — opieferd</title>
 </head>
 <body>
@@ -99,6 +99,10 @@
           </div>
           <p id="transport-note" class="transport-note">Your player controls will appear here.</p>
         </div>
+        <div id="playlist-fallback" class="playlist-fallback" hidden role="status">
+          <div><strong>Can't play this playlist here</strong><p id="playlist-fallback-label">Some YouTube Music playlists are restricted from embedded playback.</p></div>
+          <div class="fallback-actions"><a id="playlist-fallback-open" href="https://music.youtube.com/" target="_blank" rel="noopener noreferrer" class="music-button secondary">Open on YouTube Music ↗</a><button id="playlist-fallback-tracks" type="button" class="music-button primary">Load accessible tracks</button></div>
+        </div>
         <p class="player-hint" id="player-hint">Each streaming provider controls its own playback. Some require you to sign in or only allow previews.</p>
         <div class="player-actions">
           <button type="button" class="music-button secondary" id="copy-link" disabled>⧉ Copy link</button>
@@ -162,6 +166,6 @@
 </div>
 <script src="https://w.soundcloud.com/player/api.js" defer></script>
 <script src="https://www.youtube.com/iframe_api" async></script>
-<script src="music.js?v=20261030d" defer></script>
+<script src="music.js?v=20261030e" defer></script>
 </body>
 </html>
