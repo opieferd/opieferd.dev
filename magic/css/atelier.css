@@ -1,0 +1,34 @@
+/* Witch Hat inspired learning mode — extension of Opie Orange styles. */
+.magic-lesson-art{width:100px;height:100px;background:radial-gradient(circle,#3e2c1a,#17120e);border-color:#795a2b80;box-shadow:inset 0 0 24px #ebaf360b}
+.magic-lesson-art::before{inset:9px}
+.magic-lesson-art svg{width:88px;height:88px}
+.magic-lesson-copy{flex:1}
+.magic-lesson-copy strong{font-size:1.03rem}
+.magic-lesson-copy small{font-size:.73rem}
+.magic-lesson{padding:1rem;min-height:125px}
+.magic-lesson:focus-visible,.magic-recipe:focus-visible{outline:2px solid var(--magic-orange);outline-offset:2px}
+.magic-lesson[data-glyph=fire] .magic-lesson-art{background:radial-gradient(circle,#3d2517,#18120d)}
+.magic-lesson[data-glyph=water] .magic-lesson-art{background:radial-gradient(circle,#263446,#16120e)}
+.magic-lesson[data-glyph=wind] .magic-lesson-art{background:radial-gradient(circle,#23392f,#16120e)}
+.magic-lesson[data-glyph=earth] .magic-lesson-art{background:radial-gradient(circle,#352b21,#16120e)}
+.magic-learning-note{margin-top:1.1rem;display:flex;align-items:center;justify-content:space-between;gap:.9rem;flex-wrap:wrap;padding:.85rem 1rem;border:1px solid #665137;border-radius:5px;background:#241a11;color:#d4bd95;font-size:.78rem}
+.magic-learning-note a,.magic-lesson-details a{color:#ebaf36;text-underline-offset:3px}
+.magic-combos{margin-top:1.25rem;border:1px solid #473724;border-radius:9px;background:#15110d;padding:1.5rem}
+.magic-combos .magic-section-head{margin-bottom:1.3rem}
+.magic-recipes-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}
+.magic-recipe{display:flex;flex-direction:column;align-items:start;gap:.5rem;min-height:136px;padding:1rem;border:1px solid #4a3a26;background:radial-gradient(circle at 85% 15%,#ebaf3617,transparent 58%),#1d1711;color:var(--cream);border-radius:6px;text-align:left;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.magic-recipe:hover{transform:translateY(-3px);border-color:var(--orange);background:#302315}
+.magic-recipe-icon{font-size:1.8rem;line-height:1.2}
+.magic-recipe-title{font-size:.93rem;font-weight:760;letter-spacing:-.03em}
+.magic-recipe small{color:#b4a48e;font:.64rem/1.45 var(--mono)}
+.magic-debug-row>div:last-child{text-align:right;flex:none;color:#bcb0a0;font:500 .68rem/1.6 var(--mono)}
+.magic-book{max-height:350px}
+.magic-canvas-hud{max-width:calc(100% - 24px)}
+.magic-status{color:#dfbb73}
+.magic-preamble{display:inline-flex;align-items:center;gap:.5rem;margin-bottom:.85rem;color:#aa9d8b;font:.66rem var(--mono)}
+.magic-preamble span{width:7px;height:7px;background:var(--orange);border-radius:50%}
+.magic-actions .magic-btn{flex-shrink:0}
+@media(max-width:1000px){.magic-recipes-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.magic-recipes-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.magic-lesson-art{width:83px;height:83px}.magic-lesson-art svg{width:73px;height:73px}.magic-combos{padding:.85rem}.magic-recipe{min-height:126px;padding:.75rem}}
+@media(max-width:380px){.magic-recipes-grid{grid-template-columns:1fr 1fr}.magic-recipe small{font-size:.57rem}}
+@media(prefers-reduced-motion:reduce){.magic-recipe{transition:none}}
