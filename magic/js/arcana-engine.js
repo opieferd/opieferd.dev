@@ -112,8 +112,7 @@ function straightEnough(points){
  return mid.every(p=>Math.abs((p.x-a.x)*dy-(p.y-a.y)*dx)/len<.015);
 }
 function spatialGraph(strokes,regions,recognized,marked,excluded){
- const nodes=recognized.map(g=>({...g,center:bounds(g.strokeIndices.flatMap(i=>strokes[i])).center,
-   rect:bounds(g.strokeIndices.flatMap(i=>strokes[i]))}));
+ const nodes=recognized.map(g=>({...g,rect:bounds(g.strokeIndices.flatMap(i=>strokes[i]))}));
  // bounds() returns cx/cy, not a center object.
  for(const node of nodes)node.center={x:node.rect.cx,y:node.rect.cy};
  const contains=[];
@@ -200,8 +199,9 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
 }
 export function analyzeSeal(input){
  const raw=(Array.isArray(input)?input:[]).slice(0,120);
- const strokes=raw.map(clean).filter(s=>s.length>1);
- const marked=new Set(raw.map((line,i)=>line?.intent==="connector"?i:-1).filter(i=>i>=0));
+ const entries=raw.map((line,i)=>({rawIndex:i,points:clean(line),intent:line?.intent})).filter(item=>item.points.length>1);
+ const strokes=entries.map(item=>item.points);
+ const marked=new Set(entries.map((item,i)=>item.intent==="connector"?i:-1).filter(i=>i>=0));
  const scan=scanRings(strokes),{boundary,pendingRing,innerRings,frame}=scan,excluded=new Set(marked);
  for(const ring of innerRings)ring.strokeIndices.forEach(i=>excluded.add(i));
  if(boundary)boundary.strokeIndices.forEach(i=>excluded.add(i));
