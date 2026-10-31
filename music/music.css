@@ -209,3 +209,10 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,.local-file-button:f
 .local-visual{display:flex;align-items:center;gap:1.15rem;padding:1.4rem;color:var(--muted);font-family:var(--mono);font-size:.71rem;letter-spacing:.12em}
 .local-visual>span:first-child{display:grid;place-items:center;width:64px;height:64px;border:1px solid #66502c;border-radius:6px;background:#34291c;color:var(--orange);font-size:2rem}
 @media(max-width:600px){.local-visual{font-size:.64rem;gap:.75rem}.local-visual>span:first-child{width:50px;height:50px}}
+
+.playlist-fallback{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;margin-top:.8rem;border:1px solid #6d5028;border-radius:8px;background:#241c12}
+.playlist-fallback strong{font-size:.9rem;color:var(--cream)}
+.playlist-fallback p{font-size:.77rem;color:var(--muted);line-height:1.6;margin:.25rem 0 0}
+.fallback-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.fallback-actions .music-button{font-size:.75rem}
+@media(max-width:600px){.playlist-fallback{align-items:stretch}.fallback-actions{width:100%}.fallback-actions .music-button{flex:1;white-space:normal;text-align:center}}
