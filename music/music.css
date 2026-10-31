@@ -122,3 +122,30 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,.local-file-button:f
 @media(max-width:820px){.music-grid{grid-template-columns:1fr}.queue-panel{min-height:auto}.queue-list{max-height:330px}.music-hero{grid-template-columns:1fr 160px}.music-hero-art{width:150px;height:150px}.art-disc{width:115px}.art-disc:before{inset:33px}.music-info{grid-template-columns:1fr 1fr}.music-info>div{grid-column:1/-1}}
 @media(max-width:600px){.music-site{width:min(100% - 1.5rem,1240px)}.topbar{height:74px;gap:1rem}.wordmark{font-size:1rem}.music-nav{gap:.75rem}.music-nav a{font-size:.75rem}.music-nav a:nth-child(2){display:none}.music-hero{display:block;min-height:auto;padding:3.1rem 0 2rem}.music-hero-art{display:none}.music-hero h1{font-size:clamp(2.5rem,10vw,4rem)}.music-hero p:not(.eyebrow){font-size:.91rem}.input-wrap{flex-direction:column}.input-wrap .music-button{align-self:stretch}.input-wrap textarea{min-height:94px}.now-header{align-items:flex-start;gap:.8rem}.cover-art{width:84px;height:84px}.cover-grooves{width:56px;height:56px}.cover-art>span{font-size:2rem}.track-detail h2{font-size:1.2rem}.player-stage{min-height:240px}.player-stage iframe{min-height:280px}.player-stage iframe.is-compact{min-height:175px}.player-stage iframe.is-expanded{min-height:340px}.player-actions .music-button{flex:1}.player-actions .action-download{flex:1 0 100%}.music-info{grid-template-columns:1fr;gap:1rem}.music-info>div{grid-column:auto}.music-footer{flex-wrap:wrap}.music-footer span{display:none}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Artwork + familiar media player transport */
+.cover-art>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;display:block}
+.cover-art>img[hidden]{display:none!important}
+.track-artist{color:#e3ceb0!important;font-size:.82rem!important;margin:0 0 .3rem!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.transport{border:1px solid #3e3223;background:#120f0c;border-radius:10px;padding:1rem 1.1rem;margin-top:1rem}
+.transport-buttons{display:flex;align-items:center;justify-content:center;gap:1.15rem}
+.transport-icon,.transport-play{display:grid;place-items:center;border:0;cursor:pointer;color:#e6dcca;transition:color .2s,transform .2s}
+.transport-icon{font-size:1.4rem;background:transparent;width:37px;height:37px;border-radius:8px}
+.transport-icon:hover:not(:disabled){background:#302516;color:var(--orange)}
+.transport-icon.is-active{color:var(--orange);background:#ebaf3615}
+.transport-play{height:51px;width:51px;border-radius:50%;font-size:1.25rem;background:var(--orange);color:#1b150d;box-shadow:0 4px 22px #ebaf3630}
+.transport-play:hover:not(:disabled){transform:scale(1.07);background:#ffcc6b}
+.transport-icon:disabled,.transport-play:disabled{opacity:.33;cursor:not-allowed}
+.transport-progress{display:flex;align-items:center;gap:.8rem;margin-top:1rem}
+.transport-progress>span{color:#aaa39a;font-family:var(--mono);font-size:.68rem;min-width:36px;font-variant-numeric:tabular-nums}
+.transport-progress>span:last-child{text-align:right}
+.transport-progress input,.transport-volume input{accent-color:var(--orange);cursor:pointer}
+.transport-progress input{width:100%;flex:1;min-width:0}
+.transport-progress input:disabled,.transport-volume input:disabled{opacity:.4;cursor:not-allowed}
+.transport-volume{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;margin-top:.65rem;font-size:.72rem;color:var(--muted)}
+.transport-volume input{width:105px}
+.transport-note{min-height:1.1rem;margin:.65rem 0 0!important;color:#ad9e8a!important;font-size:.73rem!important;text-align:center;line-height:1.5!important}
+.queue-mode-label{color:var(--muted);font-size:.7rem;font-family:var(--mono)}
+.queue-item.is-current .queue-thumb{border-color:var(--orange)}
+.queue-thumb img{width:100%;height:100%;object-fit:cover;border-radius:5px}
+@media(max-width:600px){.transport{padding:.75rem}.transport-buttons{gap:.7rem}.transport-icon{width:33px;height:33px}.transport-progress{gap:.35rem}.transport-volume input{width:80px}}
