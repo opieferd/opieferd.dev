@@ -24,16 +24,73 @@ function normCloud(strokes){const all=strokes.flat();if(!all.length)return[];con
 const reference=new Map(SYMBOLS.map(g=>[g.id,normCloud(g.paths.map(s=>s.map(([x,y])=>({x:x/100,y:y/100}))))]));
 function pointDistance(a,b){let sum=0;for(const p of a){let best=Infinity;for(const q of b){const v=(p.x-q.x)**2+(p.y-q.y)**2;if(v<best)best=v}sum+=Math.sqrt(best)}return sum/Math.max(a.length,1)}
 function scores(strokes){if(!strokes.length)return[];const cloud=normCloud(strokes),box=bbox(strokes.flat());return SYMBOLS.map(symbol=>{const target=reference.get(symbol.id),raw=(pointDistance(cloud,target)+pointDistance(target,cloud))*.5;const nDiff=Math.abs(strokes.length-symbol.paths.length),aspect=bbox(symbol.paths.flat().map(([x,y])=>({x:x/100,y:y/100})));const aspectError=Math.abs(box.w/Math.max(box.h,.00001)-aspect.w/Math.max(aspect.h,.00001));const penalty=Math.min(.2,nDiff*.055)+Math.min(.1,aspectError*.08);const confidence=clamp(1-raw/.28-penalty);return{id:symbol.id,name:symbol.name,role:symbol.role,emoji:symbol.emoji,score:+confidence.toFixed(3),error:+raw.toFixed(4)}}).sort((a,b)=>b.score-a.score)}
-function circle(stroke,i){if(stroke.length<14)return null;const b=bbox(stroke);if(b.w<.43||b.h<.43)return null;const sampled=arcResample(stroke,80),c={x:sampled.reduce((s,p)=>s+p.x,0)/sampled.length,y:sampled.reduce((s,p)=>s+p.y,0)/sampled.length};const radii=sampled.map(p=>d(p,c)),radius=radii.reduce((a,b)=>a+b,0)/radii.length,variance=Math.sqrt(radii.reduce((sum,v)=>sum+(v-radius)**2,0)/radii.length)/radius,aspect=Math.min(b.w,b.h)/Math.max(b.w,b.h),gap=d(stroke[0],stroke.at(-1))/radius;return{strokeIndex:i,center:c,radius,quality:+clamp(1-variance*2.8-(1-aspect)-gap*.75).toFixed(3),gap:+gap.toFixed(3),radialError:+variance.toFixed(3),valid:variance<.22&&aspect>.65&&gap<.73}}
-function segment(strokes,ringIndex,groups,ring){const used=new Set(),out=[];if(Array.isArray(groups))for(const indices of groups){const list=indices.filter(i=>i!==ringIndex&&i>=0&&i<strokes.length&&!used.has(i));if(list.length){list.forEach(i=>used.add(i));out.push(list)}}
-const rest=strokes.map((_,i)=>i).filter(i=>i!==ringIndex&&!used.has(i));const parent=new Map(rest.map(i=>[i,i]));
-// Uncommitted strokes near the center usually belong to one multi-stroke elemental sigil.
-// Explicitly finished symbols remain separate, so two adjacent elements can still coexist.
-const central=ring?rest.filter(i=>{const b=bbox(strokes[i]);return d({x:b.cx,y:b.cy},ring.center)<ring.radius*.46}):[];
-if(central.length>1)for(const i of central.slice(1))parent.set(i,central[0]);function root(x){while(parent.get(x)!==x)x=parent.get(x);return x}function merge(a,b){parent.set(root(a),root(b))}
-const gapBetween=(a,b)=>{const x=Math.max(0,Math.max(a.x,b.x)-Math.min(a.x+a.w,b.x+b.w)),y=Math.max(0,Math.max(a.y,b.y)-Math.min(a.y+a.h,b.y+b.h));return Math.hypot(x,y)};
-for(let k=0;k<rest.length;k++)for(let j=k+1;j<rest.length;j++){const a=bbox(strokes[rest[k]]),b=bbox(strokes[rest[j]]);const distance=gapBetween(a,b);if(distance<.026)merge(rest[k],rest[j])}
-const clusters=new Map();for(const i of rest){const k=root(i);if(!clusters.has(k))clusters.set(k,[]);clusters.get(k).push(i)}out.push(...clusters.values());return out}
+
+function circle(stroke,i){
+ const s=pts(stroke);if(s.length<14)return null;
+ const b=bbox(s);if(b.w<.43||b.h<.43)return null;
+ const sampled=arcResample(s,96),center={x:sampled.reduce((sum,p)=>sum+p.x,0)/sampled.length,y:sampled.reduce((sum,p)=>sum+p.y,0)/sampled.length};
+ const radii=sampled.map(p=>d(p,center)),radius=radii.reduce((sum,v)=>sum+v,0)/radii.length;
+ const radialError=Math.sqrt(radii.reduce((sum,v)=>sum+(v-radius)**2,0)/radii.length)/radius;
+ const aspect=Math.min(b.w,b.h)/Math.max(b.w,b.h),gap=d(s[0],s.at(-1))/radius;
+ const circumference=s.slice(1).reduce((sum,p,i)=>sum+d(p,s[i]),0)/(2*Math.PI*radius);
+ const quality=clamp(1-radialError*2.6-(1-aspect)-gap*.32);
+ return {strokeIndex:i,strokeIndices:[i],completedAt:i,center,radius,quality:+quality.toFixed(3),gap:+gap.toFixed(3),radialError:+radialError.toFixed(3),coverage:+circumference.toFixed(3),valid:radialError<.22&&aspect>.65&&gap<.15&&circumference>.72&&quality>.52};
+}
+function boundaryScan(strokes){
+ const candidates=strokes.map(circle).filter(Boolean),loops=candidates.filter(c=>c.valid);
+ // An almost-complete ring can be activated with one final connecting stroke.
+ for(const arc of candidates.filter(c=>!c.valid&&c.radialError<.22&&c.coverage>.68&&c.gap<1.05)){
+  for(let j=arc.strokeIndex+1;j<strokes.length;j++){
+   const a=strokes[arc.strokeIndex],b=strokes[j];
+   if(b.length<2)continue;
+   const tolerance=Math.max(.037,arc.radius*.19);
+   const forwards=d(a.at(-1),b[0])<tolerance&&d(b.at(-1),a[0])<tolerance;
+   const reversed=d(a.at(-1),b.at(-1))<tolerance&&d(b[0],a[0])<tolerance;
+   if(!forwards&&!reversed)continue;
+   const joined=a.concat(forwards?b:b.slice().reverse());
+   const fitted=circle(joined,j);
+   if(fitted?.valid)loops.push({...fitted,strokeIndices:[arc.strokeIndex,j],completedAt:j,closureType:"joined-strokes"});
+  }
+ }
+ loops.sort((a,b)=>b.radius-a.radius||b.quality-a.quality);
+ candidates.sort((a,b)=>b.radius-a.radius);
+ return{boundary:loops[0]||null,candidates,pendingRing:candidates.find(c=>!c.valid&&c.radialError<.23&&c.coverage>.66&&c.gap<1.1)||null};
+}
+function autoSegment(strokes,indices,ring){
+ // Drawing-order dynamic programming: recognize each multi-stroke symbol without a Finish button.
+ const n=indices.length;if(!n)return[];
+ const dp=Array(n+1).fill(-Infinity),choice=Array(n);dp[n]=0;
+ for(let i=n-1;i>=0;i--){
+  dp[i]=dp[i+1]-.075;choice[i]={length:1,unknown:true};
+  for(let k=1;k<=Math.min(8,n-i);k++){
+   const ids=indices.slice(i,i+k),lines=ids.map(j=>strokes[j]),b=bbox(lines.flat()),center={x:b.cx,y:b.cy};
+   if(Math.max(b.w,b.h)<.025||!ring||d(center,ring.center)>ring.radius*.97)continue;
+   const ranking=scores(lines),best=ranking[0],margin=best.score-(ranking[1]?.score||0);
+   if(best.score<.49||(margin<.015&&best.score<.81))continue;
+   const definition=SYMBOLS.find(s=>s.id===best.id),countDiff=Math.abs(k-definition.paths.length);
+   if(countDiff>2)continue;
+   const radial=d(center,ring.center)/ring.radius;
+   const spatial=best.role==="sigil"?(radial<.58?.075:-.13):(radial>.28?.05:-.035);
+   const utility=1.4*(best.score-.50)+.085*(k-1)-.105-.07*countDiff+spatial;
+   const total=utility+dp[i+k];
+   if(total>dp[i]){dp[i]=total;choice[i]={length:k,unknown:false};}
+  }
+ }
+ const groups=[];
+ for(let i=0;i<n;){const c=choice[i];if(c.unknown){groups.push([indices[i]]);i++;continue;}groups.push(indices.slice(i,i+c.length));i+=c.length;}
+ return groups;
+}
+function segment(strokes,excluded,groups,ring){
+ const used=new Set(excluded),out=[];
+ if(Array.isArray(groups))for(const group of groups){
+  const ids=group.filter(i=>i>=0&&i<strokes.length&&!used.has(i));
+  if(!ids.length)continue;
+  ids.forEach(i=>used.add(i));out.push(ids);
+ }
+ const rest=strokes.map((_,i)=>i).filter(i=>!used.has(i));
+ out.push(...autoSegment(strokes,rest,ring));
+ return out;
+}
 const reactions={
 "earth+fire":["Magma Working","Stone heats and softens, becoming molten rock."],
 "earth+water":["Clay Shaping","Water saturates the earth, gathering into malleable clay."],
@@ -65,18 +122,61 @@ const special={
 "earth|convergence":["Stone Bastion","Loose earth compacts into a strong barrier."],
 "earth|expansion":["Stone Bloom","Existing stone swells and extends into a larger structure."]
 };
-function parse(boundary,recognized,warnings){const elemental=recognized.filter(g=>g.role==="sigil"),signs=recognized.filter(g=>g.role==="sign"),unique=[...new Set(elemental.map(g=>g.id))],mods=[...new Set(signs.map(g=>g.id))];if(!boundary||!elemental.length)return{schemaVersion:2,valid:false,elements:[],signs:mods,power:0,output:{emoji:"📜",title:"Unfinished seal",text:"Complete a ring and draw at least one elemental sigil."},warnings};
+function parse(boundary,recognized,warnings,inkCount=0){const elemental=recognized.filter(g=>g.role==="sigil"),signs=recognized.filter(g=>g.role==="sign"),unique=[...new Set(elemental.map(g=>g.id))],mods=[...new Set(signs.map(g=>g.id))];if(boundary&&!elemental.length&&!signs.length&&inkCount===0)return{schemaVersion:3,valid:true,elements:[],signs:[],power:Math.round(boundary.quality*35),reading:Math.round(boundary.quality*100),seal:{center:boundary.center,radius:boundary.radius,quality:boundary.quality},glyphs:[],output:{emoji:"💥",title:"Empty-Ring Shockwave",text:"A closed ring without a sigil releases a sudden pulse of raw magical energy."},warnings};
+if(!boundary||!elemental.length)return{schemaVersion:3,valid:false,elements:[],signs:mods,power:0,output:{emoji:"📜",title:"Unfinished seal",text:"Complete a ring and draw at least one elemental sigil."},warnings};
 const key=unique.slice().sort().join("+"),base=reactions[key],primary=unique[0],selected=mods[0],simple=special[primary+"|"+selected],name=unique.map(id=>SYMBOLS.find(g=>g.id===id).name).join(" + "),emoji=unique.map(id=>SYMBOLS.find(g=>g.id===id).emoji).join(" "),actions={columns:"The spell projects in a directed column.",dispersion:"The effect disperses across a broad area.",levitation:"The magic rises and lifts its target.",convergence:"Its energy concentrates into a compact point.",expansion:"The effected area grows.",pull:"The effect draws its targets inward."},title=unique.length===1&&simple?simple[0]:base?base[0]:name+" Working",description=unique.length===1&&simple?simple[1]:base?base[1]:"A combined working weaves together "+name.toLowerCase()+" magic.",tail=mods.length>1?" Other signs: "+mods.slice(1).map(k=>actions[k]).filter(Boolean).join(" "):unique.length>1&&selected?" "+actions[selected]:"";
 const size=elemental.reduce((a,g)=>a+g.relativeSize,0)/elemental.length,power=Math.round(clamp((.21+size*.95)*boundary.quality+Math.min(signs.length*.025,.1))*100);
-return{schemaVersion:2,valid:true,elements:unique,signs:mods,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),spellType:"fan interpretation",seal:{center:boundary.center,radius:boundary.radius,quality:boundary.quality},glyphs:recognized.map(g=>({id:g.id,role:g.role,strokeIndices:g.strokeIndices,confidence:g.score,relativeSize:g.relativeSize})),output:{emoji,title,text:description+tail},warnings}}
-export function analyzeSeal(raw,groups=[]){const strokes=(Array.isArray(raw)?raw:[]).slice(0,120).map(pts).filter(s=>s.length>1);const boundaryCandidates=strokes.map(circle).filter(Boolean).sort((a,b)=>Number(b.valid)-Number(a.valid)||b.quality-a.quality),boundary=boundaryCandidates.find(b=>b.valid)||null,warnings=[];if(!boundary)warnings.push("Draw one continuous, closed outer ring before casting.");
-const regions=[],recognized=[];for(const ids of segment(strokes,boundary?.strokeIndex,groups,boundary)){const lines=ids.map(i=>strokes[i]),b=bbox(lines.flat()),inside=!!boundary&&d({x:b.cx,y:b.cy},boundary.center)<boundary.radius*.95,ranking=scores(lines),winner=ranking[0],lead=winner.score-(ranking[1]?.score||0),accepted=!!boundary&&inside&&winner.score>=.47&&(lead>=.03||winner.score>.72),reason=!inside?"Outside the ring":winner.score<.47?"No matching manga sigil/sign":lead<.03?"Ambiguous symbol":"";regions.push({strokeIndices:ids,bounds:b,inside,recognized:accepted?winner.id:null,candidates:ranking.slice(0,4),confidence:winner.score,accepted,reason});if(accepted){const symbol=SYMBOLS.find(s=>s.id===winner.id);recognized.push({...winner,name:symbol.name,strokeIndices:ids,relativeSize:+(Math.max(b.w,b.h)/(2*boundary.radius)).toFixed(3)})}else if(boundary)warnings.push("Strokes "+ids.map(i=>i+1).join(", ")+": "+reason+".")}
-if(boundary&&!recognized.some(g=>g.role==="sigil"))warnings.push("The seal needs a recognizable elemental sigil.");
-const ast={schemaVersion:2,ring:boundary?{strokeIndex:boundary.strokeIndex,quality:boundary.quality,center:boundary.center,radius:boundary.radius}:null,regions:regions.map(r=>({strokes:r.strokeIndices,recognized:r.recognized,score:r.confidence})),symbols:recognized.map(g=>({id:g.id,role:g.role,strokes:g.strokeIndices}))};
-return{strokes,boundary,boundaryCandidates,regions,recognized,ast,warnings,ir:parse(boundary,recognized,warnings)}}
-function ring(){return Array.from({length:97},(_,i)=>({x:.5+.39*Math.cos(i*2*Math.PI/96),y:.5+.39*Math.sin(i*2*Math.PI/96),t:i*12}))}
+return{schemaVersion:3,valid:true,elements:unique,signs:mods,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),spellType:"fan interpretation",seal:{center:boundary.center,radius:boundary.radius,quality:boundary.quality},glyphs:recognized.map(g=>({id:g.id,role:g.role,strokeIndices:g.strokeIndices,confidence:g.score,relativeSize:g.relativeSize})),output:{emoji,title,text:description+tail},warnings}}
+
+export function analyzeSeal(raw,groups=[]){
+ const strokes=(Array.isArray(raw)?raw:[]).slice(0,120).map(pts).filter(s=>s.length>1);
+ const {boundary,candidates:boundaryCandidates,pendingRing}=boundaryScan(strokes);
+ const teachingRing=boundary||pendingRing||{center:{x:.5,y:.5},radius:.39,quality:0};
+ const excluded=new Set([...(boundary?.strokeIndices||[]),...(pendingRing?[pendingRing.strokeIndex]:[])]);
+ const warnings=[],regions=[],recognized=[];
+ if(!boundary)warnings.push(pendingRing?"Close the gap in the outer ring to cast your spell.":"Your magic is prepared. Draw and close the outer ring to cast.");
+ for(const ids of segment(strokes,excluded,groups,teachingRing)){
+  const lines=ids.map(i=>strokes[i]),b=bbox(lines.flat()),inside=d({x:b.cx,y:b.cy},teachingRing.center)<teachingRing.radius*.97;
+  const ranking=scores(lines),best=ranking[0],lead=best.score-(ranking[1]?.score||0);
+  const accepted=inside&&best.score>=.49&&(lead>=.015||best.score>.81);
+  const reason=!inside?"Outside the outer ring":best.score<.49?"No matching sigil or sign":lead<.015?"Ambiguous symbol":"";
+  regions.push({strokeIndices:ids,bounds:b,inside,recognized:accepted?best.id:null,candidates:ranking.slice(0,4),confidence:best.score,accepted,reason});
+  if(accepted){const s=SYMBOLS.find(x=>x.id===best.id);recognized.push({...best,name:s.name,strokeIndices:ids,relativeSize:+(Math.max(b.w,b.h)/(2*teachingRing.radius)).toFixed(3)})}
+  else if(boundary)warnings.push("Strokes "+ids.map(i=>i+1).join(", ")+": "+reason+".");
+ }
+ if(boundary&&!recognized.some(g=>g.role==="sigil")&&regions.length)warnings.push("The ring closed, but its inscriptions need a recognizable elemental sigil.");
+ const ast={schemaVersion:3,ring:boundary?{strokeIndices:boundary.strokeIndices,completedAt:boundary.completedAt,quality:boundary.quality,center:boundary.center,radius:boundary.radius}:null,
+  pendingRing:pendingRing?{strokeIndex:pendingRing.strokeIndex,gap:pendingRing.gap,quality:pendingRing.quality}:null,
+  regions:regions.map(r=>({strokes:r.strokeIndices,recognized:r.recognized,score:r.confidence})),symbols:recognized.map(g=>({id:g.id,role:g.role,strokes:g.strokeIndices}))};
+ const inkCount=strokes.length-excluded.size;
+ const ir=parse(boundary,recognized,warnings,inkCount);
+ if(!boundary){ir.valid=false;ir.output={emoji:"🖋️",title:"Spell prepared",text:recognized.length?recognized.map(g=>g.name).join(" + ")+" inscribed. Close the outer ring to activate it.":"Draw elemental sigils and modifier signs, then close the outer circle."};}
+ return{strokes,boundary,boundaryCandidates,pendingRing,regions,recognized,ast,warnings,ir,
+  ready:!!boundary,completion:boundary?{strokeIndices:boundary.strokeIndices,completedAt:boundary.completedAt,type:boundary.closureType||"single-stroke"}:null};
+}
+
+function ring(open=false){
+ const start=open?.23:0,end=open?Math.PI*2-.23:Math.PI*2;
+ return Array.from({length:open?93:97},(_,i)=>{const a=start+(end-start)*i/(open?92:96);return{x:.5+.39*Math.cos(a),y:.5+.39*Math.sin(a),t:2000+i*12}});
+}
+export function closeRingStroke(){return Array.from({length:13},(_,i)=>{const angle=Math.PI*2-.23+.46*i/12;return{x:.5+.39*Math.cos(angle),y:.5+.39*Math.sin(angle),t:4000+i*12}});}
 function place(symbol,center,size){return symbol.paths.map(path=>path.map(([x,y],i)=>({x:center.x+(x-50)*size/100,y:center.y+(y-50)*size/100,t:i*15})))}
-export function makeExample(ids=["wind","columns"]){const chosen=ids.map(id=>SYMBOLS.find(g=>g.id===id)).filter(Boolean),elements=chosen.filter(g=>g.role==="sigil"),signs=chosen.filter(g=>g.role==="sign"),strokes=[ring()],groups=[];for(let i=0;i<elements.length;i++){const x=.5+(i-(elements.length-1)/2)*.2,paths=place(elements[i],{x,y:.52},elements.length>1?.19:.27),indices=[];for(const path of paths){indices.push(strokes.length);strokes.push(path)}groups.push(indices)}for(let i=0;i<signs.length;i++){const angle=-Math.PI/2+i*Math.PI*2/Math.max(3,signs.length),paths=place(signs[i],{x:.5+Math.cos(angle)*.28,y:.5+Math.sin(angle)*.28},.12),indices=[];for(const path of paths){indices.push(strokes.length);strokes.push(path)}groups.push(indices)}return{strokes,groups}}
+export function makeExample(ids=["wind","columns"],options={}){
+ const chosen=ids.map(id=>SYMBOLS.find(g=>g.id===id)).filter(Boolean),
+ elements=chosen.filter(g=>g.role==="sigil"),signs=chosen.filter(g=>g.role==="sign");
+ const strokes=[],groups=[];
+ for(let i=0;i<elements.length;i++){
+  const x=.5+(i-(elements.length-1)/2)*.2,paths=place(elements[i],{x,y:.52},elements.length>1?.19:.27),indices=[];
+  for(const path of paths){indices.push(strokes.length);strokes.push(path)}groups.push(indices);
+ }
+ for(let i=0;i<signs.length;i++){
+  const angle=-Math.PI/2+i*Math.PI*2/Math.max(3,signs.length),
+  paths=place(signs[i],{x:.5+Math.cos(angle)*.28,y:.5+Math.sin(angle)*.28},.12),indices=[];
+  for(const path of paths){indices.push(strokes.length);strokes.push(path)}groups.push(indices);
+ }
+ strokes.push(ring(!!options.open));
+ return{strokes,groups,ringIndex:strokes.length-1,open:!!options.open};
+}
 export function normalizedCloud(group){return normCloud(group)}
 export const recipes=[
 {ids:["wind","columns"],label:"Wind Blast",emoji:"🌬️"},{ids:["wind","dispersion"],label:"Gust Wave",emoji:"🌪️"},{ids:["wind","levitation"],label:"Skysoaring",emoji:"🫧"},
