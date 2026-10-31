@@ -1,4 +1,4 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=recognizer-3";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS,poeticName} from "./arcana-engine.js?v=short-names-1";
 import {createCastEffects} from "./cast-fx.js?v=recognizer-3";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
@@ -174,7 +174,23 @@ function renderResult(){
  if(casted&&analysis.ready){const stats=make("div","magic-stats");stats.append(make("span","","Power "+ir.power+" / 100"),make("span","","Recognition "+ir.reading+" / 100"),make("span","",TIERS.find(t=>t.id===ir.tier)?.name||"Beginner"));if(ir.rings?.nested?.length)stats.append(make("span","",ir.rings.nested.length+" nested ring(s)"));if(ir.effects?.some(e=>e.asymmetric))stats.append(make("span","","Direction "+ir.direction));if(!ir.castSucceeded)stats.append(make("span","magic-miscast-label",ir.castOutcome==="lost-control"?"Lost control":"Spell failed"));result.append(stats);}
 }
 
-const key="opie_magic_wha_lab_v1";function loadSaved(){try{return JSON.parse(localStorage.getItem(key)||"{}")||{}}catch{return{}}}
+const key="opie_magic_wha_lab_v1";
+function loadSaved(){
+ try{
+  const data=JSON.parse(localStorage.getItem(key)||"{}")||{};
+  let changed=false;
+  for(const [signature,spell] of Object.entries(data)){
+   if(!spell||typeof spell.title!=="string")continue;
+   if(!/^(Grand|Greater)\s/.test(spell.title)&&spell.title.trim().split(/\s+/).length<=3)continue;
+   const [elements,signs]=signature.split("::");
+   if(!elements)continue;
+   const revised=poeticName(elements.split("+"),signs?signs.split("+"):[]);
+   if(revised!==spell.title){spell.title=revised;changed=true;}
+  }
+  if(changed)localStorage.setItem(key,JSON.stringify(data));
+  return data;
+ }catch{return{}}
+}
 function save(){try{const data=loadSaved(),ir=analysis.ir,signature=[...ir.elements].sort().join("+")+"::"+[...ir.signs].sort().join("+")+"::"+(ir.relationSignature||"")+"::"+(ir.rings?.nested?.length||0)+"::"+(ir.rotationDegrees||0);data[signature]={emoji:ir.output.emoji,title:ir.output.title,power:Math.max(data[signature]?.power||0,ir.power),tier:ir.tier,rotation:ir.rotationDegrees,nested:ir.rings?.nested?.length||0};localStorage.setItem(key,JSON.stringify(data));showSaved()}catch{status.textContent="Spell cast successfully. Your browser did not allow saving it."}}
 function showSaved(){
  book.replaceChildren();
