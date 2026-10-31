@@ -1,0 +1,26 @@
+/* Homepage web-games collection; intentionally inherits Opie Orange / editorial styles. */
+.project-webgames{padding:0;width:100%;font:inherit;cursor:pointer;text-align:left}
+.project-webgames .project-art-games{background:radial-gradient(circle at 50% 44%,#704a18 0%,#302214 48%,#17120e 100%);isolation:isolate}
+.project-art-games:before,.project-art-games:after{content:"";position:absolute;width:150px;height:150px;border:1px solid #ebaf3680;border-radius:50%;transform:rotate(-20deg)}
+.project-art-games:after{width:190px;height:190px;border-style:dashed;opacity:.65;transform:rotate(25deg)}
+.games-mark{font-size:4.2rem;line-height:1;filter:drop-shadow(0 0 24px #ebaf3670);z-index:1;transition:transform .3s ease}
+.project-webgames:hover .games-mark{transform:rotate(-10deg) scale(1.12)}
+.project-webgames[aria-expanded=true]{border-color:var(--orange)}
+.project-webgames[aria-expanded=true] .project-arrow{transform:rotate(135deg);background:var(--orange);color:#16110a}
+.project-grid>.webgames-reveal{grid-column:1/-1!important;min-width:0}
+.webgames-reveal[hidden]{display:none!important}
+.webgames-reveal{padding:1.15rem;border:1px solid #5f4827;border-radius:8px;background:linear-gradient(135deg,#1b160f,#14110d);animation:webgames-appear .22s ease both}
+.webgames-reveal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 1rem}
+.webgames-reveal-head h3{margin:0;color:var(--cream);font-size:1.1rem;letter-spacing:-.03em}
+.webgames-reveal-head span{color:var(--muted);font:.68rem var(--mono)}
+.webgames-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+.webgame-card{display:flex;align-items:center;gap:1rem;padding:1.15rem;min-width:0;border:1px solid #453726;border-radius:7px;background:#211b14;color:var(--cream);text-decoration:none;transition:transform .2s,border-color .2s,background .2s}
+.webgame-card:hover,.webgame-card:focus-visible{transform:translateY(-3px);border-color:var(--orange);background:#302315;outline:none}
+.webgame-icon{display:grid;place-items:center;flex:none;width:62px;height:62px;border:1px solid #66512c;border-radius:7px;background:#2b2116;font-size:2rem}
+.webgame-details{display:flex;flex-direction:column;gap:.3rem;min-width:0;flex:1}
+.webgame-details strong{font-size:1.06rem;letter-spacing:-.025em}
+.webgame-details small{font-size:.78rem;color:#b8ab96;line-height:1.5}
+.webgame-arrow{color:var(--orange);font-size:1.3rem}
+@keyframes webgames-appear{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){.webgames-cards{grid-template-columns:1fr}.webgames-reveal{padding:.8rem}.webgame-card{padding:.85rem}.webgame-icon{width:54px;height:54px}}
+@media(prefers-reduced-motion:reduce){.webgames-reveal{animation:none}.games-mark{transition:none}}
