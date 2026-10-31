@@ -3,10 +3,19 @@
 
   const STORAGE_KEY = 'opie-music-queue-v1';
   const MAX_ITEMS = 60;
+  const LIBRARY_KEY = 'opie-music-collections-v1';
+  const library = [];
+  const LIBRARY_LIMIT = 100;
   const $ = (id) => document.getElementById(id);
   const queue = [];
   const localUrls = new Map();
   let current = -1;
+  let shuffle = false;
+  let repeat = 0;
+  let controller = null;
+  let ticker = null;
+  let playState = false;
+  const playedHistory = [];
 
   const form = $('import-form');
   const input = $('music-url');
@@ -94,24 +103,34 @@
     }
 
     if (hostIs(host, 'youtube.com') || hostIs(host, 'youtube-nocookie.com') || host === 'youtu.be') {
-      const list = u.searchParams.get('list');
+      const browseList = host === 'music.youtube.com' && segments[0] === 'browse'
+        && /^VL[A-Za-z0-9_-]{8,}$/.test(segments[1] || '') ? segments[1].slice(2) : null;
+      const list = u.searchParams.get('list') || browseList;
       const id = host === 'youtu.be' ? segments[0] :
         u.pathname === '/watch' ? u.searchParams.get('v') :
         ['shorts', 'live', 'embed'].includes(segments[0]) ? segments[1] : null;
       const isMusic = host === 'music.youtube.com';
       const source = isMusic ? 'YouTube Music' : 'YouTube';
-      if (list && /^[A-Za-z0-9_-]{10,}$/.test(list)) {
+      if (list && /^[A-Za-z0-9_-]{8,}$/.test(list)) {
+        const firstVideo = /^[A-Za-z0-9_-]{11}$/.test(id || '') ? id : null;
+        const params = new URLSearchParams({listType:'playlist',list,playsinline:'1',enablejsapi:'1',origin:location.origin});
         return {
           original: (isMusic ? 'https://music.youtube.com/' : 'https://www.youtube.com/') + 'playlist?list=' + encodeURIComponent(list),
-          source, kind: 'playlist', title: source + ' playlist', mode: 'embed', size: 'video',
-          embed: 'https://www.youtube-nocookie.com/embed/videoseries?list=' + encodeURIComponent(list) + '&rel=0'
+          source,kind:'playlist',title:source+' playlist',mode:'embed',size:'video',
+          playlistId:list,artwork:firstVideo?'https://i.ytimg.com/vi/'+firstVideo+'/hqdefault.jpg':null,
+          embed:'https://www.youtube.com'+(firstVideo?'/embed/'+firstVideo:'/embed')+'?'+params.toString()
         };
+      }
+      if (isMusic && segments[0] === 'browse' && /^MPRE[A-Za-z0-9_-]+$/.test(segments[1] || '')) {
+        return {original:'https://music.youtube.com/browse/'+segments[1],source,kind:'album',
+          title:'YouTube Music album',mode:'external',size:'compact'};
       }
       if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) {
         return {
           original: (isMusic ? 'https://music.youtube.com/watch?v=' : 'https://www.youtube.com/watch?v=') + id,
           source, kind: 'track', title: source + ' track', mode: 'embed', size: 'video',
-          embed: 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0&playsinline=1'
+          artwork: 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg',
+          embed: 'https://www.youtube.com/embed/' + id + '?playsinline=1&enablejsapi=1&origin=' + encodeURIComponent(location.origin)
         };
       }
       throw Error('Use a YouTube/YouTube Music watch or playlist link. Music album browse links cannot be embedded directly.');
@@ -193,6 +212,15 @@
       return { title: json.title, artwork: json.thumbnail_url, artist: json.author_name };
     }
     if (entry.source === 'YouTube Music' || entry.source === 'YouTube') {
+      if (entry.playlistId) {
+        const key = getYouTubeKey();
+        if (!key) return null;
+        const params = new URLSearchParams({part:'snippet',id:entry.playlistId,key});
+        const result = await getJson('https://www.googleapis.com/youtube/v3/playlists?' + params);
+        const sn = result.items?.[0]?.snippet;
+        return sn ? {title:sn.title,artist:sn.channelTitle,
+          artwork:sn.thumbnails?.maxres?.url || sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url} : null;
+      }
       const u = new URL(entry.original);
       const id = u.searchParams.get('v');
       const oembedUrl = id ? 'https://www.youtube.com/watch?v=' + id : entry.original.replace('music.youtube.com', 'www.youtube.com');
@@ -218,14 +246,15 @@
       const id = parts[parts.length - 1], kind = parts[parts.length - 2];
       if (!/^\d+$/.test(id) || !['track', 'album', 'playlist'].includes(kind)) return null;
       // Deezer's API does not send browser CORS headers; only its exact, public read-only metadata URL is proxied.
-      const data = await getJson('https://proxy.cors.dev/https://api.deezer.com/' + kind + '/' + id);
+      return null; // Deezer metadata is displayed by its own embed, avoiding an unrelated CORS proxy.
+      /* const data = await getJson('https://api.deezer.com/' + kind + '/' + id);
       if (data.error) return null;
       return {
         title: data.title || data.title_short,
         artist: data.artist?.name || data.creator?.name,
         artwork: kind === 'track' ? data.album?.cover_xl || data.album?.cover_big :
           kind === 'album' ? data.cover_xl || data.cover_big : data.picture_xl || data.picture_big
-      };
+      }; */
     }
     return null;
   }
@@ -260,6 +289,8 @@
         entry.artwork = coverUrl(data.artwork);
         renderQueue();
         if (queue[current] === entry) refreshDetails();
+        rememberCollection(entry);
+        save();
       }
     } catch (error) {
       // Access or CORS failures leave the real provider widget in place without fake cover art.
@@ -278,7 +309,7 @@
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(queue.filter((item) => item.source !== 'Local file')
-        .map((item) => ({ id: item.id, url: item.original }))));
+        .map((item) => ({url:item.original,title:item.title,artist:item.artist||'',artwork:item.artwork||''}))));
     } catch { /* Private mode and storage quota must not break playback. */ }
   }
 
@@ -287,7 +318,7 @@
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if (!Array.isArray(data)) return;
       for (const item of data.slice(0, MAX_ITEMS)) {
-        try { queue.push({ ...parseLink(item.url), id: newId() }); }
+        try { const parsed=parseLink(item.url); queue.push({...parsed,id:newId(),title:item.title||parsed.title,artist:item.artist||'',artwork:coverUrl(item.artwork)||parsed.artwork}); }
         catch { /* Ignore invalid or obsolete provider links. */ }
       }
     } catch { /* Malformed saved data. */ }
@@ -351,7 +382,6 @@
     $('next').disabled = current < 0 || current >= queue.length - 1;
     $('copy-link').disabled = current < 0 || queue[current]?.source === 'Local file';
     $('show-download').disabled = current < 0;
-    $('shuffle-queue').disabled = queue.length < 2;
     $('clear-queue').disabled = queue.length === 0;
   }
 
@@ -465,6 +495,7 @@
       try {
         const item = { ...parseLink(link), id: newId() };
         queue.push(item);
+        rememberCollection(item);
         added++;
       } catch (error) { errors.push(error.message); }
     }
@@ -578,6 +609,7 @@
     }
   });
 
+  loadLibrary();
   restore();
   if (queue.length) setCurrent(0);
   else setCurrent(-1);
