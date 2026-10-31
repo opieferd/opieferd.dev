@@ -1,5 +1,5 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=spell-names-v6";
-import {createCastEffects} from "./cast-fx.js?v=cast-upgrade-2";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=miscast-v1";
+import {createCastEffects} from "./cast-fx.js?v=miscast-v1";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
 let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false,traceMode=false,traceTemplate=[];
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
@@ -147,12 +147,16 @@ function refresh({checkClosure=false}={}){
  const justClosed=checkClosure&&!wasClosed&&analysis.ready&&analysis.completion?.completedAt===strokes.length-1;
  if(justClosed){
   casted=true;
-  if(analysis.ir.valid){
+  if(analysis.ir.castSucceeded){
    castEffects.play(analysis.ir.elements,analysis.ir.power,analysis.ir.rings?.outer||analysis.boundary);
    save();if(analysis.ir.tier!==selectedTier)setTier(analysis.ir.tier);
    status.textContent="✦ Circle closed! "+analysis.ir.output.title+" was cast automatically.";
-
-  }else status.textContent="The ring closed, but the inscriptions were unstable. "+(analysis.warnings.at(-1)||"Try another sigil.");
+  }else{
+   castEffects.playMiscast(analysis.ir.elements,analysis.ir.power,analysis.ir.rings?.outer||analysis.boundary,analysis.ir.castOutcome);
+   status.textContent=analysis.ir.castOutcome==="lost-control"
+    ?"⚠ The outer ring closed, but you lost control of the spell (recognition "+analysis.ir.reading+"%)."
+    :"⚠ The outer ring closed, but the spell failed (recognition "+analysis.ir.reading+"%).";
+  }
  }else if(!analysis.ready){
   casted=false;
   if(analysis.pendingRing)status.textContent="Seal prepared. Connect the two glowing endpoints to close the ring and cast.";
@@ -160,14 +164,14 @@ function refresh({checkClosure=false}={}){
   else status.textContent="Draw elemental sigils and modifier signs first, then close a large circle around them.";
  }
  const ringStatus=$("magic-ring-state");
- ringStatus.textContent=casted?"✦ Ring sealed — spell activated":analysis.pendingRing?"◌ Ring open — connect endpoints":"◌ Magic prepared — awaiting ring";
+ ringStatus.textContent=casted?(analysis.ir.castSucceeded?"✦ Ring sealed — spell activated":"⚠ Ring sealed — unstable magic"):analysis.pendingRing?"◌ Ring open — connect endpoints":"◌ Magic prepared — awaiting ring";
  ringStatus.dataset.sealed=String(casted);
  renderResult();inspect();
 }
 function renderResult(){
  const ir=analysis.ir;result.replaceChildren();
  result.append(make("div","magic-output-emoji",ir.output.emoji),make("h3","",ir.output.title),make("p","",ir.output.text));
- if(casted&&ir.valid){const stats=make("div","magic-stats");stats.append(make("span","","Power "+ir.power+" / 100"),make("span","","Recognition "+ir.reading+" / 100"),make("span","",TIERS.find(t=>t.id===ir.tier)?.name||"Beginner"));if(ir.rings?.nested?.length)stats.append(make("span","",ir.rings.nested.length+" nested ring(s)"));if(ir.effects?.some(e=>e.asymmetric))stats.append(make("span","","Direction "+ir.direction));result.append(stats);}
+ if(casted&&analysis.ready){const stats=make("div","magic-stats");stats.append(make("span","","Power "+ir.power+" / 100"),make("span","","Recognition "+ir.reading+" / 100"),make("span","",TIERS.find(t=>t.id===ir.tier)?.name||"Beginner"));if(ir.rings?.nested?.length)stats.append(make("span","",ir.rings.nested.length+" nested ring(s)"));if(ir.effects?.some(e=>e.asymmetric))stats.append(make("span","","Direction "+ir.direction));if(!ir.castSucceeded)stats.append(make("span","magic-miscast-label",ir.castOutcome==="lost-control"?"Lost control":"Spell failed"));result.append(stats);}
 }
 
 const key="opie_magic_wha_lab_v1";function loadSaved(){try{return JSON.parse(localStorage.getItem(key)||"{}")||{}}catch{return{}}}
