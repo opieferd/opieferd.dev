@@ -224,3 +224,34 @@ test("custom mixtures survive shuffled pen strokes",()=>{
  assert.equal(cast.ir.output.title,"Earth Projectile");
  assert.ok(cast.ir.output.text.includes("stone projectile"));
 });
+
+
+test("screenshot-style freehand Earth projectile is not confused with fire or water",()=>{
+ const poly=coords=>{
+  const out=[];for(let k=0;k<coords.length-1;k++)for(let i=0;i<12;i++){
+   const t=i/12;out.push({x:(coords[k][0]*(1-t)+coords[k+1][0]*t-142)/695,y:(coords[k][1]*(1-t)+coords[k+1][1]*t-109)/695});
+  }out.push({x:(coords.at(-1)[0]-142)/695,y:(coords.at(-1)[1]-109)/695});return out;
+ };
+ const lines=[
+ [[427,394],[547,394]],[[488,391],[493,531]],
+ [[460,431],[421,474]],[[421,474],[493,531]],[[493,531],[559,468]],[[559,468],[525,429]],
+ [[441,556],[539,558]],
+ [[403,435],[410,435],[410,441],[403,441],[403,435]],
+ [[576,432],[583,432],[582,440],[576,441],[576,432]],
+ [[296,566],[295,386]],[[259,448],[296,386],[331,441]],
+ [[684,570],[687,390]],[[657,438],[687,390],[721,439]],
+ [[457,282],[488,220],[542,280],[457,282]],
+ [[461,665],[485,725],[541,667],[461,665]]
+ ].map(poly);
+ const ring=(cx,cy,rx,ry)=>Array.from({length:120},(_,i)=>{
+  const t=i*Math.PI*2/119;return{x:(cx+Math.cos(t)*rx-142)/695,y:(cy+Math.sin(t)*ry-109)/695};
+ });
+ const analyzed=analyzeSeal([...lines,ring(491,462,141,157),ring(489,438,275,282)]);
+ assert.equal(analyzed.ir.output.title,"Earth Projectile");
+ assert.deepEqual(analyzed.ir.elements,["earth"]);
+ assert.ok(analyzed.recognized.filter(x=>x.id==="pull").length===2);
+ assert.ok(analyzed.recognized.some(x=>x.id==="convergence"));
+ assert.ok(!analyzed.recognized.some(x=>x.id==="fire"||x.id==="water"));
+ assert.ok(!analyzed.recognized.some(x=>x.strokeIndices.includes(7)||x.strokeIndices.includes(8)),"decorative dots must stay unrecognized");
+ assert.equal(analyzed.innerRings.length,1);
+});
