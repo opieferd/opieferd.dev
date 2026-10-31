@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css">
-  <link rel="stylesheet" href="music.css?v=1">
+  <link rel="stylesheet" href="music.css?v=3">
   <title>Music — opieferd</title>
 </head>
 <body>
@@ -131,6 +131,25 @@
       </aside>
     </div>
 
+    <section class="library-panel" aria-labelledby="library-title">
+      <div class="library-header">
+        <div><p class="mini-label">04 / YOUR LIBRARY</p><h2 id="library-title">Saved playlists & albums</h2><p>Your imported collections are saved automatically in this browser, even after you leave the page.</p></div>
+        <button class="music-button secondary" type="button" id="clear-library">Clear saved library</button>
+      </div>
+      <div class="library-list" id="library-list"><p class="queue-empty">Imported playlists and albums will show up here.</p></div>
+      <details class="music-settings" id="youtube-settings">
+        <summary>Advanced: load individual YouTube Music playlist tracks</summary>
+        <p>For full playlist track lists, use your own browser-restricted YouTube Data API v3 key. The key stays in local browser storage and is sent only to Google's official API. Playlist access depends on the owner and YouTube's API restrictions.</p>
+        <div class="api-settings-row">
+          <label for="youtube-api-key">YouTube Data API key</label>
+          <input type="password" id="youtube-api-key" autocomplete="off" placeholder="Paste an API key">
+          <button type="button" class="music-button secondary" id="save-youtube-key">Save key</button>
+          <button type="button" class="music-button secondary" id="forget-youtube-key">Forget key</button>
+        </div>
+        <p class="feedback" id="api-key-status" role="status"></p>
+      </details>
+    </section>
+
     <section class="music-info" aria-labelledby="info-title">
       <div><p class="mini-label">GOOD TO KNOW</p><h2 id="info-title">The little details.</h2></div>
       <p>Spotify, Apple Music, YouTube Music, SoundCloud, and Deezer open in their official embedded players. Albums and playlists stay inside those players; queue skip moves between links, not individual songs inside an album. The transport controls can directly operate browser audio and supported YouTube/SoundCloud widgets; other services use their own controls. Direct audio URLs and locally selected files play using your browser's audio controls.</p>
@@ -142,6 +161,6 @@
 </div>
 <script src="https://w.soundcloud.com/player/api.js" defer></script>
 <script src="https://www.youtube.com/iframe_api" async></script>
-<script src="music.js?v=2" defer></script>
+<script src="music.js?v=3" defer></script>
 </body>
 </html>
