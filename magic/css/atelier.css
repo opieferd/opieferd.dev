@@ -91,3 +91,15 @@
 .magic-spatial-inspector{margin-top:1rem;border-top:1px solid #493727;padding-top:.75rem}
 .magic-relationship{color:#d8c2e8;padding:.5rem .65rem;margin:.3rem 0;background:#26202a;border-left:2px solid #b393d9;border-radius:3px;font:.72rem/1.6 var(--mono)}
 @media(max-width:780px){.magic-spatial-steps{grid-template-columns:1fr}.magic-spatial-lesson{padding:.8rem}}
+
+/* Guided tracing mode and intentional freeform workbench */
+.magic-trace-progress{
+ display:flex;align-items:center;gap:.4rem;min-height:34px;margin-top:.8rem;
+ padding:.55rem .72rem;color:#f1cb87;background:#2c2114;
+ border:1px solid #695232;border-radius:5px;font:.72rem/1.5 var(--mono);
+}
+#magic-freeform[aria-pressed=true]{background:#ebaf36;border-color:#ebaf36;color:#271b0d;box-shadow:0 0 0 2px #ebaf3621}
+#magic-trace[aria-pressed=true]{border-color:#e8c47e;background:#382814;color:#f9daa8}
+#magic-trace:disabled{cursor:not-allowed;opacity:.45}
+.magic-recipe:focus-visible{outline:2px solid var(--magic-orange);outline-offset:2px}
+@media(max-width:650px){.magic-trace-progress{font-size:.68rem}.magic-actions{gap:.45rem}.magic-btn{min-height:39px}}
