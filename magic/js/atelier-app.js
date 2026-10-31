@@ -1,6 +1,6 @@
-import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-4-final";
+import {SYMBOLS,analyzeSeal,makeExample,normalizedCloud,recipes,TIERS} from "./arcana-engine.js?v=arcana-5";
 const $=id=>document.getElementById(id), ink=$("magic-ink"),overlay=$("magic-debug-layer"),ctx=ink.getContext("2d"),ox=overlay.getContext("2d");
-let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false;
+let strokes=[],active=null,pointer=null,selected="wind",selectedTier="beginner",showGuide=true,mode="practice",casted=false,analysis=analyzeSeal([]),currentRecipe=null,recipeDirty=false,linkMode=false;
 const status=$("magic-status"),result=$("magic-result"),book=$("magic-book");
 const make=(tag,className,text)=>{const x=document.createElement(tag);if(className)x.className=className;if(text!==undefined)x.textContent=text;return x};
 const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
@@ -11,7 +11,7 @@ const circle=document.createElementNS(NS,"circle");circle.setAttribute("cx","60"
 for(const path of sym.paths){const line=document.createElementNS(NS,"polyline");line.setAttribute("points",path.map(([x,y])=>(10+x)+","+(10+y)).join(" "));line.setAttribute("stroke",sym.color);line.setAttribute("stroke-width","3");line.setAttribute("stroke-linecap","round");line.setAttribute("stroke-linejoin","round");line.setAttribute("fill","none");svg.append(line)}
 return svg;}
 function setCanvasSize(){const ratio=Math.min(devicePixelRatio||1,2.3);for(const canvas of [ink,overlay]){const r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);canvas.getContext("2d").setTransform(ratio,0,0,ratio,0,0)}draw();}
-function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3675";ctx.shadowBlur=10;for(const s of strokes)poly(ctx,s,w,h,"#f1c980",3.1);if(active)poly(ctx,active,w,h,"#ffdda1",3.2);ctx.shadowBlur=0;$("magic-strokes").textContent=strokes.length+" strokes · "+analysis.recognized.length+" detected";debugPaint();}
+function draw(){const{w,h}=size();ctx.clearRect(0,0,w,h);ctx.shadowColor="#ebaf3675";ctx.shadowBlur=10;for(const s of strokes)poly(ctx,s,w,h,s.intent==="connector"?"#81cfe9":"#f1c980",3.1);if(active)poly(ctx,active,w,h,linkMode?"#81dcfa":"#ffdda1",3.2);ctx.shadowBlur=0;$("magic-strokes").textContent=strokes.length+" strokes · "+analysis.recognized.length+" detected";debugPaint();}
 function guidePaths(sym){const sigil=sym.role==="sigil",cx=.5,cy=sigil?.51:.24,z=sigil?.28:.145;return sym.paths.map(s=>s.map(([x,y])=>({x:cx+(x-50)*z/100,y:cy+(y-50)*z/100})));}
 function debugPaint(){const{w,h}=size();ox.clearRect(0,0,w,h);
 if(showGuide&&!casted){
@@ -29,6 +29,19 @@ if(analysis.pendingRing&&!analysis.boundary){
   for(const p of endpoints){ox.save();ox.fillStyle="#ffc970";ox.shadowColor="#ebaf36";ox.shadowBlur=11;ox.beginPath();ox.arc(p.x*w,p.y*h,5.5,0,Math.PI*2);ox.fill();ox.restore();}
  }
 }
+const graph=analysis.spatial||{links:[],contains:[]};
+for(const rel of graph.contains||[]){
+ const node=graph.nodes?.find(n=>n.strokeIndices[0]===rel.parentStroke);if(!node)continue;
+ const b=node.bounds;ox.save();ox.strokeStyle="#d9adff";ox.lineWidth=2;ox.setLineDash([4,5]);ox.strokeRect(b.x*w-8,b.y*h-8,b.w*w+16,b.h*h+16);ox.restore();
+}
+for(const link of graph.links||[]){
+ const line=strokes[link.strokeIndex];if(!line?.length)continue;const a=line[0],b=line.at(-1);
+ poly(ox,line,w,h,"#85e5ff",3);
+ const theta=Math.atan2(b.y-a.y,b.x-a.x),sz=12;
+ ox.save();ox.fillStyle="#85e5ff";ox.beginPath();ox.moveTo(b.x*w,b.y*h);
+ ox.lineTo(b.x*w-Math.cos(theta-.6)*sz,b.y*h-Math.sin(theta-.6)*sz);
+ ox.lineTo(b.x*w-Math.cos(theta+.6)*sz,b.y*h-Math.sin(theta+.6)*sz);ox.closePath();ox.fill();ox.restore();
+}
 if(mode==="practice")return;
 const fit=$("debug-fit").checked,boxes=$("debug-boxes").checked,labels=$("debug-labels").checked,points=$("debug-points").checked;
 const boundary=analysis.boundary||analysis.pendingRing;
@@ -42,11 +55,12 @@ if(mode==="deep"&&points){const ringIndices=new Set(analysis.boundary?.strokeInd
 }
 function point(e){const r=ink.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width),y:clamp((e.clientY-r.top)/r.height),t:performance.now()};}
 function add(e){if(!active)return;const p=point(e),last=active.at(-1);if(!last||Math.hypot(p.x-last.x,p.y-last.y)>.0009)active.push(p)}
-ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;recipeDirty=true;$("magic-rotation").disabled=true;ink.setPointerCapture(pointer);active=[];add(e);draw()});
+ink.addEventListener("pointerdown",e=>{if(pointer!==null)return;if(casted&&analysis.ready){status.textContent="The ring is already sealed. Undo the last stroke or clear the parchment to prepare another spell.";return;}pointer=e.pointerId;recipeDirty=true;$("magic-rotation").disabled=true;ink.setPointerCapture(pointer);active=[];if(linkMode)active.intent="connector";add(e);draw()});
 ink.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!active)return;const ev=typeof e.getCoalescedEvents==="function"?e.getCoalescedEvents():[e];for(const v of ev)add(v);draw()});
 function finish(e){
  if(e.pointerId!==pointer)return;
  add(e);const added=active?.length>1;if(added)strokes.push(active);active=null;pointer=null;
+ if(linkMode){linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");}
  refresh({checkClosure:added});draw();
 }
 ink.addEventListener("pointerup",finish);ink.addEventListener("pointercancel",finish);
@@ -79,7 +93,7 @@ function renderResult(){
 }
 
 const key="opie_magic_wha_lab_v1";function loadSaved(){try{return JSON.parse(localStorage.getItem(key)||"{}")||{}}catch{return{}}}
-function save(){try{const data=loadSaved(),ir=analysis.ir,signature=[...ir.elements].sort().join("+")+"::"+[...ir.signs].sort().join("+");data[signature]={emoji:ir.output.emoji,title:ir.output.title,power:Math.max(data[signature]?.power||0,ir.power),tier:ir.tier,rotation:ir.rotationDegrees,nested:ir.rings?.nested?.length||0};localStorage.setItem(key,JSON.stringify(data));showSaved()}catch{status.textContent="Spell cast successfully. Your browser did not allow saving it."}}
+function save(){try{const data=loadSaved(),ir=analysis.ir,signature=[...ir.elements].sort().join("+")+"::"+[...ir.signs].sort().join("+")+"::"+(ir.relationSignature||"")+"::"+(ir.rings?.nested?.length||0)+"::"+(ir.rotationDegrees||0);data[signature]={emoji:ir.output.emoji,title:ir.output.title,power:Math.max(data[signature]?.power||0,ir.power),tier:ir.tier,rotation:ir.rotationDegrees,nested:ir.rings?.nested?.length||0};localStorage.setItem(key,JSON.stringify(data));showSaved()}catch{status.textContent="Spell cast successfully. Your browser did not allow saving it."}}
 function showSaved(){
  book.replaceChildren();
  const counts=Object.values(loadSaved());
@@ -94,11 +108,11 @@ $("lesson-credit").textContent=s.experimental?"Original experimental modifier fo
 function showLessons(){const out=$("magic-lessons-grid");for(const s of SYMBOLS){const b=make("button","magic-lesson");b.type="button";b.dataset.glyph=s.id;b.dataset.lessonLevel=s.experimental?"advanced":s.role==="sign"&&s.id!=="columns"?"intermediate":"beginner";b.setAttribute("aria-pressed","false");const art=make("span","magic-lesson-art");if(s.referenceImage){const image=make("img","magic-reference-sigil");image.src=s.referenceImage;image.loading="lazy";image.alt="Reference drawing of the "+s.name+" sigil";image.onerror=()=>{image.replaceWith(symbolSvg(s))};art.append(image)}else art.append(symbolSvg(s));const copy=make("span","magic-lesson-copy");copy.append(make("span","magic-lesson-role",s.experimental?"Experimental sign":s.role==="sigil"?"Elemental sigil":"Directional / modifier sign"),make("strong","",s.emoji+" "+s.name),make("small","",s.tip));b.append(art,copy);b.addEventListener("click",()=>displayLesson(s.id));out.append(b)}}
 function loadExample(recipe){
  const ids=Array.isArray(recipe)?recipe:recipe.ids;
- const nested=Array.isArray(recipe)?0:recipe.nested||0,rotate=Array.isArray(recipe)?0:recipe.rotate||0;
- const ex=makeExample(ids,{open:true,nested,rotate});
- currentRecipe={ids,nested,rotate};recipeDirty=false;
+ const nested=Array.isArray(recipe)?0:recipe.nested||0,rotate=Array.isArray(recipe)?0:recipe.rotate||0,spatial=Array.isArray(recipe)?null:recipe.spatial||null;
+ const ex=makeExample(ids,{open:true,nested,rotate,spatial});
+ currentRecipe={ids,nested,rotate,spatial};recipeDirty=false;
  $("magic-rotation").disabled=false;$("magic-rotation").value=String(rotate);
- strokes=ex.strokes;casted=false;refresh();draw();
+ strokes=ex.strokes;casted=false;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");refresh();draw();
  status.textContent="Recipe prepared"+(nested?" with "+nested+" focusing ring(s)":"")+(rotate?" and a rotated sign":"")+". Join the glowing endpoints of the outer ring to cast.";
 }
 function showRecipes(){
@@ -107,7 +121,7 @@ function showRecipes(){
  for(const r of visible){
   const b=make("button","magic-recipe");b.type="button";
   b.append(make("span","magic-recipe-icon",r.emoji),make("span","magic-recipe-title",r.label),make("small","",r.ids.map(id=>SYMBOLS.find(s=>s.id===id)?.name||id).join(" + ")));
-  if(r.nested||r.rotate){const flags=make("span","magic-recipe-flags",(r.nested?"◎ "+r.nested+" inner ring(s) ":"")+(r.rotate?"↻ "+r.rotate+"°":""));b.append(flags);}
+  if(r.nested||r.rotate||r.spatial){const flags=make("span","magic-recipe-flags",(r.nested?"◎ "+r.nested+" inner ring(s) ":"")+(r.rotate?"↻ "+r.rotate+"° ":"")+(r.spatial?.link?"↗ Directed link":r.spatial?.contain?"⊙ Enclosed sign":""));b.append(flags);}
   b.addEventListener("click",()=>loadExample(r));out.append(b);
  }
  const t=TIERS.find(x=>x.id===selectedTier);
@@ -115,7 +129,7 @@ function showRecipes(){
 }
 function setTier(tier){
  if(!TIERS.some(x=>x.id===tier))return;
- selectedTier=tier;for(const tab of document.querySelectorAll("[data-book-tier]")){const on=tab.dataset.bookTier===tier;tab.setAttribute("aria-selected",String(on));tab.tabIndex=on?0:-1;}
+ selectedTier=tier;$("magic-spatial-lesson").hidden=tier!=="advanced";for(const tab of document.querySelectorAll("[data-book-tier]")){const on=tab.dataset.bookTier===tier;tab.setAttribute("aria-selected",String(on));tab.tabIndex=on?0:-1;}
  for(const card of document.querySelectorAll(".magic-lesson")){const req=card.dataset.lessonLevel;card.hidden=(tier==="beginner"&&req!=="beginner")||(tier==="intermediate"&&req==="advanced");}
  const chosen=document.querySelector('.magic-lesson[aria-pressed="true"]');if(chosen?.hidden)displayLesson("wind");
  showRecipes();showSaved();debugPaint();
@@ -129,7 +143,12 @@ function setupTiers(){
 }
 
 $("magic-undo").addEventListener("click",()=>{strokes.pop();casted=false;recipeDirty=true;$("magic-rotation").disabled=true;refresh();draw();});
-$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;currentRecipe=null;recipeDirty=false;$("magic-rotation").disabled=true;refresh();draw();});
+$("magic-clear").addEventListener("click",()=>{strokes=[];casted=false;currentRecipe=null;recipeDirty=false;linkMode=false;$("magic-link-pen").setAttribute("aria-pressed","false");$("magic-rotation").disabled=true;refresh();draw();});
+$("magic-link-pen").addEventListener("click",()=>{
+ if(casted){status.textContent="Undo the sealing stroke before connecting signs.";return;}
+ linkMode=!linkMode;$("magic-link-pen").setAttribute("aria-pressed",String(linkMode));
+ status.textContent=linkMode?"↗ Link pen active: drag a straight line from the center of one sign to another. It resets after one stroke.":"Link pen off. Continue drawing sigils and signs.";
+});
 $("magic-focus-ring").addEventListener("click",()=>{
  if(casted){status.textContent="Undo the sealing stroke before changing a completed spell.";return;}
  const count=analysis.innerRings.length;
@@ -153,8 +172,13 @@ $("magic-guide").addEventListener("click",()=>{showGuide=!showGuide;$("magic-gui
 for(const btn of document.querySelectorAll(".magic-mode"))btn.addEventListener("click",()=>setMode(btn.dataset.mode));for(const id of ["debug-fit","debug-boxes","debug-labels","debug-points"])$(id).addEventListener("change",debugPaint);
 function setMode(value){mode=value;document.querySelectorAll(".magic-mode").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.mode===value)));$("magic-inspector").hidden=value==="practice";$("deep-settings").hidden=value!=="deep";$("magic-json-wrap").hidden=value!=="deep";inspect();draw()}
 function inspect(){if(mode==="practice")return;const info=$("debug-summary"),regions=$("debug-regions");info.textContent=analysis.boundary?"Outer ring "+Math.round(analysis.boundary.quality*100)+"% · "+analysis.innerRings.length+" inner ring(s) · "+analysis.recognized.length+" glyphs":analysis.pendingRing?"Outer ring open · "+analysis.innerRings.length+" inner ring(s) · "+analysis.recognized.length+" glyphs":"Prepared · "+analysis.innerRings.length+" inner ring(s) · "+analysis.recognized.length+" glyphs";regions.replaceChildren();if(!analysis.regions.length)regions.append(make("p","magic-note","No symbols detected yet. Draw the individual marks of a sigil and they will be grouped automatically."));for(const r of analysis.regions){const box=make("div","magic-debug-row"),left=make("div",""),right=make("div","");left.append(make("strong","",(r.recognized||"Unknown")+" · strokes "+r.strokeIndices.map(i=>i+1).join(",")),make("small","",(r.reason||"Group recognized")+" · "+r.zone+" · "+r.rotationDegrees+"°"));for(const c of r.candidates.slice(0,3))right.append(make("div","",c.name+" "+Math.round(c.score*100)+"%"));box.append(left,right);regions.append(box)}
+const relationPanel=$("magic-spatial-relations");relationPanel.replaceChildren();
+const graph=analysis.spatial||{links:[],contains:[]};
+for(const rel of graph.contains||[])relationPanel.append(make("div","magic-relationship","⊙ "+rel.parent+" encloses "+rel.child));
+for(const rel of graph.links||[])relationPanel.append(make("div","magic-relationship","↗ "+rel.from+" → "+rel.to+" ("+Math.round(rel.angleDegrees)+"°)"));
+if(!graph.contains?.length&&!graph.links?.length)relationPanel.append(make("p","magic-note","No sign relationships detected. Try the advanced recipe examples."));
 $("magic-json").textContent=JSON.stringify({ast:analysis.ast,spell:analysis.ir,warnings:analysis.warnings},null,2);
 const mini=$("magic-normalized"),ratio=Math.min(devicePixelRatio||1,2),rect=mini.getBoundingClientRect(),c=mini.getContext("2d");mini.width=Math.round(rect.width*ratio);mini.height=Math.round(rect.height*ratio);c.setTransform(ratio,0,0,ratio,0,0);c.clearRect(0,0,rect.width,rect.height);const first=analysis.regions.find(r=>r.accepted)||analysis.regions[0];if(first){const paths=first.strokeIndices.map(i=>analysis.strokes[i]),cloud=normalizedCloud(paths),symbol=SYMBOLS.find(s=>s.id===first.candidates[0]?.id);for(const p of cloud){c.fillStyle="#ebaf36";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),3,3)}if(symbol){const target=normalizedCloud(symbol.paths.map(path=>path.map(([x,y])=>({x:x/100,y:y/100}))));for(const p of target){c.fillStyle="#b18cffaa";c.fillRect(rect.width*(.5+p.x*.64),rect.height*(.5+p.y*.64),2,2)}}}}
-$("magic-export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({schemaVersion:4,date:new Date().toISOString(),strokes,analysis},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="witch-hat-seal-test.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+$("magic-export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({schemaVersion:5,date:new Date().toISOString(),strokes,analysis},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="witch-hat-seal-test.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 $("magic-reset-book").addEventListener("click",()=>{if(!confirm("Erase this version's grimoire entries?"))return;localStorage.removeItem(key);showSaved()});
 showLessons();setupTiers();setTier("beginner");displayLesson("wind");refresh();setMode(new URLSearchParams(location.search).has("debug")?"deep":"practice");if("ResizeObserver"in window)new ResizeObserver(setCanvasSize).observe(ink);else window.addEventListener("resize",setCanvasSize);setCanvasSize();
