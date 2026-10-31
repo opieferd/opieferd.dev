@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0a08">
-  <meta name="description" content="Glyph Atelier: a little interactive magic lab on opieferd.dev. Learn original glyphs, draw seals, and inspect spell recognition.">
+  <meta name="description" content="Glyph Atelier: a little interactive magic lab on opieferd.dev. Learn manga-reference sigils, compose magical circles, and inspect the recognition engine.">
   <title>Glyph Atelier ✧ opieferd</title>
   <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../home-2026.css?v=20261031">
   <link rel="stylesheet" href="css/magic.css?v=20261031">
+  <link rel="stylesheet" href="css/atelier.css?v=20261031a">
 </head>
 <body>
 <div class="container">
@@ -28,7 +29,7 @@
       <div class="magic-hero-copy">
         <div class="magic-kicker">✦ an experiment in drawing spells / 01</div>
         <h1>Glyph <em>Atelier.</em></h1>
-        <p class="magic-lead">Magic has a language. Learn its alphabet, inscribe an enclosing ring, and discover what happens when different glyphs share the same seal. Your mouse, touch, or stylus is the wand.</p>
+        <p class="magic-lead">Based on the magical language of Witch Hat Atelier. Learn the four elemental sigils, add modifier signs, and draw an enclosing ring to cast your own spell. Every mark matters.</p>
       </div>
       <div class="magic-seal-mark" aria-hidden="true"><span>✳</span></div>
     </div>
@@ -41,16 +42,17 @@
         <div class="magic-canvas-wrap">
           <canvas id="magic-ink" aria-label="Draw a magical seal with your mouse, pen, or finger">This game requires a canvas-enabled browser.</canvas>
           <canvas id="magic-debug-layer" aria-hidden="true"></canvas>
-          <div class="magic-canvas-hud" aria-hidden="true">01 ring → 02 glyphs → 03 cast</div>
+          <div class="magic-canvas-hud" aria-hidden="true">01 circle → 02 sigil + signs → 03 cast</div>
         </div>
         <div class="magic-actions">
           <button class="magic-btn magic-btn-primary" type="button" id="magic-cast">✦ Cast seal</button>
+          <button class="magic-btn" type="button" id="magic-finish-symbol" title="Group the pen strokes you just drew into one symbol">✓ Finish symbol</button>
           <button class="magic-btn" type="button" id="magic-undo">↶ Undo</button>
           <button class="magic-btn" type="button" id="magic-clear">Clear</button>
           <button class="magic-btn" type="button" id="magic-demo">Load example</button>
           <button class="magic-btn" type="button" id="magic-guide" aria-pressed="true">◌ Guides</button>
         </div>
-        <p class="magic-status" id="magic-status" aria-live="polite">Start with one big closed circle. Add a glyph inside.</p>
+        <p class="magic-status" id="magic-status" aria-live="polite">Start with a closed circle. Draw a sigil in the center, then press Finish symbol before adding a sign.</p>
       </div>
       <aside class="magic-panel magic-reading-panel">
         <div class="magic-heading">
@@ -63,29 +65,39 @@
           <h3>Collected discoveries</h3>
           <button class="magic-btn" id="magic-reset-book" type="button" style="min-height:32px;padding:.35rem .6rem;font-size:.7rem">Reset</button>
         </div>
-        <p class="magic-note">Successful spells are kept in this browser's grimoire. Smaller, cleanly drawn glyphs create gentler magic; larger ones push more power into the circle.</p>
+        <p class="magic-note">Successful spells are kept in this browser's grimoire. This fan experiment stores discovered combinations in your browser. Bigger sigils create stronger magic, and signs modify its direction and behavior.</p>
         <div class="magic-book" id="magic-book"><p class="magic-note">No discoveries yet.</p></div>
       </aside>
     </div>
     <div class="magic-lessons" id="lessons">
       <div class="magic-section-head">
-        <div><span class="magic-mini">02 / the language of seals</span><h2>Learn the <em>glyphs.</em></h2></div>
-        <p>Six symbols, infinite experiments eventually.</p>
+        <div><span class="magic-mini">02 / primary tetrad and modifier signs</span><h2>Learn the <em>sigils.</em></h2></div>
+        <p>10 traceable symbols · 4 elements · 6 signs</p>
       </div>
       <div class="magic-lessons-grid" id="magic-lessons-grid"></div>
       <div class="magic-lesson-details">
         <div>
-          <span class="magic-mini" id="lesson-role">Element glyph</span>
-          <h3 id="lesson-name" style="margin:.35rem 0;font-size:1.18rem">🔥 Flame</h3>
-          <p id="lesson-steps">Trace a triangle and close it at the starting point.</p>
+          <span class="magic-mini" id="lesson-role">Central sigil</span>
+          <h3 id="lesson-name" style="margin:.35rem 0;font-size:1.18rem">🌬️ Wind</h3>
+          <p id="lesson-steps">Copy each stroke individually. The recognizer can group them into a single symbol.</p>
+          <a id="lesson-source" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" rel="noopener noreferrer" target="_blank" style="font:.73rem var(--mono);color:#ebaf36">Reference sigils ↗</a>
         </div>
         <button class="magic-btn magic-btn-primary" type="button" id="lesson-demo">Load this seal ↗</button>
       </div>
-      <p class="magic-note" style="margin-top:1rem">The ornate rings and accent marks are decorative teaching guides. Only the large boundary ring and the simple glyph strokes need to be drawn. These are original training shapes, not copies of Witch Hat Atelier artwork.</p>
+      <div class="magic-learning-note"><span>✦ Study the reference-inspired sigils and modifier signs one stroke at a time. Click <b>Finish symbol</b> to keep multi-stroke marks together. The program checks your geometry, not just your selected lesson.</span><a href="../magic-original/">Play original sigils ↗</a></div>
+      <p class="magic-note" style="margin-top:1rem">Unofficial Witch Hat Atelier fan study. Symbols here are simplified vector tracings for interactive practice, not exact scans of manga artwork; spell descriptions and combinations are prototype interpretations, not canon. <a style="color:#ebaf36" href="https://witchhatatelier.telepedia.net/wiki/Sigils_Explained" target="_blank" rel="noopener noreferrer">Read Sigils Explained ↗</a></p>
     </div>
+    <section class="magic-combos" id="recipes">
+      <div class="magic-section-head">
+        <div><span class="magic-mini">03 / example spellwork</span><h2>Try these <em>circles.</em></h2></div>
+        <p>Click a recipe to load its drawn strokes, then inspect or alter it.</p>
+      </div>
+      <div class="magic-recipes-grid" id="magic-recipes-grid"></div>
+      <p class="magic-note" style="margin:1rem 0 0">Examples are starter recipes, not the only valid spells. Change the elemental sigils or signs to invent your own combinations.</p>
+    </section>
     <div class="magic-panel magic-debug-section">
       <div class="magic-debug-top">
-        <div><span class="magic-mini">03 / developer tools</span><h2 style="margin:.4rem 0 0">Recognition lens</h2></div>
+        <div><span class="magic-mini">04 / developer tools</span><h2 style="margin:.4rem 0 0">Recognition lens</h2></div>
         <div class="magic-mode-switch" role="group" aria-label="Drawing debug mode">
           <button class="magic-mode" data-mode="practice" type="button" aria-pressed="true">Practice</button>
           <button class="magic-mode" data-mode="inspect" type="button" aria-pressed="false">Inspect</button>
@@ -107,7 +119,7 @@
         </div>
         <div>
           <h3>Normalized glyph comparison</h3>
-          <p style="margin-bottom:.6rem">Gold = your drawing. Violet dashed = closest template. Stroke direction is allowed to reverse.</p>
+          <p style="margin-bottom:.6rem">Gold = sampled points from your ink. Violet = closest template. Stroke order and stroke direction can vary.</p>
           <canvas class="magic-mini-canvas" id="magic-normalized" aria-label="Normalized glyph matching visualization"></canvas>
           <div id="magic-json-wrap" hidden style="margin-top:1rem">
             <h3>Seal AST + spell IR</h3>
@@ -119,10 +131,10 @@
     </div>
   </main>
   <footer class="magic-foot">
-    <span>© 2026 opieferd · Glyph Atelier (prototype)</span>
+    <span>© 2026 opieferd · Unofficial fan-built magic lab · <a href="../magic-original/">Original version ↗</a></span>
     <a href="../#web-games">← Back to my web games</a>
   </footer>
 </div>
-<script type="module" src="js/app.js?v=20261031"></script>
+<script type="module" src="js/atelier-app.js?v=20261031a"></script>
 </body>
 </html>
