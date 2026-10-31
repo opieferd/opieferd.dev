@@ -26,8 +26,8 @@ export function createCastEffects(){
   const node=document.createElement("i");node.className="magic-seal-fx-spark";node.style.setProperty("--spark-delay",((i%4)*32)+"ms");sparks.appendChild(node);return node;
  });
  seal.append(bloom,ringA,ringB,sparks,title);parchment?.appendChild(seal);
- const sound=new Audio(new URL("../audio/cast-stinger.mp3",import.meta.url).href);
- const failureSound=new Audio(new URL("../audio/miscast-fizzle.mp3",import.meta.url).href);
+ const sound=new Audio(new URL("../761460__jmd4252010__magic-item-being-grabbed.mp3",import.meta.url).href);
+ const failureSound=new Audio(new URL("../871792__qubodup__natural-error-sound.ogg",import.meta.url).href);
  sound.preload="auto";sound.volume=.75;
  failureSound.preload="auto";failureSound.volume=.8;
  let soundOn=true;try{soundOn=localStorage.getItem(SOUND_KEY)!=="off";}catch{}
@@ -71,7 +71,7 @@ export function createCastEffects(){
     const active=miscast?failureSound:sound,other=miscast?sound:failureSound;
     other.pause();active.pause();active.currentTime=0;
     const result=active.play();
-    if(result&&typeof result.catch==="function")result.catch(()=>{});
+    if(result&&typeof result.catch==="function")result.catch(error=>console.warn("Glyph Atelier: casting sound unavailable",error));
    }catch{}
   }
  }
