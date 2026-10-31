@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {SYMBOLS,TIERS,recipes,analyzeSeal,makeExample,closeRingStroke} from "../js/arcana-engine.js";
+import {SYMBOLS,TIERS,recipes,analyzeSeal,makeExample,closeRingStroke,classifyCastAccuracy} from "../js/arcana-engine.js";
 
 test("the grimoire has three progressive chapters",()=>{
   assert.deepEqual(TIERS.map(x=>x.id),["beginner","intermediate","advanced"]);
@@ -153,4 +153,13 @@ test("every guided recipe provides a complete noninteractive trace template",()=
   }
   assert.equal(analyzeSeal(guide.strokes).ready,false,"trace preview must not cast");
  }
+});
+
+test("casting outcomes honor the 50 percent accuracy threshold",()=>{
+ assert.equal(classifyCastAccuracy(0),"failed");
+ assert.equal(classifyCastAccuracy(24),"failed");
+ assert.equal(classifyCastAccuracy(25),"uncontrolled");
+ assert.equal(classifyCastAccuracy(49),"uncontrolled");
+ assert.equal(classifyCastAccuracy(50),"success");
+ assert.equal(classifyCastAccuracy(100),"success");
 });
