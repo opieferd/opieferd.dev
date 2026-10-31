@@ -139,6 +139,48 @@ function poeticName(elements,signs,layerCount=0){
  return (layerCount===1?"Greater ":layerCount>=2?"Grand ":"")+core+" "+form;
 }
 
+
+const spellSubstances={
+ "fire":{noun:"a ribbon of living flame",motion:"ignites in the air",impact:"scorches whatever it touches"},
+ "water":{noun:"a surge of clear water",motion:"gathers from suspended droplets",impact:"drenches and pushes nearby objects"},
+ "earth":{noun:"a mass of shifting stone",motion:"rises from the ground",impact:"forms solid cover and reshapes the terrain"},
+ "wind":{noun:"a compressed current of air",motion:"stirs the surrounding atmosphere",impact:"sweeps dust and loose objects aside"},
+ "earth+fire":{noun:"a torrent of molten rock and sparks",motion:"melts shards of stone in a roaring furnace",impact:"leaves glowing fragments in its wake"},
+ "earth+water":{noun:"a surge of wet clay and riverbed stone",motion:"loosens the ground into flowing mud",impact:"hardens into whatever shape the caster guides"},
+ "earth+wind":{noun:"a cyclone of sand and jagged pebbles",motion:"rips grit and stone from the earth",impact:"scours the air and obscures the path ahead"},
+ "fire+water":{noun:"a pressurized cloud of scalding steam",motion:"boils suspended water into vapor",impact:"conceals the caster in shimmering heat"},
+ "fire+wind":{noun:"a howling ribbon of flame",motion:"feeds a spark with a rushing current",impact:"sweeps fire across its path"},
+ "water+wind":{noun:"a spinning mass of rain and mist",motion:"lifts droplets into the moving air",impact:"blinds and drenches anyone caught within"},
+ "earth+fire+water":{noun:"a molten glasslike river",motion:"fuses minerals with heat and moisture",impact:"cools into glittering hardened structures"},
+ "earth+fire+wind":{noun:"a storm of red-hot stone shards and ash",motion:"whips molten grit through a furnace-hot gale",impact:"blasts a burning path through the air"},
+ "earth+water+wind":{noun:"a rolling wall of mud, mist, and sand",motion:"draws soil into a rain-laden vortex",impact:"buries obstacles beneath shifting earth"},
+ "fire+water+wind":{noun:"a thunderous cloud of burning vapor",motion:"draws steam into an incandescent cyclone",impact:"bursts outward as a blinding squall"},
+ "earth+fire+water+wind":{noun:"a turbulent mass of flame, stone, rain, and wind",motion:"draws every elemental current into one unstable center",impact:"warps the terrain beneath a violent elemental surge"}
+};
+function describeSpell(ids,signs,direction,focusCount,quality){
+ const key=ids.slice().sort().join("+");
+ const substance=spellSubstances[key]||spellSubstances[ids[0]]||spellSubstances.wind;
+ const has=id=>signs.some(g=>g.id===id);
+ const primary=signs.find(g=>["veer","columns","pull","levitation","split"].includes(g.id));
+ const facing=primary?.rotationDegrees===undefined?"":(" toward the "+direction);
+ let body="The seal "+substance.motion+", conjuring "+substance.noun;
+ if(has("convergence"))body+=" compressed into a dense, concentrated core";
+ if(has("orbit"))body+=" that circles its target in a tightening spiral";
+ if(has("columns"))body+=" before firing forward as a narrow lance";
+ if(has("veer"))body+=" that bends around obstacles"+facing;
+ else if(has("columns")&&facing)body+=facing;
+ if(has("split"))body+=" and separates into branching streams";
+ if(has("dispersion"))body+=" that fan out into a wide, sweeping burst";
+ if(has("expansion"))body+=" that grows in size as it travels";
+ if(has("levitation"))body+=" while rising high into the air";
+ if(has("pull"))body+=" and draws nearby objects toward its center";
+ body+=". ";
+ if(focusCount)body+=(focusCount===1?"An inner focusing ring":"Two nested focusing rings")+" stabilizes the working and amplifies its force. ";
+ body+=substance.impact[0].toUpperCase()+substance.impact.slice(1)+".";
+ if(quality<.48)body+=" Its uneven lines cause the magic to flicker at the edges.";
+ return body;
+}
+
 function bearing(degrees){const a=((degrees%360)+360)%360;return["north","northeast","east","southeast","south","southwest","west","northwest"][Math.round(a/45)%8];}
 function tierFor(elements,signs,inner){if(inner.length||elements.length>=3||signs.length>=2&&elements.length>=2||signs.length>=3)return"advanced";if(elements.length>=2||signs.length>=2||signs.some(g=>["veer","orbit","split","levitation","convergence","expansion","pull"].includes(g.id)))return"intermediate";return"beginner";}
 
@@ -231,7 +273,7 @@ function compile(boundary,recognized,innerRings,warnings,inkCount){
  const focus=innerRings.length?" "+innerRings.length+" nested ring"+(innerRings.length>1?"s":"")+" isolate and intensify the inner working.":"";
  const orientationText=rotateMeaning?" The main effect points "+direction+".":"";
  const power=Math.round(clamp((.22+elements.reduce((s,e)=>s+e.relativeSize,0)/elements.length*.96)*boundary.quality+Math.min(.16,innerRings.length*.055)+Math.min(.10,signs.length*.028))*100);
- const text=description+(steps?" Signs "+steps+".":"")+focus+orientationText;
+ const text=describeSpell(ids,signs,direction,innerRings.length,boundary.quality);
  return{...basics,valid:true,power,reading:Math.round(recognized.reduce((sum,g)=>sum+g.score,0)/recognized.length*100),
   rotationDegrees:orientation,direction,effects:sequence,channels:{inner:recognized.filter(g=>g.zone==="inner").map(g=>g.id),outer:recognized.filter(g=>g.zone==="outer").map(g=>g.id)}, 
   glyphs:recognized.map(g=>({id:g.id,strokeIndices:g.strokeIndices,confidence:g.score,rotationDegrees:g.rotationDegrees,zone:g.zone,relativeSize:g.relativeSize})),
