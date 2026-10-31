@@ -370,7 +370,7 @@
       else art.textContent=(sources[entry.source]||{}).icon||'♫';
       const detail=document.createElement('div');detail.className='library-detail';
       const heading=document.createElement('strong');heading.textContent=entry.title;
-      const sub=document.createElement('small');sub.textContent=entry.source+' · '+entry.kind+(entry.artist?' · '+entry.artist:'');
+      const sub=document.createElement('small');sub.textContent=entry.source+' · '+entry.kind+(entry.artist?' · '+entry.artist:'')+' · saved '+new Date(entry.savedAt||Date.now()).toLocaleDateString();
       detail.append(heading,sub);
       const actions=document.createElement('div');actions.className='library-actions';
       const open=document.createElement('button');open.type='button';open.className='music-button secondary';
