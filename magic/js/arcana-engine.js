@@ -161,26 +161,22 @@ function describeSpell(ids,signs,direction,focusCount,quality){
  const key=ids.slice().sort().join("+");
  const substance=spellSubstances[key]||spellSubstances[ids[0]]||spellSubstances.wind;
  const has=id=>signs.some(g=>g.id===id);
- const primary=signs.find(g=>["veer","columns","pull","levitation","split"].includes(g.id));
- const facing=primary?.rotationDegrees===undefined?"":(" toward the "+direction);
- let body="The seal "+substance.motion+", conjuring "+substance.noun;
- if(has("convergence"))body+=" compressed into a dense, concentrated core";
- if(has("orbit"))body+=" that circles its target in a tightening spiral";
- if(has("columns"))body+=" before firing forward as a narrow lance";
- if(has("veer"))body+=" that bends around obstacles"+facing;
- else if(has("columns")&&facing)body+=facing;
- if(has("split"))body+=" and separates into branching streams";
- if(has("dispersion"))body+=" that fan out into a wide, sweeping burst";
- if(has("expansion"))body+=" that grows in size as it travels";
- if(has("levitation"))body+=" while rising high into the air";
- if(has("pull"))body+=" and draws nearby objects toward its center";
- body+=". ";
- if(focusCount)body+=(focusCount===1?"An inner focusing ring":"Two nested focusing rings")+" stabilizes the working and amplifies its force. ";
- body+=substance.impact[0].toUpperCase()+substance.impact.slice(1)+".";
- if(quality<.48)body+=" Its uneven lines cause the magic to flicker at the edges.";
- return body;
+ const parts=["The seal "+substance.motion+", conjuring "+substance.noun+"."];
+ if(has("convergence"))parts.push("A convergence mark compresses the working into a dense, focused core.");
+ if(has("orbit"))parts.push("The conjured mass spirals around its chosen target.");
+ if(has("columns"))parts.push("A narrow column launches the energy forward like a lance.");
+ if(has("veer"))parts.push("The current bends around obstacles toward the "+direction+".");
+ else if(has("columns")&&signs.some(g=>g.id==="columns"&&!g.orientationAmbiguous))parts.push("The lance travels toward the "+direction+".");
+ if(has("split"))parts.push("The stream divides into uneven branching paths.");
+ if(has("dispersion"))parts.push("The moving force fans out into a broad, sweeping burst.");
+ if(has("expansion"))parts.push("Its area of effect swells as the spell travels.");
+ if(has("levitation"))parts.push("The magic rises, carrying its target upward.");
+ if(has("pull"))parts.push("Nearby loose objects are drawn toward its center.");
+ if(focusCount)parts.push((focusCount===1?"An inner focusing ring":"Two nested focusing rings")+" stabilizes the working and amplifies its force.");
+ parts.push(substance.impact[0].toUpperCase()+substance.impact.slice(1)+".");
+ if(quality<.48)parts.push("Uneven lines make the spell flicker at its edges.");
+ return parts.join(" ");
 }
-
 function bearing(degrees){const a=((degrees%360)+360)%360;return["north","northeast","east","southeast","south","southwest","west","northwest"][Math.round(a/45)%8];}
 function tierFor(elements,signs,inner){if(inner.length||elements.length>=3||signs.length>=2&&elements.length>=2||signs.length>=3)return"advanced";if(elements.length>=2||signs.length>=2||signs.some(g=>["veer","orbit","split","levitation","convergence","expansion","pull"].includes(g.id)))return"intermediate";return"beginner";}
 
