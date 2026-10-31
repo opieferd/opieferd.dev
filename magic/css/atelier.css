@@ -282,3 +282,34 @@
  .magic-cast-fx,.magic-cast-fx.is-active,.magic-seal-fx,.magic-seal-fx.is-active,
  .magic-seal-fx *{animation:none!important;opacity:0!important}
 }
+
+
+/* A failed or uncontrolled cast collapses rather than radiating an intact ring. */
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-ring{
+ border-color:rgba(222,157,220,.95);
+ box-shadow:0 0 10px rgba(211,115,195,.75),0 0 30px rgba(159,119,211,.45);
+ animation:magic-failed-ring .72s cubic-bezier(.2,.9,.3,1) both;
+}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-ring-b{animation-delay:.08s}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-bloom{
+ animation:magic-failed-bloom .8s ease-out both;
+}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-title{color:#dfabdd}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-title::before{content:"⚠ "}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-title{font-size:0}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-title::after{
+ content:"UNSTABLE SPELL";font-size:clamp(.75rem,1.6vw,1.05rem)
+}
+.magic-seal-fx.is-active.is-failed .magic-seal-fx-spark{
+ background:#ce9ed6;animation-duration:.55s
+}
+@keyframes magic-failed-ring{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(1)}
+ 15%{opacity:1}
+ 48%{opacity:.88;transform:translate(-50%,-50%) scale(1.04)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(.72)}
+}
+@keyframes magic-failed-bloom{
+ 0%{opacity:.8;transform:translate(-50%,-50%) scale(.7)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
+}
