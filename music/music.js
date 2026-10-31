@@ -558,6 +558,8 @@
     $('next').disabled=current<0||(queue.length<2&&repeat===0&&!controller?.nextTrack);
     $('shuffle-toggle').disabled=queue.length<2;
     $('repeat-toggle').disabled=current<0;
+    $('expand-playlist').hidden=!(item?.playlistId&&(item.source==='YouTube Music'||item.source==='YouTube'));
+    $('expand-playlist').disabled=!item?.playlistId;
     $('shuffle-toggle').classList.toggle('is-active',shuffle);
     $('shuffle-toggle').setAttribute('aria-pressed',String(shuffle));
     $('repeat-toggle').classList.toggle('is-active',repeat>0);
@@ -944,6 +946,10 @@
     repeat=(repeat+1)%3;updateTransport();
   });
   $('play-pause').addEventListener('click',togglePlayback);
+  $('expand-playlist').addEventListener('click',()=>{
+    const item=queue[current];
+    if(item?.playlistId)expandYouTubePlaylist(item,$('expand-playlist'));
+  });
   $('seek').addEventListener('change',e=>{
     if(controller?.seek&&controller?.duration){
       const seconds=controller.duration()*Number(e.target.value)/1000;
