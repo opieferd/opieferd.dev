@@ -159,6 +159,117 @@
     throw Error('Unsupported link. Try Spotify, Apple Music, YouTube Music, YouTube, SoundCloud, Deezer, or a direct audio file.');
   }
 
+
+  // Metadata comes from each provider's actual track/album identifier.
+  // Never guess an album cover from a fuzzy music search.
+  const metadataInFlight = new Set();
+  function coverUrl(value) {
+    try {
+      const url = new URL(value);
+      const host = url.hostname.toLowerCase();
+      const safeHosts = ['scdn.co', 'sndcdn.com', 'mzstatic.com', 'ytimg.com', 'youtube.com', 'dzcdn.net'];
+      return url.protocol === 'https:' && safeHosts.some((allowed) => hostIs(host, allowed)) ? url.href : null;
+    } catch { return null; }
+  }
+
+  async function getJson(url, timeoutMs = 6500) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const result = await fetch(url, { signal: controller.signal, credentials: 'omit' });
+      if (!result.ok) throw Error('Metadata HTTP ' + result.status);
+      return await result.json();
+    } finally { clearTimeout(timeout); }
+  }
+
+  async function metadataFor(entry) {
+    if (entry.source === 'Local file' || entry.source === 'Audio file') return null;
+    if (entry.source === 'Spotify') {
+      const json = await getJson('https://open.spotify.com/oembed?url=' + encodeURIComponent(entry.original));
+      return { title: json.title, artwork: json.thumbnail_url };
+    }
+    if (entry.source === 'SoundCloud') {
+      const json = await getJson('https://soundcloud.com/oembed?format=json&url=' + encodeURIComponent(entry.original));
+      return { title: json.title, artwork: json.thumbnail_url, artist: json.author_name };
+    }
+    if (entry.source === 'YouTube Music' || entry.source === 'YouTube') {
+      const u = new URL(entry.original);
+      const id = u.searchParams.get('v');
+      const oembedUrl = id ? 'https://www.youtube.com/watch?v=' + id : entry.original.replace('music.youtube.com', 'www.youtube.com');
+      const json = await getJson('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(oembedUrl));
+      return { title: json.title, artist: json.author_name, artwork: json.thumbnail_url };
+    }
+    if (entry.source === 'Apple Music') {
+      const url = new URL(entry.original);
+      const itemId = url.searchParams.get('i');
+      const segments = url.pathname.split('/').filter(Boolean);
+      const last = segments[segments.length - 1];
+      const id = itemId && /^\d+$/.test(itemId) ? itemId : last;
+      if (!/^\d+$/.test(id)) return null;
+      const json = await getJson('https://itunes.apple.com/lookup?id=' + id + '&country=' + encodeURIComponent(segments[0] || 'us'));
+      const match = (json.results || []).find((r) => String(r.trackId || r.collectionId) === id) || json.results?.[0];
+      if (!match) return null;
+      const artwork = (match.artworkUrl100 || '').replace(/100x100(bb|cc)\.(jpg|png)/i, '600x600bb.jpg');
+      return { title: entry.kind === 'track' ? (match.trackName || match.collectionName) : match.collectionName,
+        artist: match.artistName, artwork };
+    }
+    if (entry.source === 'Deezer') {
+      const parts = entry.original.split('/').filter(Boolean);
+      const id = parts[parts.length - 1], kind = parts[parts.length - 2];
+      if (!/^\d+$/.test(id) || !['track', 'album', 'playlist'].includes(kind)) return null;
+      // Deezer's API does not send browser CORS headers; only its exact, public read-only metadata URL is proxied.
+      const data = await getJson('https://proxy.cors.dev/https://api.deezer.com/' + kind + '/' + id);
+      if (data.error) return null;
+      return {
+        title: data.title || data.title_short,
+        artist: data.artist?.name || data.creator?.name,
+        artwork: kind === 'track' ? data.album?.cover_xl || data.album?.cover_big :
+          kind === 'album' ? data.cover_xl || data.cover_big : data.picture_xl || data.picture_big
+      };
+    }
+    return null;
+  }
+
+  function refreshDetails() {
+    const item = queue[current];
+    if (!item) return;
+    $('now-heading').textContent = item.title;
+    $('track-artist').textContent = item.artist || '';
+    $('track-artist').hidden = !item.artist;
+    const image = $('cover-image');
+    const url = coverUrl(item.artwork);
+    if (url) {
+      image.src = url;
+      image.hidden = false;
+    } else {
+      image.removeAttribute('src');
+      image.hidden = true;
+    }
+    $('cover-symbol').textContent = (sources[item.source] || {}).icon || '♪';
+    $('cover-art').classList.toggle('is-active', !url);
+  }
+
+  async function loadMetadata(entry) {
+    if (!entry || entry.metaLoaded || metadataInFlight.has(entry.id) || entry.mode === 'audio') return;
+    metadataInFlight.add(entry.id);
+    try {
+      const data = await metadataFor(entry);
+      if (data && queue.includes(entry)) {
+        if (typeof data.title === 'string' && data.title.trim()) entry.title = data.title.trim().slice(0, 160);
+        if (typeof data.artist === 'string' && data.artist.trim()) entry.artist = data.artist.trim().slice(0, 100);
+        entry.artwork = coverUrl(data.artwork);
+        renderQueue();
+        if (queue[current] === entry) refreshDetails();
+      }
+    } catch (error) {
+      // Access or CORS failures leave the real provider widget in place without fake cover art.
+      console.info('[music] Metadata unavailable from ' + entry.source, error.message);
+    } finally {
+      entry.metaLoaded = true;
+      metadataInFlight.delete(entry.id);
+    }
+  }
+
   function newId() {
     return typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
@@ -215,6 +326,15 @@
       const detail = document.createElement('small');
       detail.textContent = entry.source + ' · ' + entry.kind;
       textWrap.append(title, detail);
+      const art = coverUrl(entry.artwork);
+      if (art) {
+        const image = document.createElement('img');
+        image.src = art;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.addEventListener('error', () => image.remove());
+        thumb.replaceChildren(image);
+      }
       select.append(thumb, textWrap);
       select.addEventListener('click', () => setCurrent(index));
       const remove = document.createElement('button');
@@ -244,6 +364,8 @@
       $('source-link').hidden = true;
       $('cover-art').classList.remove('is-active');
       $('cover-symbol').textContent = '♪';
+      $('cover-image').hidden = true;
+      $('track-artist').hidden = true;
       stage.replaceChildren();
       const empty = document.createElement('div');
       empty.className = 'player-empty';
@@ -267,6 +389,8 @@
       entry.kind === 'album' ? 'Album · tracks play inside the provider' : 'Playlist · tracks play inside the provider';
     $('cover-art').classList.add('is-active');
     $('cover-symbol').textContent = (sources[entry.source] || {}).icon || '♪';
+    refreshDetails();
+    loadMetadata(entry);
     $('player-hint').textContent = sources[entry.source]?.hint || '';
 
     const sourceLink = $('source-link');
@@ -347,6 +471,7 @@
     if (added) {
       save();
       setCurrent(firstIndex);
+      queue.slice(firstIndex, firstIndex + 4).forEach(loadMetadata);
       input.value = '';
     }
     const message = (added ? 'Added ' + added + (added === 1 ? ' link.' : ' links.') : 'No links added.') +
