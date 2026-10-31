@@ -156,6 +156,7 @@ function renderSymbol(symbol,center,size,angleDegrees=0){
  const a=angleDegrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
  return symbol.paths.map(line=>line.map(([x,y],i)=>{const dx=(x-50)*size/100,dy=(y-50)*size/100;return{x:center.x+dx*c-dy*s,y:center.y+dx*s+dy*c,t:i*16}}));
 }
+export function normalizedCloud(strokes){return cloud(strokes)}
 export function closeRingStroke(){return closeBaseRing();}
 export function makeExample(ids=["wind","columns"],options={}){
  const selected=ids.map(id=>SYMBOLS.find(g=>g.id===id)).filter(Boolean),elems=selected.filter(s=>s.role==="sigil"),signs=selected.filter(s=>s.role==="sign");
