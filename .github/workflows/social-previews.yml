@@ -1,0 +1,77 @@
+name: Capture and publish social preview screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/capture-social-previews.cjs
+      - .github/workflows/social-previews.yml
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install headless browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/preview-node" --no-save playwright@1.56.1
+          "$RUNNER_TEMP/preview-node/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Render each page in Chromium
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > "$RUNNER_TEMP/preview-server.log" 2>&1 &
+          sleep 2
+          NODE_PATH="$RUNNER_TEMP/preview-node/node_modules" node scripts/capture-social-previews.cjs
+
+      - name: Commit generated previews
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add social-previews/*.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture updated Discord and social share previews"
+            git push origin HEAD:main
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build published website with screenshots
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Upload preview-enabled website
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: screenshots
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website with social previews
+        id: deployment
+        uses: actions/deploy-pages@v4
