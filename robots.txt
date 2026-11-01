@@ -1,4 +1,6 @@
 User-agent: *
+Disallow: /resume/
+Disallow: /social-previews/resume.png
 Allow: /
 Disallow: /api/
 Disallow: /discord-rpc-helper/

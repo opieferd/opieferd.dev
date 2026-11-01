@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d0b09">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+<meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+<meta name="referrer" content="no-referrer">
+<!-- Best effort only: GitHub Pages controls HTTP caching headers. -->
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Private portfolio</title>
+<link rel="icon" type="image/png" href="../favicon.png">
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+html{min-height:100%;background:#0d0b09}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 38%,#382717 0%,#17120e 49%,#0d0b09 82%);color:#f3ede3;padding:24px}
+.frame{width:min(100%,460px);padding:clamp(24px,5vw,40px);border:1px solid #5f482c;border-radius:12px;background:#17120de8;box-shadow:0 25px 70px #0006}
+.wordmark{font-size:1.15rem;font-weight:900;letter-spacing:-.045em;text-decoration:none;color:#f3ede3}
+.wordmark span,.mark{color:#ebaf36}
+.eyebrow{font:.68rem ui-monospace,SFMono-Regular,monospace;letter-spacing:.13em;color:#d4ae6c;margin:36px 0 10px;text-transform:uppercase}
+h1{font-size:clamp(1.8rem,5vw,2.65rem);line-height:1.17;letter-spacing:-.055em;margin:0 0 12px}
+p{color:#c2b6a6;line-height:1.75;font-size:.93rem;margin:0}
+form{margin-top:25px}
+label{display:block;margin-bottom:9px;font-weight:750;font-size:.78rem;color:#eee3d0}
+.field{display:flex;gap:8px}
+input{min-width:0;flex:1;border:1px solid #6d5535;background:#0d0a08;border-radius:5px;color:#f8e8ce;padding:13px 12px;letter-spacing:.035em;font:inherit;font-size:.86rem}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #ebaf36;outline-offset:3px}
+button{border:0;background:#ebaf36;border-radius:5px;color:#261605;padding:13px 18px;cursor:pointer;font-weight:850;white-space:nowrap}
+button:disabled{opacity:.7;cursor:wait}
+#message{min-height:28px;margin-top:13px;font-size:.83rem;color:#c7b69b}
+#message.error{color:#ffb6a1}
+footer{margin-top:20px;color:#a4937a;font:.7rem ui-monospace,monospace;text-align:center}
+footer a{color:#e1b969;text-underline-offset:3px}
+@media(max-width:420px){.field{flex-direction:column}button{width:100%}}
+</style>
+<script src="./unlock.js?v=private-1" defer></script>
+</head>
+<body>
+<main class="frame">
+<a class="wordmark" href="../" aria-label="Home"><span>✳</span> opieferd<span>.</span></a>
+<p class="eyebrow">PRIVATE / APPLICATION PORTFOLIO</p>
+<h1>Shared with you, <span class="mark">not the web.</span></h1>
+<p>This portfolio is encrypted and available through its private access link. If you received an access key separately, enter it below.</p>
+<form id="unlock-form" autocomplete="off">
+<label for="access-key">Access key</label>
+<div class="field">
+<input id="access-key" type="password" placeholder="Paste your private access key" autocomplete="off" spellcheck="false" aria-describedby="message" required>
+<button id="unlock-button" type="submit">Unlock ↗</button>
+</div>
+<p id="message" role="status" aria-live="polite">A full invitation link unlocks the page automatically.</p>
+</form>
+</main>
+<footer>Private link access · <a href="../">Return to website</a></footer>
+</body>
+</html>

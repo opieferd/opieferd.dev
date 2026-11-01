@@ -1,0 +1,7 @@
+# Do not commit readable copies of private application materials
+resume/private*.html
+resume/public*.html
+resume/*-plaintext.*
+resume/*-unencrypted.*
+resume/*.pdf
+social-previews/resume.png

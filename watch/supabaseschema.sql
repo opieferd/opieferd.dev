@@ -21,7 +21,7 @@ alter table public.app_settings enable row level security;   -- no policies on p
 revoke all on public.app_settings from anon, authenticated;
 
 insert into public.app_settings (key, value)
-values ('owner_email', 'nakwolek@gmail.com')          -- <<< EDIT
+values ('owner_email', 'REPLACE_WITH_YOUR_OWNER_EMAIL')          -- <<< EDIT
 on conflict (key) do update set value = excluded.value;
 
 -- ---------- profiles ----------
