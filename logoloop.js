@@ -24,7 +24,7 @@ const logos = [
         html: '<i class="fab fa-bluesky"></i>'
     },
     {
-        href: "https://discord.com/users/931745609252233257",
+        href: "https://discord.com/users/1547071256816259122/",
         html: '<i class="fab fa-discord"></i>'
     },
     {
