@@ -91,6 +91,7 @@
     const saveHistoryButton = document.getElementById("save-history-button");
     const saveAccountHistoryButton = document.getElementById("save-account-history-button");
     const historySaveStatus = document.getElementById("history-save-status");
+    const historySyncStatus = document.getElementById("history-sync-status");
     const disclaimer = document.getElementById("vidrock-disclaimer");
     const closeDisclaimer = document.getElementById("close-disclaimer");
 
@@ -100,6 +101,7 @@
     let historyEnabled = false;
     let historyStore = null;
     let pendingAccountHistory = false;
+    let historyPromptDismissed = false;
     let activeProviderId = PROVIDERS[0].id;
     let activePlayback = { currentTime: 0, duration: 0 };
     let recommendationsTimer = null;
@@ -379,7 +381,13 @@
     const readHistory = () => historyStore ? historyStore.read() : [];
 
     function renderHistoryOptions() {
-        if (saveHistoryPrompt) saveHistoryPrompt.hidden = false;
+        if (!historyStore?.enabled) historyPromptDismissed = false;
+        else if (!historyStore.loading && !historyStore.error) historyPromptDismissed = true;
+        if (saveHistoryPrompt) saveHistoryPrompt.hidden = historyPromptDismissed;
+        if (historySyncStatus) {
+            historySyncStatus.textContent = historyStore?.error || "";
+            historySyncStatus.hidden = !historyStore?.error;
+        }
         for (const [button, mode] of [[saveHistoryButton, "browser"], [saveAccountHistoryButton, "account"]]) {
             if (!button) continue;
             const selected = historyStore?.mode === mode;
@@ -394,7 +402,7 @@
             : historyStore.mode === "account" ? "Saved to your account and synced between devices. Browser history stays separate."
             : historyStore.mode === "browser" ? "Saved only in this browser, without linking it to your account. Clearing site data removes it."
             : pendingAccountHistory ? "Sign in to save watch history to your account."
-            : "Choose where to save your watch history. You can switch at any time.");
+            : "Choose where to save your watch history.");
     }
 
     function renderHistory() {

@@ -260,13 +260,14 @@
                         </div>
                         <button id="clear-history" class="text-button" type="button">Clear these</button>
                     </div>
+                    <p id="history-sync-status" role="status" aria-live="polite" hidden></p>
                     <div id="history" class="history-grid"></div>
                 </section>
                 <section id="save-history-prompt" class="save-history-prompt card" aria-labelledby="save-history-heading">
                     <div class="save-history-copy">
                         <p class="eyebrow">Up to you</p>
                         <h2 id="save-history-heading">Want me to remember what you’re watching?</h2>
-                        <p id="history-save-status" role="status" aria-live="polite">Choose where to save your watch history. You can switch at any time.</p>
+                        <p id="history-save-status" role="status" aria-live="polite">Choose where to save your watch history.</p>
                     </div>
                     <div class="history-save-options" role="group" aria-label="Where to save watch history">
                         <button id="save-history-button" class="grey-button" type="button" aria-pressed="false">In the browser (anonymous)</button>
@@ -369,7 +370,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="discord-presence.js?v=20261105"></script>
     <script src="history-store.js?v=20261105-history"></script>
-    <script src="watching.js?v=20261105-history"></script>
+    <script src="watching.js?v=20261105-history-prompt"></script>
     <script src="accounts.js?v=20261105-history"></script>
     <script src="donationslive.js?v=202610230052"></script>
     <script src="ads.js?v=202610230052"></script>

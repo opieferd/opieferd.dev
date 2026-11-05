@@ -11,8 +11,8 @@ connection was available. Until it is applied, account history shows an error
 and browser history continues working.
 
 The home-page prompt shows **In the browser (anonymous)** and
-**Account (synced between devices)** side by side. The selection stays visible
-so users can switch. Selecting Account while signed out opens sign-in.
+**Account (synced between devices)** side by side. The prompt disappears after a choice succeeds and stays
+hidden on reload for a remembered choice. Failed choices remain visible for retry. Selecting Account while signed out opens sign-in.
 
 Browser history preserves existing data and never automatically uploads it.
 Account opt-in is saved in Supabase so other devices signed into that account

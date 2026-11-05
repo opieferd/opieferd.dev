@@ -276,3 +276,108 @@ test("a refresh cannot claim sync succeeded while failed writes remain pending",
     assert.equal(s.pending.size, 1);
     assert.match(s.error, /hasn’t synced/);
 });
+
+// Exercise the actual page renderer with real store transitions, rather than
+// duplicating the visibility condition in a separate test-only implementation.
+function historyPrompt(storage = memory()) {
+    const vm = require("node:vm");
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const source = fs.readFileSync(path.join(__dirname, "watching.js"), "utf8");
+    const renderer = source.slice(source.indexOf("    function renderHistoryOptions()"), source.indexOf("    function renderHistory()"));
+    const button = () => ({ setAttribute() {}, classList: { toggle() {} } });
+    const context = {
+        saveHistoryPrompt: { hidden: false },
+        saveHistoryButton: button(), saveAccountHistoryButton: button(),
+        historySaveStatus: { textContent: "" }, historySyncStatus: { hidden: true, textContent: "" },
+        pendingAccountHistory: false, historyPromptDismissed: false, historyStore: null
+    };
+    vm.createContext(context);
+    vm.runInContext(renderer, context);
+    context.historyStore = new WatchHistoryStore({
+        storage, setTimer: () => 1, clearTimer() {}, onChange: () => context.renderHistoryOptions()
+    });
+    context.renderHistoryOptions();
+    return { context, store: context.historyStore, hidden: () => context.saveHistoryPrompt.hidden };
+}
+
+test("history prompt disappears after browser selection and stays hidden on reload and saving", async () => {
+    const storage = memory();
+    const ui = historyPrompt(storage);
+    assert.equal(ui.hidden(), false);
+    ui.store.chooseBrowser();
+    assert.equal(ui.hidden(), true);
+    ui.store.save(item());
+    assert.equal(ui.hidden(), true);
+    assert.equal(ui.store.read()[0].id, 42);
+    await ui.store.clear();
+    assert.equal(ui.hidden(), true, "clearing saved titles does not undo the choice");
+    assert.equal(historyPrompt(storage).hidden(), true, "remembered browser choice dismisses on reload");
+});
+
+test("account choice dismisses only after successful saving and restores on another device", async () => {
+    const db = database();
+    const ui = historyPrompt();
+    await ui.store.setAccount(db, "user-a");
+    const started = deferred();
+    const gate = deferred();
+    db.before(async q => {
+        if (q.table === "watch_history_preferences" && q.op === "upsert") {
+            started.resolve();
+            await gate.promise;
+        }
+    });
+    const choosing = ui.store.chooseAccount();
+    await started.promise;
+    assert.equal(ui.hidden(), false, "do not dismiss while the choice is still saving");
+    gate.resolve();
+    assert.equal(await choosing, true);
+    assert.equal(ui.hidden(), true);
+    const otherDevice = historyPrompt();
+    await otherDevice.store.setAccount(db, "user-a");
+    assert.equal(otherDevice.hidden(), true);
+});
+
+test("sign-in is required before an account choice dismisses the history prompt", async () => {
+    const ui = historyPrompt();
+    ui.context.pendingAccountHistory = true;
+    ui.context.renderHistoryOptions();
+    assert.equal(await ui.store.chooseAccount(), false);
+    assert.equal(ui.hidden(), false);
+    assert.match(ui.context.historySaveStatus.textContent, /Sign in/);
+    const db = database();
+    await ui.store.setAccount(db, "user-a");
+    ui.context.pendingAccountHistory = false;
+    await ui.store.chooseAccount();
+    assert.equal(ui.hidden(), true);
+    await ui.store.setAccount(db, null);
+    assert.equal(ui.hidden(), false, "signed-out users with no browser choice get the prompt");
+});
+
+test("failed browser or account choices leave the prompt visible with an error", async () => {
+    const blocked = historyPrompt({ getItem() { return null; }, setItem() { throw Error("blocked"); } });
+    blocked.store.chooseBrowser();
+    assert.equal(blocked.hidden(), false);
+    assert.match(blocked.context.historySaveStatus.textContent, /blocking storage/);
+    const db = database();
+    const account = historyPrompt();
+    await account.store.setAccount(db, "user-a");
+    db.before(async () => { throw Error("offline"); });
+    assert.equal(await account.store.chooseAccount(), false);
+    assert.equal(account.hidden(), false);
+    assert.match(account.context.historySaveStatus.textContent, /Couldn’t enable/);
+});
+
+test("a later sync error stays in the history status without reopening the choice prompt", async () => {
+    const db = database();
+    const ui = historyPrompt();
+    await ui.store.setAccount(db, "user-a");
+    await ui.store.chooseAccount();
+    assert.equal(ui.hidden(), true);
+    db.before(async q => { if (q.table === "watch_history" && q.op === "upsert") throw Error("offline"); });
+    ui.store.save(item());
+    await ui.store.flush();
+    assert.equal(ui.hidden(), true);
+    assert.equal(ui.context.historySyncStatus.hidden, false);
+    assert.match(ui.context.historySyncStatus.textContent, /hasn’t synced/);
+});
