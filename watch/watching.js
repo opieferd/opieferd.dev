@@ -89,14 +89,17 @@
     const clearHistory = document.getElementById("clear-history");
     const saveHistoryPrompt = document.getElementById("save-history-prompt");
     const saveHistoryButton = document.getElementById("save-history-button");
+    const saveAccountHistoryButton = document.getElementById("save-account-history-button");
+    const historySaveStatus = document.getElementById("history-save-status");
     const disclaimer = document.getElementById("vidrock-disclaimer");
     const closeDisclaimer = document.getElementById("close-disclaimer");
 
     let searchType = "multi";
     let activeMedia = null;
     let activeMediaType = null;
-    const historyKey = "watch-history";
-    let historyEnabled = localStorage.getItem("watch-history-enabled") === "true";
+    let historyEnabled = false;
+    let historyStore = null;
+    let pendingAccountHistory = false;
     let activeProviderId = PROVIDERS[0].id;
     let activePlayback = { currentTime: 0, duration: 0 };
     let recommendationsTimer = null;
@@ -373,28 +376,26 @@
         });
     }
 
-    const readHistory = () => {
-        if (!historyEnabled) return [];
-        try {
-            const storedItems = JSON.parse(localStorage.getItem(historyKey) || "[]");
-            if (!Array.isArray(storedItems)) return [];
-            const items = storedItems.filter((item) => item && item.id && item.type);
-            const latestByMedia = new Map();
-            items.forEach((item) => {
-                const key = `${item.type}:${item.id}`;
-                if (!latestByMedia.has(key)) latestByMedia.set(key, item);
-            });
-            const normalizedItems = Array.from(latestByMedia.values());
-            if (normalizedItems.length !== items.length) {
-                saveHistory(normalizedItems);
-            }
-            return normalizedItems;
-        } catch (error) {
-            console.error("Unable to read watch history.", error);
-            return [];
+    const readHistory = () => historyStore ? historyStore.read() : [];
+
+    function renderHistoryOptions() {
+        if (saveHistoryPrompt) saveHistoryPrompt.hidden = false;
+        for (const [button, mode] of [[saveHistoryButton, "browser"], [saveAccountHistoryButton, "account"]]) {
+            if (!button) continue;
+            const selected = historyStore?.mode === mode;
+            button.setAttribute("aria-pressed", String(selected));
+            button.classList.toggle("primary-button", selected);
+            button.classList.toggle("grey-button", !selected);
+            button.disabled = Boolean(historyStore?.clearing || (mode === "account" && historyStore?.loading));
         }
-    };
-    const saveHistory = (items) => localStorage.setItem(historyKey, JSON.stringify(items.slice(0, 24)));
+        if (!historySaveStatus || !historyStore) return;
+        historySaveStatus.textContent = historyStore.error || (historyStore.loading ? "Loading account history…"
+            : historyStore.clearing ? "Clearing account history…"
+            : historyStore.mode === "account" ? "Saved to your account and synced between devices. Browser history stays separate."
+            : historyStore.mode === "browser" ? "Saved only in this browser, without linking it to your account. Clearing site data removes it."
+            : pendingAccountHistory ? "Sign in to save watch history to your account."
+            : "Choose where to save your watch history. You can switch at any time.");
+    }
 
     function renderHistory() {
         if (!history || !historySection) return;
@@ -415,7 +416,7 @@
     }
 
     function updateSessionView() {
-        if (saveHistoryPrompt) saveHistoryPrompt.hidden = historyEnabled;
+        renderHistoryOptions();
         renderHistory();
         loadRecommendations();
     }
@@ -436,10 +437,7 @@
             episode: activeMediaType === "tv" ? episode : 0,
             progress: progress.currentTime ? progress : undefined
         };
-        const items = readHistory().filter((saved) => !(saved.id === item.id && saved.type === item.type));
-        saveHistory([item, ...items]);
-        renderHistory();
-        scheduleRecommendationsRefresh();
+        historyStore?.save(item);
     }
 
     function normalizeSearchText(value) {
@@ -1350,6 +1348,7 @@
 
     if (closePlayer && playerSection) {
         closePlayer.addEventListener("click", () => {
+            void historyStore?.flush();
             mediaRequestId += 1;
             window.OpwatchDiscord?.clear();
             if (player) player.src = "";
@@ -1367,11 +1366,78 @@
     if (hideDownloadActions) hideDownloadActions.addEventListener("click", () => setDownloadActionsVisible(false));
     if (showDownloadActions) showDownloadActions.addEventListener("click", () => setDownloadActionsVisible(true));
 
+    function savePlayingTitleToHistory() {
+        if (!activeMedia) return;
+        saveCurrentMedia(
+            activeMediaType === "tv" ? Number(seasonSelect?.value) || 1 : 0,
+            activeMediaType === "tv" ? Number(episodeSelect?.value) || 1 : 0
+        );
+    }
+
+    if (window.WatchHistoryStore) {
+        let storage;
+        try { storage = window.localStorage; } catch { storage = null; }
+        historyStore = new window.WatchHistoryStore({
+            storage,
+            onChange(store) {
+                historyEnabled = store.enabled;
+                renderHistoryOptions();
+                renderHistory();
+                scheduleRecommendationsRefresh();
+            }
+        });
+        historyEnabled = historyStore.enabled;
+    }
+
+    async function syncHistoryAccount(force = false) {
+        const account = window.OpieAccount;
+        const userId = account?.getUser?.()?.id || null;
+        const previousHistoryUser = historyStore?.userId;
+        await historyStore?.setAccount(account?.client || null, userId, force);
+        if (pendingAccountHistory && userId) {
+            pendingAccountHistory = false;
+            try { sessionStorage.removeItem("watch-history-pending-account"); } catch {}
+            if (await historyStore?.chooseAccount()) savePlayingTitleToHistory();
+        } else if (userId && userId !== previousHistoryUser && historyStore?.mode === "account") {
+            savePlayingTitleToHistory();
+        }
+    }
+    try { pendingAccountHistory = sessionStorage.getItem("watch-history-pending-account") === "true"; } catch {}
+    window.addEventListener("opie:auth-changed", () => { void historyStore?.setAccount(null, null); });
+    window.addEventListener("opie:account-ready", () => { void syncHistoryAccount(); });
+    // account:changed also clears the cache as soon as the account UI changes.
+    window.addEventListener("account:changed", () => { void syncHistoryAccount(); });
+    window.addEventListener("focus", () => { void syncHistoryAccount(true); });
+    window.addEventListener("online", () => { void syncHistoryAccount(true); });
+    window.addEventListener("pagehide", () => { void historyStore?.flush(); });
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) void historyStore?.flush();
+        else void syncHistoryAccount(true);
+    });
+    window.addEventListener("storage", (event) => {
+        if (historyStore?.mode === "browser" && event.key === "watch-history") renderHistory();
+    });
+    void syncHistoryAccount();
+
     if (saveHistoryButton) {
         saveHistoryButton.addEventListener("click", () => {
-            historyEnabled = true;
-            localStorage.setItem("watch-history-enabled", "true");
-            updateSessionView();
+            pendingAccountHistory = false;
+            try { sessionStorage.removeItem("watch-history-pending-account"); } catch {}
+            historyStore?.chooseBrowser();
+            savePlayingTitleToHistory();
+        });
+    }
+    if (saveAccountHistoryButton) {
+        saveAccountHistoryButton.addEventListener("click", async () => {
+            if (!window.OpieAccount?.isSignedIn()) {
+                pendingAccountHistory = true;
+                try { sessionStorage.setItem("watch-history-pending-account", "true"); } catch {}
+                renderHistoryOptions();
+                window.OpieAccount?.openAuth("signin");
+                return;
+            }
+            await syncHistoryAccount();
+            if (await historyStore?.chooseAccount()) savePlayingTitleToHistory();
         });
     }
 
@@ -1396,12 +1462,13 @@
         clearDialog.querySelector("#confirm-clear-history").addEventListener("click", () => {
             clearDialog.close();
             if (!historyEnabled) return;
-            localStorage.removeItem(historyKey);
-            renderHistory();
-            loadRecommendations();
+            void historyStore?.clear();
         });
         clearHistory.addEventListener("click", () => {
             if (!historyEnabled) return;
+            clearDialog.querySelector("#clear-history-dialog-heading").textContent = historyStore?.mode === "account"
+                ? "Clear your account’s watch history on all devices?"
+                : "Clear watch history in this browser?";
             clearDialog.showModal();
         });
     }

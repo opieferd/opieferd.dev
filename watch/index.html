@@ -62,7 +62,7 @@
     <link rel="icon" type="image/png" href="https://opieferd.dev/favicon.png">
     <link rel="shortcut icon" type="image/png" href="https://opieferd.dev/favicon.png">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="watching.css?v=202610230052">
+    <link rel="stylesheet" href="watching.css?v=20261105-history">
     <link rel="stylesheet" href="accounts.css?v=202610230052">
     <link rel="stylesheet" href="../subpage-enhancements.css?v=hide-native-scrollbar-1">
     <link rel="stylesheet" href="watch-2026.css">
@@ -263,10 +263,15 @@
                     <div id="history" class="history-grid"></div>
                 </section>
                 <section id="save-history-prompt" class="save-history-prompt card" aria-labelledby="save-history-heading">
-                    <p class="eyebrow">Up to you</p>
-                    <h2 id="save-history-heading">Want me to remember what you’re watching?</h2>
-                    <p>Watch history is saved in your browser and will be lost if you clear site data.</p>
-                    <button id="save-history-button" class="primary-button" type="button"><span>Sure, save it</span><span aria-hidden="true">→</span></button>
+                    <div class="save-history-copy">
+                        <p class="eyebrow">Up to you</p>
+                        <h2 id="save-history-heading">Want me to remember what you’re watching?</h2>
+                        <p id="history-save-status" role="status" aria-live="polite">Choose where to save your watch history. You can switch at any time.</p>
+                    </div>
+                    <div class="history-save-options" role="group" aria-label="Where to save watch history">
+                        <button id="save-history-button" class="grey-button" type="button" aria-pressed="false">In the browser (anonymous)</button>
+                        <button id="save-account-history-button" class="grey-button" type="button" aria-pressed="false">Account (synced between devices)</button>
+                    </div>
                 </section>
 
                 <section id="popular-shows-section" class="recommendation-section" aria-labelledby="popular-shows-heading">
@@ -363,8 +368,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="discord-presence.js?v=20261105"></script>
-    <script src="watching.js?v=20261105"></script>
-    <script src="accounts.js?v=202610230052"></script>
+    <script src="history-store.js?v=20261105-history"></script>
+    <script src="watching.js?v=20261105-history"></script>
+    <script src="accounts.js?v=20261105-history"></script>
     <script src="donationslive.js?v=202610230052"></script>
     <script src="ads.js?v=202610230052"></script>
 </body>

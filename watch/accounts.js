@@ -47,6 +47,7 @@
         openAuth: () => {},
         isSignedIn: () => false,
         getProfile: () => null,
+        getUser: () => null,
         hasEarlyAccess: () => false
     };
     document.documentElement.dataset.accountsReady = "0";
@@ -359,7 +360,13 @@
     }
 
     sb.auth.onAuthStateChange((event, session) => {
+        const previousUserId = state.user?.id || null;
         state.user = session ? session.user : null;
+        if (previousUserId !== (state.user?.id || null)) {
+            // Synchronous notification only purges local history caches. Database
+            // reads still happen after refreshAll, outside the auth callback.
+            window.dispatchEvent(new CustomEvent("opie:auth-changed"));
+        }
         // Don't call other supabase methods directly inside this callback
         setTimeout(() => {
             refreshAll();
@@ -1441,6 +1448,7 @@ if (act === "owner-mod") return run(async () => {
         openAuth: (mode) => openAuth(mode || "signin"),
         isSignedIn: () => Boolean(state.user),
         getProfile: () => state.profile,
+        getUser: () => state.user,
         hasEarlyAccess: () => effTier(state.profile) === "gold",
         isModerator: () => isModerator(state.profile)
     };
