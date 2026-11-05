@@ -6,7 +6,7 @@ iframe.on('UpdateData', () => {
     .sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)
   const video = videos[0]
   iframe.send({
-    url: window.location.href,
+    url: document.location.href,
     video: video ? {
       currentTime: video.currentTime,
       duration: video.duration,

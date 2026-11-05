@@ -2,29 +2,25 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { stripTypeScriptTypes } = require("node:module");
 const root = path.resolve(__dirname, "..");
+const esbuild = require(path.join(root, "premid/node_modules/esbuild"));
+const activity = path.join(root, "premid/websites/O/OPwatch");
 
 function compileActivity() {
-    if (typeof stripTypeScriptTypes !== "function") throw new Error("Building requires Node.js 22.13 or newer");
-    const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-    const runtime = read("premid/runtime.ts").replace(/^export /gm, "");
-    const importedHelpers = /^import \{ ActivityType, getTimestamps \} from 'premid'\r?\n/m;
-    const files = { "metadata.json": read("premid/OPwatch/metadata.json") };
-    for (const name of ["presence", "iframe"]) {
-        let source = read(`premid/OPwatch/${name}.ts`);
-        let bundled = "";
-        if (name === "presence") {
-            if (!importedHelpers.test(source)) throw new Error("Update the offline bundler for changed PreMiD imports");
-            source = source.replace(importedHelpers, "");
-            bundled = runtime + "\n";
-        }
-        // Node removes interfaces/generics and transforms TypeScript enums.
-        // The activity has no other dependencies; reject unresolved imports.
-        const js = stripTypeScriptTypes(bundled + source, { mode: "transform" });
-        if (/^\s*(?:import|export)\s/m.test(js)) throw new Error(`Unresolved module in ${name}`);
-        files[`${name}.js`] = `(() => {\n"use strict";\n${js}\n})();\n`;
-        new vm.Script(files[`${name}.js`], { filename: `${name}.js` });
+    const result = esbuild.buildSync({
+        entryPoints: [path.join(activity, "presence.ts"), path.join(activity, "iframe.ts")],
+        outdir: path.join(activity, "dist"),
+        bundle: true,
+        minify: true,
+        sourcemap: "inline",
+        tsconfigRaw: { compilerOptions: { target: "ES2022", useDefineForClassFields: true } },
+        write: false
+    });
+    const files = { "metadata.json": fs.readFileSync(path.join(activity, "metadata.json"), "utf8") };
+    for (const output of result.outputFiles) {
+        const name = path.basename(output.path);
+        new vm.Script(output.text, { filename: name });
+        files[name] = output.text;
     }
     return files;
 }

@@ -1,0 +1,49 @@
+name: PreMiD activity
+
+on:
+  push:
+    paths:
+      - 'premid/**'
+      - 'scripts/*premid*'
+      - '.github/workflows/premid.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: site
+      - uses: actions/checkout@v6
+        with:
+          repository: PreMiD/Activities
+          ref: ce94323cfba763f14412281aeebc34ea80887596
+          path: activities
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install OPwatch source in upstream repository
+        run: cp -R site/premid/websites/O/OPwatch activities/websites/O/
+      - name: Install official PreMiD tools
+        working-directory: activities
+        run: npm ci
+      - name: Type check and build with official pmd
+        working-directory: activities
+        run: npx pmd build OPwatch --zip
+      - name: Lint with upstream rules
+        working-directory: activities
+        run: npx eslint websites/O/OPwatch
+      - name: Validate metadata, Discord application, DNS and images
+        working-directory: activities
+        run: npx pmd build OPwatch --validate --zip
+      - name: Upload official build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OPwatch-official-build
+          path: activities/websites/O/OPwatch/dist/OPwatch.zip
+          if-no-files-found: ignore

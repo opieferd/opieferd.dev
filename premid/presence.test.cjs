@@ -11,7 +11,7 @@ const compiled = JSON.parse(execFileSync("python3", ["-c",
     "import json,zipfile; z=zipfile.ZipFile('watch/discord/opwatch-premid.zip'); print(json.dumps({n:z.read(n).decode() for n in z.namelist()}))"
 ], { cwd: root, encoding: "utf8" }));
 
-test("download ZIP contains current compiled scripts and metadata at the archive root", () => {
+test("download ZIP contains current compiled scripts and metadata at the archive root", async () => {
     assert.deepEqual(Object.keys(compiled).sort(), ["iframe.js", "metadata.json", "presence.js"]);
     assert.deepEqual(compiled, compileActivity());
     for (const name of ["presence.js", "iframe.js"]) {
@@ -34,9 +34,12 @@ function runtime() {
     let activity;
     let clears = 0;
     let clientId;
+    const settings = { showCover: true, timestamps: true, privacy: false };
     class Presence {
         constructor(options) { clientId = options.clientId; }
         on(event, callback) { handlers[event] = callback; }
+        async getSetting(key) { return settings[key]; }
+        async getStrings() { return { play: "Playing", pause: "Paused", movie: "Watching a movie", series: "Watching a series" }; }
         clearActivity() { activity = null; clears++; }
         setActivity(data) { activity = JSON.parse(JSON.stringify(data)); }
     }
@@ -47,7 +50,7 @@ function runtime() {
     };
     vm.runInNewContext(compiled["presence.js"], context);
     return {
-        section, handlers, get activity() { return activity; }, get clears() { return clears; }, get clientId() { return clientId; },
+        section, handlers, settings, get activity() { return activity; }, get clears() { return clears; }, get clientId() { return clientId; },
         tick: () => handlers.UpdateData(),
         setState(value) { section.dataset.discordPresence = JSON.stringify(value); },
         advance(ms) { now += ms; },
@@ -56,9 +59,9 @@ function runtime() {
     };
 }
 
-test("configured application, TV episode, poster, and movie activity", () => {
+test("configured application, TV episode, poster, and movie activity", async () => {
     const r = runtime();
-    r.tick();
+    await r.tick();
     assert.equal(r.clientId, "1558711400132640918");
     assert.equal(r.activity.type, 3);
     assert.equal(r.activity.details, "Example show");
@@ -66,70 +69,70 @@ test("configured application, TV episode, poster, and movie activity", () => {
     assert.equal(r.activity.largeImageKey, sample().image);
     assert.equal(r.activity.startTimestamp, undefined);
     r.setState(sample({ title: "Example movie", mediaType: "movie", image: "" }));
-    r.tick();
-    assert.match(r.activity.state, /Movie/);
-    assert.match(r.activity.largeImageKey, /favicon/);
+    await r.tick();
+    assert.match(r.activity.state, /movie/i);
+    assert.equal(r.activity.largeImageKey, undefined);
 });
 
-test("real iframe progress produces timestamps; pause removes them; stale samples expire", () => {
+test("real iframe progress produces timestamps; pause removes them; stale samples expire", async () => {
     const r = runtime();
     r.frame({ currentTime: 120, duration: 1800, paused: false });
-    r.tick();
+    await r.tick();
     assert.equal(r.activity.endTimestamp - r.activity.startTimestamp, 1800);
     const expectedEnd = r.activity.endTimestamp;
     r.advance(5000);
-    r.tick();
+    await r.tick();
     assert.equal(r.activity.endTimestamp, expectedEnd, "countdown must not restart on each extension tick");
     r.frame({ currentTime: 125, duration: 1800, paused: true });
-    r.tick();
-    assert.match(r.activity.state, /^Paused/);
+    await r.tick();
+    assert.equal(r.activity.smallImageText, "Paused");
     assert.equal(r.activity.endTimestamp, undefined);
     r.advance(16000);
-    r.tick();
-    assert.doesNotMatch(r.activity.state, /^Paused/);
+    await r.tick();
+    assert.notEqual(r.activity.smallImageText, "Paused");
     assert.equal(r.activity.endTimestamp, undefined);
 });
 
-test("late messages from another episode or provider cannot supply progress", () => {
+test("late messages from another episode or provider cannot supply progress", async () => {
     const r = runtime();
     r.frame({ currentTime: 120, duration: 1800, paused: false });
     r.setState(sample({ episode: 4, playerUrl: "https://vidrock.to/tv/42/2/4?autoplay=true" }));
     r.frame({ currentTime: 150, duration: 1800, paused: true });
-    r.tick();
+    await r.tick();
     assert.match(r.activity.state, /S2 E4/);
-    assert.doesNotMatch(r.activity.state, /^Paused/);
+    assert.notEqual(r.activity.smallImageText, "Paused");
     assert.equal(r.activity.endTimestamp, undefined);
     r.frame({ currentTime: 200, duration: 1800, paused: false }, "https://ads.example/video");
-    r.tick();
+    await r.tick();
     assert.equal(r.activity.endTimestamp, undefined);
 });
 
-test("trusted site progress is a fallback and unknown pause state invents no timer", () => {
+test("trusted site progress is a fallback and unknown pause state invents no timer", async () => {
     const r = runtime();
     r.setState(sample({ playback: { currentTime: 0, duration: 1800, paused: false, updatedAt: r.now } }));
-    r.tick();
+    await r.tick();
     assert.ok(r.activity.endTimestamp);
     r.setState(sample({ playback: { currentTime: 200, duration: 1800, paused: null, updatedAt: r.now } }));
-    r.tick();
+    await r.tick();
     assert.equal(r.activity.endTimestamp, undefined);
     r.setState(sample({ playback: { currentTime: -1, duration: 1800, paused: false, updatedAt: r.now } }));
-    r.tick();
+    await r.tick();
     assert.equal(r.activity.endTimestamp, undefined);
 });
 
-test("disabled sharing, closed player, hidden section, and malformed data clear activity", () => {
+test("disabled sharing, closed player, hidden section, and malformed data clear activity", async () => {
     const r = runtime();
     for (const state of [sample({ enabled: false }), sample({ active: false }), null, { version: 2 }]) {
         r.setState(state);
-        r.tick();
+        await r.tick();
         assert.equal(r.activity, null);
     }
     r.section.dataset.discordPresence = "not JSON";
-    r.tick();
+    await r.tick();
     assert.equal(r.activity, null);
     r.setState(sample());
     r.section.hidden = true;
-    r.tick();
+    await r.tick();
     assert.equal(r.activity, null);
     assert.equal(r.clears, 6);
 });
@@ -168,7 +171,7 @@ function adapter(stored = null, blockedStorage = false) {
     };
 }
 
-test("site sharing defaults off, persists opt-in, resets playback on title change, and clears", () => {
+test("site sharing defaults off, persists opt-in, resets playback on title change, and clears", async () => {
     const a = adapter();
     a.window.OpwatchDiscord.update(sample());
     assert.equal(a.state().enabled, false);
@@ -186,7 +189,7 @@ test("site sharing defaults off, persists opt-in, resets playback on title chang
     assert.equal(a.state().active, false);
 });
 
-test("opt-out in another tab, navigation, and blocked storage are handled", () => {
+test("opt-out in another tab, navigation, and blocked storage are handled", async () => {
     const a = adapter("true");
     a.window.OpwatchDiscord.update(sample());
     a.listeners.pagehide();
@@ -201,7 +204,7 @@ test("opt-out in another tab, navigation, and blocked storage are handled", () =
     assert.equal(blocked.state().active, true);
 });
 
-test("iframe adapter selects the largest playable video and reports no-video state", () => {
+test("iframe adapter selects the largest playable video and reports no-video state", async () => {
     let callback;
     let sent;
     let videos = [
@@ -213,7 +216,7 @@ test("iframe adapter selects the largest playable video and reports no-video sta
         send(value) { sent = value; }
     }
     vm.runInNewContext(compiled["iframe.js"], {
-        iFrame, document: { querySelectorAll: () => videos }, window: { location: { href: sample().playerUrl } }
+        iFrame, document: { querySelectorAll: () => videos, location: { href: sample().playerUrl } }
     });
     callback();
     assert.equal(sent.video.currentTime, 90);
@@ -224,8 +227,8 @@ test("iframe adapter selects the largest playable video and reports no-video sta
     assert.equal(sent.video, null);
 });
 
-test("metadata limits injection to site watch pages and actual provider domains", () => {
-    const metadata = JSON.parse(read("premid/OPwatch/metadata.json"));
+test("metadata limits injection to site watch pages and actual provider domains", async () => {
+    const metadata = JSON.parse(read("premid/websites/O/OPwatch/metadata.json"));
     const site = new RegExp(metadata.regExp);
     const frame = new RegExp(metadata.iFrameRegExp);
     for (const url of ["https://opieferd.dev/watch/", "https://www.opieferd.dev/watch/tv/", "https://watch.opieferd.dev/"])
@@ -261,4 +264,22 @@ test("episode lookup ignores results arriving after closing or selecting another
     resolveFetch({ ok: true, json: async () => ({ episodes: [{ episode_number: 1, name: "Current episode" }] }) });
     await current;
     assert.deepEqual(calls, [[2, 1]]);
+});
+
+test("upstream activity settings hide titles, covers, and timestamps when requested", async () => {
+    const r = runtime();
+    r.frame({ currentTime: 100, duration: 1800, paused: false });
+    r.settings.privacy = true;
+    await r.tick();
+    assert.equal(r.activity.details, "Watching a series");
+    assert.equal(r.activity.largeImageKey, undefined);
+    assert.equal(r.activity.endTimestamp, undefined);
+    assert.equal(r.activity.buttons, undefined, "no prohibited homepage promotion button");
+    r.settings.privacy = false;
+    r.settings.showCover = false;
+    r.settings.timestamps = false;
+    await r.tick();
+    assert.equal(r.activity.details, "Example show");
+    assert.equal(r.activity.largeImageKey, undefined);
+    assert.equal(r.activity.endTimestamp, undefined);
 });

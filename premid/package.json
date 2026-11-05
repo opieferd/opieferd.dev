@@ -1,0 +1,16 @@
+{
+  "name": "opwatch-activity-tools",
+  "private": true,
+  "scripts": {
+    "build": "python3 ../scripts/package-premid.py",
+    "validate": "node ../scripts/validate-premid.cjs",
+    "test": "node --test presence.test.cjs"
+  },
+  "dependencies": {
+    "premid": "file:vendor/premid"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2"
+  }
+}

@@ -5,3 +5,7 @@ resume/*-plaintext.*
 resume/*-unencrypted.*
 resume/*.pdf
 social-previews/resume.png
+
+# PreMiD local tooling and compiled output
+premid/node_modules/
+premid/websites/**/dist/
