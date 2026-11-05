@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: activities/package-lock.json
       - name: Install OPwatch source in upstream repository
         run: cp -R site/premid/websites/O/OPwatch activities/websites/O/
       - name: Install official PreMiD tools
