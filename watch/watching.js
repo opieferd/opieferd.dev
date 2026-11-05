@@ -96,7 +96,6 @@
     let activeMedia = null;
     let activeMediaType = null;
     const historyKey = "watch-history";
-    const DISCORD_RPC_URL = "http://127.0.0.1:6464/activity";
     let historyEnabled = localStorage.getItem("watch-history-enabled") === "true";
     let activeProviderId = PROVIDERS[0].id;
     let activePlayback = { currentTime: 0, duration: 0 };
@@ -105,6 +104,7 @@
     let audioMode = "default";
     let malOverride = null;
     let playerRequestId = 0;
+    let mediaRequestId = 0;
     const animeEntryCache = new Map();
     let genreBrowse = null;
     const RATING_KEY = "watch-max-rating";
@@ -296,6 +296,7 @@
         // Preserve the no-referrer policy for every other provider.
         player.referrerPolicy = provider.id === "vixsrc" ? "origin" : "no-referrer";
         player.src = url;
+        updateDiscordPresence(currentSeason, currentEpisode);
         if (serverStatus) serverStatus.textContent = status;
         player.addEventListener("load", () => sendResumePosition(), { once: true });
     }
@@ -347,6 +348,11 @@
             currentTime,
             duration: Number.isFinite(duration) && duration > 0 ? duration : activePlayback.duration
         };
+        window.OpwatchDiscord?.playback({
+            currentTime: activePlayback.currentTime,
+            duration: activePlayback.duration,
+            paused: typeof payload.paused === "boolean" ? payload.paused : null
+        });
         saveCurrentMedia(
             activeMediaType === "tv" ? Number(seasonSelect?.value) || 1 : 0,
             activeMediaType === "tv" ? Number(episodeSelect?.value) || 1 : 0,
@@ -356,14 +362,15 @@
 
     function updateDiscordPresence(season, episode) {
         if (!activeMedia) return;
-        const title = mediaTitle(activeMedia);
-        const episodeLabel = activeMediaType === "tv" ? `S${season} E${episode}` : "Movie";
-        const image = activeMedia.poster_path ? `${IMAGE_BASE}${activeMedia.poster_path}` : "";
-        fetch(DISCORD_RPC_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title, episode: episodeLabel, image })
-        }).catch(() => {});
+        window.OpwatchDiscord?.update({
+            title: mediaTitle(activeMedia),
+            mediaId: activeMedia.id,
+            mediaType: activeMediaType,
+            season: activeMediaType === "tv" ? season : 0,
+            episode: activeMediaType === "tv" ? episode : 0,
+            image: activeMedia.poster_path ? `${IMAGE_BASE}${activeMedia.poster_path}` : "",
+            playerUrl: player.src
+        });
     }
 
     const readHistory = () => {
@@ -785,6 +792,8 @@
     }
 
     async function openMedia(id, type, preferredSeason, preferredEpisode) {
+        const requestId = ++mediaRequestId;
+        playerRequestId += 1;
         console.log("[watch] openMedia called", { id, type, preferredSeason, preferredEpisode });
         if (searchMessage) searchMessage.textContent = "Getting the details…";
         try {
@@ -792,7 +801,10 @@
             const response = await fetch(`${TMDB_API}/${type}/${id}?api_key=${TMDB_KEY}&language=en-US`);
             console.log("[watch] openMedia: TMDB response", response.ok, response.status);
             if (!response.ok) throw new Error(`Details failed (${response.status})`);
-            activeMedia = await response.json();
+            const media = await response.json();
+            if (requestId !== mediaRequestId) return;
+            window.OpwatchDiscord?.clear();
+            activeMedia = media;
             activeMediaType = type;
             console.log("[watch] openMedia: media loaded", { title: mediaTitle(activeMedia), id: activeMedia.id, poster_path: activeMedia.poster_path });
             window.dispatchEvent(new CustomEvent("watch:media-opened", { detail: { type, id: activeMedia.id, title: mediaTitle(activeMedia), poster_path: activeMedia.poster_path || "" } }));
@@ -813,12 +825,12 @@
                 if (episodeControls) episodeControls.hidden = true;
                 updatePlayer();
                 saveCurrentMedia();
-                updateDiscordPresence(0, 0);
             }
             if (playerSection) playerSection.scrollIntoView({ behavior: "smooth", block: "start" });
             if (searchMessage) searchMessage.textContent = "";
             console.log("[watch] openMedia: complete, playerSection.hidden =", playerSection ? playerSection.hidden : "N/A");
         } catch (error) {
+            if (requestId !== mediaRequestId) return;
             console.error("[watch] openMedia error:", error);
             if (searchMessage) searchMessage.textContent = "I couldn’t load that one. Want to try another?";
         }
@@ -838,19 +850,23 @@
 
     async function loadEpisodes(showId, seasonNumber, preferredEpisode) {
         if (!episodeSelect) return;
+        const requestId = mediaRequestId;
+        const isCurrent = () => requestId === mediaRequestId && activeMediaType === "tv"
+            && activeMedia?.id === showId && Number(seasonSelect?.value) === Number(seasonNumber);
         episodeSelect.innerHTML = "<option>Finding episodes…</option>";
         try {
             const response = await fetch(`${TMDB_API}/tv/${showId}/season/${seasonNumber}?api_key=${TMDB_KEY}&language=en-US`);
             if (!response.ok) throw new Error(`Episodes failed (${response.status})`);
             const data = await response.json();
+            if (!isCurrent()) return;
             episodeSelect.innerHTML = (data.episodes || []).map((episode) => `<option value="${episode.episode_number}">Episode ${episode.episode_number} · ${escapeHtml(episode.name)}</option>`).join("");
             if (preferredEpisode && data.episodes.some((episode) => episode.episode_number === preferredEpisode)) episodeSelect.value = preferredEpisode;
             updatePlayer(Number(seasonNumber), Number(episodeSelect.value) || 1);
             updateVidVaultLink(Number(seasonNumber), Number(episodeSelect.value) || 1);
             saveCurrentMedia(Number(seasonNumber), Number(episodeSelect.value) || 1);
-            updateDiscordPresence(Number(seasonNumber), Number(episodeSelect.value) || 1);
         } catch (error) {
             console.error(error);
+            if (!isCurrent()) return;
             episodeSelect.innerHTML = "<option>Couldn’t find the episodes</option>";
             updatePlayer(Number(seasonNumber), 1);
         }
@@ -1326,7 +1342,6 @@
             updatePlayer(Number(seasonSelect.value), Number(episodeSelect.value));
             updateVidVaultLink(Number(seasonSelect.value), Number(episodeSelect.value));
             saveCurrentMedia(Number(seasonSelect.value), Number(episodeSelect.value));
-            updateDiscordPresence(Number(seasonSelect.value), Number(episodeSelect.value));
         });
     }
 
@@ -1335,6 +1350,8 @@
 
     if (closePlayer && playerSection) {
         closePlayer.addEventListener("click", () => {
+            mediaRequestId += 1;
+            window.OpwatchDiscord?.clear();
             if (player) player.src = "";
             playerSection.hidden = true;
             activeMedia = null;

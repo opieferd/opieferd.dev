@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17120b">
+  <title>Discord activity setup · OPwatch</title>
+  <link rel="icon" href="../../favicon.png">
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #100e0b; color: #f4eee5; }
+    body { max-width: 740px; margin: 0 auto; padding: 48px 24px; line-height: 1.7; }
+    h1 { line-height: 1.15; font-size: clamp(2rem, 6vw, 3rem); }
+    a { color: #ebaf36; } li { margin: 1rem 0; }
+    .button { display: inline-block; padding: 12px 20px; border-radius: 12px; background: #ebaf36; color: #17120b; font-weight: 700; text-decoration: none; }
+    .note { padding: 16px 20px; background: #211b13; border: 1px solid #544027; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="../">← Back to OPwatch</a>
+    <h1>Put your watch on Discord.</h1>
+    <p>Show the movie or episode you’re watching, its poster, and playback progress when available.</p>
+    <p>Use the PreMiD browser extension with Discord desktop. You don’t need to run a server.</p>
+    <ol>
+      <li><a href="https://premid.app/downloads" target="_blank" rel="noopener noreferrer">Install PreMiD</a> and open Discord desktop. Enable activity sharing in Discord.</li>
+      <li><a href="opwatch-premid.zip" download>Download the OPwatch activity</a> and extract the ZIP.</li>
+      <li>In PreMiD settings, enable <strong>Activity Developer Mode</strong>. In its Developer tab, choose <strong>Load Activity</strong> and select the extracted <strong>OPwatch</strong> folder containing <code>metadata.json</code>. Use the source activity loader, rather than “Load Compiled Activity.”</li>
+      <li>Open a movie or episode on OPwatch and turn <strong>Discord sharing</strong> on below the player.</li>
+    </ol>
+    <p><a class="button" href="../">Choose something to watch</a></p>
+    <p class="note">This activity is available as a manual installation and is not yet published in the PreMiD store. Installing PreMiD alone does not install OPwatch.</p>
+    <p>Sharing starts off. Turn it off or close the player to clear the activity on PreMiD’s next update. Some embedded players provide title and episode information only; pause status and timers depend on playback access.</p>
+    <p><a href="https://docs.premid.app/v1/guide/loading-activities.html" target="_blank" rel="noopener noreferrer">PreMiD’s activity loading guide ↗</a></p>
+  </main>
+</body>
+</html>

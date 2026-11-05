@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.premid.app/metadata/1.16",
+  "apiVersion": 1,
+  "author": { "name": "opieferd", "id": "1547071256816259122" },
+  "service": "OPwatch",
+  "description": { "en": "Share the movie or episode you are watching on opieferd.dev with Discord." },
+  "url": ["opieferd.dev", "www.opieferd.dev", "watch.opieferd.dev"],
+  "regExp": "^https://(?:(?:www\\.)?opieferd\\.dev/watch(?:/|$)|watch\\.opieferd\\.dev/)",
+  "version": "1.0.0",
+  "logo": "https://opieferd.dev/favicon.png",
+  "thumbnail": "https://opieferd.dev/social-previews/watch.png",
+  "color": "#EBAF36",
+  "category": "videos",
+  "tags": ["movies", "tv", "anime"],
+  "iframe": true,
+  "iFrameRegExp": "^https://(?:[a-z0-9-]+\\.)?(?:vidrock\\.to|vidsrc\\.sh|vidlink\\.pro|vaplayer\\.ru|cinesrc\\.st|vixsrc\\.to)/"
+}
