@@ -4,8 +4,21 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { stripTypeScriptTypes } = require("node:module");
+const { compileActivity } = require("../scripts/build-premid.cjs");
 const root = path.resolve(__dirname, "..");
+const { execFileSync } = require("node:child_process");
+const compiled = JSON.parse(execFileSync("python3", ["-c",
+    "import json,zipfile; z=zipfile.ZipFile('watch/discord/opwatch-premid.zip'); print(json.dumps({n:z.read(n).decode() for n in z.namelist()}))"
+], { cwd: root, encoding: "utf8" }));
+
+test("download ZIP contains current compiled scripts and metadata at the archive root", () => {
+    assert.deepEqual(Object.keys(compiled).sort(), ["iframe.js", "metadata.json", "presence.js"]);
+    assert.deepEqual(compiled, compileActivity());
+    for (const name of ["presence.js", "iframe.js"]) {
+        assert.doesNotMatch(compiled[name], /^\s*(?:import|export)\s/m);
+        new vm.Script(compiled[name], { filename: name });
+    }
+});
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const sample = (extra = {}) => ({
     version: 1, enabled: true, active: true, title: "Example show", mediaType: "tv",
@@ -28,13 +41,11 @@ function runtime() {
         setActivity(data) { activity = JSON.parse(JSON.stringify(data)); }
     }
     const context = {
-        Presence, URL, ActivityType: { Watching: 3 },
+        Presence, URL,
         document: { querySelector: () => section },
-        Date: class extends Date { static now() { return now; } },
-        getTimestamps(position, duration) { return [Math.floor(now / 1000 - position), Math.floor(now / 1000 + duration - position)]; }
+        Date: class extends Date { static now() { return now; } }
     };
-    const code = read("premid/OPwatch/presence.ts").replace(/^import .*from 'premid'\n/m, "");
-    vm.runInNewContext(stripTypeScriptTypes(code), context);
+    vm.runInNewContext(compiled["presence.js"], context);
     return {
         section, handlers, get activity() { return activity; }, get clears() { return clears; }, get clientId() { return clientId; },
         tick: () => handlers.UpdateData(),
@@ -201,7 +212,7 @@ test("iframe adapter selects the largest playable video and reports no-video sta
         on(event, value) { callback = value; }
         send(value) { sent = value; }
     }
-    vm.runInNewContext(stripTypeScriptTypes(read("premid/OPwatch/iframe.ts")), {
+    vm.runInNewContext(compiled["iframe.js"], {
         iFrame, document: { querySelectorAll: () => videos }, window: { location: { href: sample().playerUrl } }
     });
     callback();

@@ -8,23 +8,28 @@ hosted on GitHub Pages, Vercel, or another static host.
 
 1. Install the browser extension from https://premid.app/downloads and keep
    Discord desktop running with activity sharing enabled.
-2. In PreMiD's settings, enable **Activity Developer Mode**. Open its Developer
-   tab, choose **Load Activity**, and select this extracted directory (the one
-   containing `metadata.json`, `presence.ts`, and `iframe.ts`). These are source
-   files: use **Load Activity**, not **Load Compiled Activity**.
+2. Download `watch/discord/opwatch-premid.zip` and keep it zipped. In PreMiD's
+   settings, enable **Activity Developer Mode**. Open its Developer tab, choose
+   **Load Compiled Activity** (or the activity ZIP upload button), and select
+   `opwatch-premid.zip`. No source folder or local build is needed for visitors.
 3. Open https://opieferd.dev/watch/, play a title, and enable **Discord sharing**
    in the player. Deploy the updated site files first when testing production.
 4. Check Discord's profile activity. Changing movies or episodes updates the
    activity. Closing the player or turning sharing off clears it on the next
    PreMiD update. Sharing defaults to off and is remembered per site origin.
 
-PreMiD's manual source loader is documented at:
+PreMiD's compiled activity loader is documented at:
 https://docs.premid.app/v1/guide/loading-activities.html
 
 ## Public distribution
 
-`watch/discord/opwatch-premid.zip` is an extractable source package for the
-manual loader. Rebuild it after edits with `python3 scripts/package-premid.py`.
+`watch/discord/opwatch-premid.zip` is a compiled activity containing
+`metadata.json`, `presence.js`, and `iframe.js` at its root. Rebuild it after edits
+with `python3 scripts/package-premid.py` (requires Node.js 22.13+ and Python 3).
+The offline builder strips TypeScript, bundles the two PreMiD runtime imports
+from `premid/runtime.ts`, wraps scripts as IIFEs, and validates JavaScript syntax.
+Its archive layout matches PreMiD's ActivityCompiler ZIP output. It does not run
+the official CLI's store submission checks or TypeScript type checking.
 For ordinary one-click installation, submit this activity to
 https://github.com/PreMiD/Activities under `websites/O/OPwatch` and wait for
 review/publication. It is not currently published in the PreMiD store. Do not
@@ -52,6 +57,6 @@ as a title/episode change unless the site itself updates its episode selection.
 ## Verify
 
 Run `node --test premid/presence.test.cjs` from the repository root. The tests
-exercise the activity against a simulated PreMiD runtime and the browser adapter
+exercise the compiled JavaScript against a simulated PreMiD runtime and the browser adapter
 against a minimal DOM. Live Discord/browser verification is still required for
 each provider; tests do not validate PreMiD's installer or Discord's rendering.
