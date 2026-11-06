@@ -1,0 +1,28 @@
+name: Account watch history
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'watch/history-store*'
+      - 'watch/watching.js'
+      - 'watch/accounts.js'
+      - 'scripts/check-history-api.py'
+      - '.github/workflows/watch-history.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: History regression tests
+        run: node --test watch/history-store.test.cjs
+      - name: Read-only Supabase API contract check
+        run: python3 scripts/check-history-api.py
