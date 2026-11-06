@@ -52,7 +52,7 @@
     };
     document.documentElement.dataset.accountsReady = "0";
 
-    /* ---------- Perks (must match supabase-schema.sql) ---------- */
+    /* ---------- Perks (must match the Supabase database) ---------- */
     const DEFAULT_ACCENT = "#ebaf36"; // Opie Orange
     const BASIC_ACCENTS = ["#ebaf36", "#e5484d", "#3e9bff", "#30c48d", "#a66bff", "#ff7ab6"];
     const GOLD_ACCENTS = BASIC_ACCENTS.concat(["#ff9f1c", "#00d1c1", "#d8d8d8", "#ffd700", "#7cff6b", "#ff5e3a"]);
@@ -928,7 +928,7 @@ async function loadOwnerAnnouncements() {
         .select("id,title,body,show_normal,show_gold,enabled,updated_at")
         .order("updated_at", { ascending: false });
     if (error) {
-        node.innerHTML = '<p class="acc-muted">Announcements are unavailable. Run watch/announcements-upgrade.sql in Supabase first.</p>';
+        node.innerHTML = '<p class="acc-muted">Announcements are unavailable. Please try again.</p>';
         return;
     }
     const rows = (data || []).map((a) => ({

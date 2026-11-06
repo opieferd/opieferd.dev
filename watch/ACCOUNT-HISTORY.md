@@ -1,14 +1,9 @@
 # Account watch history
 
-Run `watch/account-watch-history.sql` once in the SQL Editor of the Supabase
-project configured in `watch/accounts.js`. It is safe to re-run and only adds
-private history tables, policies, an index, and a timestamp trigger. New
-installations include the same migration in `watch/supabaseschema.sql`.
-Do not re-run the full schema just for this update: it also sets owner settings.
-
-The migration has not been applied automatically: no database-management
-connection was available. Until it is applied, account history shows an error
-and browser history continues working.
+The Supabase schema and migrations have already been applied. Completed SQL
+setup scripts have been removed from this repository; their earlier versions
+remain available in Git history. The website uses the existing Supabase tables
+and policies configured for the project in `watch/accounts.js`.
 
 The home-page prompt shows **In the browser (anonymous)** and
 **Account (synced between devices)** side by side. The prompt disappears after a choice succeeds and stays
@@ -36,6 +31,6 @@ affects only this browser. Supabase row-level security restricts users to their
 own rows; anonymous users have no access. No service key is used in the website.
 
 Run `node --test watch/history-store.test.cjs premid/presence.test.cjs`.
-Tests use simulated clients, not a live database. After applying the migration,
-verify saving/resuming on two devices and confirm a different account cannot
+Tests use simulated clients, not a live database. For live verification,
+check saving/resuming on two devices and confirm a different account cannot
 read or delete the first account's history.

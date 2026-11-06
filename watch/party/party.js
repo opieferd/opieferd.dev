@@ -1475,7 +1475,7 @@
       season: Math.max(0, Math.floor(Number(raw.season) || 0)),
       episode: Math.max(0, Math.floor(Number(raw.episode) || 0)),
       media_url: mediaUrl,
-      // Matches the media_poster check constraint in supabase-schema.sql.
+      // Matches the media_poster check constraint in Supabase.
       poster_path: /^\/[A-Za-z0-9_.-]{1,80}$/.test(poster) ? poster : "",
     };
   }
