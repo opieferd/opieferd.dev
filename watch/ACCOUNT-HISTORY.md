@@ -21,7 +21,10 @@ tab, and leaving the page attempt to flush progress. Abrupt termination can
 lose unsynced seconds. Resume still depends on provider support.
 
 History refreshes on page load, focus, returning to the tab, and reconnecting.
-It shares saved history rather than synchronizing simultaneous playback.
+A remembered Account choice stays in account mode during network outages;
+reconnecting retries preferences as well as saved titles. Concurrent sign-in
+notifications wait for the same initialization. It shares saved history rather
+than synchronizing simultaneous playback.
 Account data stays in memory and Supabase, separate from browser storage.
 Sign-out and account switches clear the account cache immediately. Unsaved
 updates retry while the page remains open; errors are shown.
@@ -34,3 +37,9 @@ Run `node --test watch/history-store.test.cjs premid/presence.test.cjs`.
 Tests use simulated clients, not a live database. For live verification,
 check saving/resuming on two devices and confirm a different account cannot
 read or delete the first account's history.
+
+When a Supabase request fails, the history status includes its error code and
+message when available. This distinguishes permission or schema errors from a
+network failure. The Account watch history workflow runs regression tests and
+zero-row API requests to check that the tables exist and deny anonymous access;
+it does not validate authenticated reads, writes, or per-account RLS.

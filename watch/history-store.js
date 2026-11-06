@@ -34,6 +34,8 @@
             this.pending = new Map();
             this.queue = Promise.resolve();
             this.loading = false;
+            this.initialization = null;
+            this.preferencesLoaded = false;
             this.clearing = false;
             this.lastTitle = null;
             this.lastSelection = null;
@@ -50,41 +52,79 @@
             if (this.mode !== "browser") return [];
             try { return normalize(JSON.parse(this.get("watch-history") || "[]")); } catch { return []; }
         }
+        reportError(error, fallback) {
+            const code = typeof error?.code === "string" ? error.code : "";
+            const message = typeof error?.message === "string" ? error.message.slice(0, 200) : "";
+            this.error = code ? `${fallback} (${code}${message ? `: ${message}` : ""})` : fallback;
+            if (code) console.warn(`[watch-history] ${fallback}`, { code, message });
+        }
         async setAccount(client, userId, force = false) {
+            userId = userId || null;
             if (client === this.client && userId === this.userId) {
-                if (force && userId && this.mode === "account") await this.refresh();
+                // Account UI emits more than one ready event. Every caller must
+                // await the same initialization before deciding whether to save.
+                if (this.initialization) return this.initialization;
+                if (force && userId && this.get(this.preferenceKey) !== "browser") {
+                    // Re-read the server choice as well as the rows: another
+                    // device may have enabled account history since page load.
+                    return this.initialize();
+                }
                 return;
             }
             this.clearTimer(this.timer);
+            this.timer = null;
             this.epoch++;
             this.version++;
             this.client = client;
-            this.userId = userId || null;
+            this.userId = userId;
             this.pending.clear();
             this.items = [];
+            this.queue = Promise.resolve();
             this.loading = false;
+            this.initialization = null;
+            this.preferencesLoaded = false;
             this.clearing = false;
             this.lastTitle = null;
             this.lastSelection = null;
             this.error = "";
-            this.mode = this.get("watch-history-enabled") === "true" ? "browser" : "";
             const override = this.get(this.preferenceKey);
-            if (override === "browser") this.mode = "browser";
+            this.mode = userId && override === "account" ? "account"
+                : override === "browser" || this.get("watch-history-enabled") === "true" ? "browser" : "";
+            // Keep a previously selected account destination during outages;
+            // never silently write that user's activity to anonymous storage.
             this.emit();
-            if (!client || !this.userId || override === "browser") return;
+            if (!client || !userId || override === "browser") return;
+            return this.initialize();
+        }
+        async initialize() {
+            if (this.initialization) return this.initialization;
+            const request = this.loadPreferences();
+            this.initialization = request;
+            try { await request; }
+            finally { if (this.initialization === request) this.initialization = null; }
+        }
+        async loadPreferences() {
             const epoch = this.epoch;
+            const client = this.client;
+            const userId = this.userId;
             this.loading = true;
             this.emit();
             try {
-                const { data, error } = await client.from("watch_history_preferences").select("enabled").eq("user_id", this.userId).maybeSingle();
+                const { data, error } = await client.from("watch_history_preferences").select("enabled").eq("user_id", userId).maybeSingle();
                 if (error) throw error;
                 if (epoch !== this.epoch) return;
+                this.preferencesLoaded = true;
+                this.error = "";
                 if (data?.enabled) {
                     this.mode = "account";
                     await this.refresh();
+                } else if (this.mode === "account") {
+                    // A server-side opt-out takes precedence over the last local
+                    // account choice; ask again rather than switching to browser.
+                    this.mode = "";
                 }
-            } catch {
-                if (epoch === this.epoch) this.error = "Account history is unavailable. You can still save in this browser.";
+            } catch (error) {
+                if (epoch === this.epoch) this.reportError(error, "Account history is unavailable. Please reconnect and try again.");
             } finally {
                 if (epoch === this.epoch) { this.loading = false; this.emit(); }
             }
@@ -99,6 +139,8 @@
             this.items = [];
             this.mode = "browser";
             this.loading = false;
+            this.initialization = null;
+            this.preferencesLoaded = true;
             this.error = "";
             try {
                 this.put("watch-history-enabled", "true");
@@ -108,7 +150,7 @@
         }
         async chooseAccount() {
             if (!this.client || !this.userId) return false;
-            if (this.mode === "account") { await this.refresh(); return !this.error; }
+            if (this.mode === "account" && this.preferencesLoaded) { await this.refresh(); return !this.error; }
             const epoch = ++this.epoch;
             const client = this.client;
             const userId = this.userId;
@@ -121,13 +163,14 @@
                 if (error) throw error;
                 if (epoch !== this.epoch) return false;
                 this.mode = "account";
+                this.preferencesLoaded = true;
                 this.items = [];
                 this.pending.clear();
                 try { this.put(this.preferenceKey, "account"); } catch { /* The server preference works without browser storage. */ }
                 await this.refresh();
                 return !this.error;
-            } catch {
-                if (epoch === this.epoch) this.error = "Couldn’t enable account history. Please try again.";
+            } catch (error) {
+                if (epoch === this.epoch) this.reportError(error, "Couldn’t enable account history. Please try again.");
                 return false;
             } finally {
                 if (epoch === this.epoch) { this.loading = false; this.emit(); }
@@ -149,8 +192,8 @@
                 // Keep unsaved playback ahead of a refresh that started earlier.
                 this.items = normalize([...(version !== this.version ? this.items : []), ...(data || []).map(fromRow)]);
                 this.error = "";
-            } catch {
-                if (epoch === this.epoch && readVersion === this.readVersion) this.error = "Couldn’t load account history. Please try again when you’re online.";
+            } catch (error) {
+                if (epoch === this.epoch && readVersion === this.readVersion) this.reportError(error, "Couldn’t load account history. Please try again when you’re online.");
             }
             if (epoch === this.epoch) this.emit();
         }
@@ -204,10 +247,10 @@
                     const { error } = await client.from("watch_history").upsert(rows, { onConflict: "user_id,media_type,media_id" });
                     if (error) throw error;
                     if (epoch === this.epoch) { this.error = ""; this.emit(); }
-                } catch {
+                } catch (error) {
                     if (epoch !== this.epoch || clearVersion !== this.clearVersion) return;
                     for (const [key, item] of entries) if (!this.pending.has(key)) this.pending.set(key, item);
-                    this.error = "Account history hasn’t synced yet. Keep this page open and retry when you’re online.";
+                    this.reportError(error, "Account history hasn’t synced yet. Keep this page open and retry when you’re online.");
                     this.emit();
                 }
             });
@@ -239,8 +282,8 @@
                     const { error } = await client.from("watch_history").delete().eq("user_id", userId);
                     if (error) throw error;
                     if (epoch === this.epoch) { this.items = []; this.error = ""; }
-                } catch {
-                    if (epoch === this.epoch) this.error = "Couldn’t clear account history. Please try again.";
+                } catch (error) {
+                    if (epoch === this.epoch) this.reportError(error, "Couldn’t clear account history. Please try again.");
                 }
                 if (epoch === this.epoch) { this.clearing = false; this.emit(); }
             });

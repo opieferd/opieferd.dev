@@ -381,3 +381,92 @@ test("a later sync error stays in the history status without reopening the choic
     assert.equal(ui.context.historySyncStatus.hidden, false);
     assert.match(ui.context.historySyncStatus.textContent, /hasn’t synced/);
 });
+
+test("a remembered account choice never falls back to browser storage during an outage", async () => {
+    const db = database();
+    db.preferences.set("user-a", { enabled: true });
+    const storage = memory({
+        "watch-history-enabled": "true",
+        "watch-history-mode:user-a": "account",
+        "watch-history": JSON.stringify([item(99)])
+    });
+    db.before(async q => { if (q.table === "watch_history_preferences") throw Error("offline"); });
+    const s = store(storage);
+    await s.setAccount(db, "user-a");
+    assert.equal(s.mode, "account");
+    s.save(item(42));
+    await s.flush();
+    assert.equal(JSON.parse(storage.getItem("watch-history"))[0].id, 99);
+});
+
+test("reconnecting retries account preferences after a failed initial load", async () => {
+    const db = database();
+    db.preferences.set("user-a", { enabled: true });
+    db.rows.set("user-a:tv:42", { user_id: "user-a", media_type: "tv", media_id: 42, title: "Saved show", season: 1, episode: 2, position: 120, duration: 1800 });
+    db.before(async () => { throw Error("offline"); });
+    const s = store();
+    await s.setAccount(db, "user-a");
+    assert.notEqual(s.mode, "account");
+    db.before(async () => {});
+    await s.setAccount(db, "user-a", true);
+    assert.equal(s.mode, "account");
+    assert.equal(s.read()[0].id, 42);
+});
+
+test("concurrent ready events await the same account initialization", async () => {
+    const db = database();
+    db.preferences.set("user-a", { enabled: true });
+    const gate = deferred();
+    const started = deferred();
+    db.before(async q => { if (q.table === "watch_history_preferences") { started.resolve(); await gate.promise; } });
+    const s = store();
+    const first = s.setAccount(db, "user-a");
+    await started.promise;
+    let secondDone = false;
+    const second = s.setAccount(db, "user-a").then(() => { secondDone = true; });
+    await Promise.resolve();
+    assert.equal(secondDone, false);
+    gate.resolve();
+    await Promise.all([first, second]);
+    assert.equal(s.mode, "account");
+    assert.equal(db.calls.filter(q => q.table === "watch_history_preferences").length, 1);
+});
+
+test("the page saves the playing title when account mode recovers after sign-in", async () => {
+    const db = database();
+    db.preferences.set("user-a", { enabled: true });
+    db.before(async () => { throw Error("offline"); });
+    const s = store();
+    await s.setAccount(db, "user-a");
+    db.before(async () => {});
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const vm = require("node:vm");
+    const source = fs.readFileSync(path.join(__dirname, "watching.js"), "utf8");
+    const fn = source.slice(source.indexOf("    async function syncHistoryAccount("), source.indexOf("    try { pendingAccountHistory = sessionStorage"));
+    let saves = 0;
+    const context = {
+        window: { OpieAccount: { client: db, getUser: () => ({ id: "user-a" }) } },
+        historyStore: s, pendingAccountHistory: false,
+        savePlayingTitleToHistory() { saves++; s.save(item()); }
+    };
+    vm.createContext(context);
+    vm.runInContext(fn, context);
+    await context.syncHistoryAccount(true);
+    await s.flush();
+    assert.equal(saves, 1);
+    assert.equal([...db.rows.values()][0].media_id, 42);
+});
+
+test("returning to a device picks up account opt-in enabled on another device", async () => {
+    const db = database();
+    const s = store();
+    await s.setAccount(db, "user-a");
+    assert.equal(s.mode, "");
+    db.preferences.set("user-a", { enabled: true });
+    await s.setAccount(db, "user-a", true);
+    assert.equal(s.mode, "account");
+    s.chooseBrowser();
+    await s.setAccount(db, "user-a", true);
+    assert.equal(s.mode, "browser", "an explicit browser-only choice still wins on this device");
+});

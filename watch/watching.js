@@ -1401,12 +1401,14 @@
         const account = window.OpieAccount;
         const userId = account?.getUser?.()?.id || null;
         const previousHistoryUser = historyStore?.userId;
+        const previousHistoryMode = historyStore?.mode;
         await historyStore?.setAccount(account?.client || null, userId, force);
         if (pendingAccountHistory && userId) {
             pendingAccountHistory = false;
             try { sessionStorage.removeItem("watch-history-pending-account"); } catch {}
             if (await historyStore?.chooseAccount()) savePlayingTitleToHistory();
-        } else if (userId && userId !== previousHistoryUser && historyStore?.mode === "account") {
+        } else if (userId && historyStore?.mode === "account"
+            && (userId !== previousHistoryUser || previousHistoryMode !== "account")) {
             savePlayingTitleToHistory();
         }
     }
